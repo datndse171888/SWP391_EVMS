@@ -7,4 +7,6 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   mongoUri: process.env.MONGODB_URI || '',
   dbName: process.env.DB_NAME || 'evms',
+  jwtSecret: process.env.JWT_SECRET || '',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
 };
