@@ -1,0 +1,13 @@
+﻿import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import { loadEnv, env } from './config/env.js';
+import { router } from './routes/index.js';
+loadEnv();
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev'));
+app.use('/api', router);
+app.get('/', (_req, res) => res.send('EVMS BE running'));
+app.listen(env.port, () => { console.log('Server listening on port ' + env.port); });
