@@ -183,20 +183,30 @@
 .border-orange-9 { border-color: #673903; }
 .border-orange-10 { border-color: #452602; }
 
+/* Additional colors for status indicators */
+.bg-green-100 { background-color: #dcfce7; }
+.text-green-600 { color: #16a34a; }
+.bg-red-100 { background-color: #fee2e2; }
+.text-red-600 { color: #dc2626; }
+
 /* Hover effects for backgrounds */
 .hover\:bg-gray-0:hover { background-color: #e1e3e7; }
 .hover\:bg-azure-0:hover { background-color: #0991f3; }
 .hover\:bg-blue-0:hover { background-color: #014091; }
+.hover\:bg-blue-1:hover { background-color: #8abdfe; }
 .hover\:bg-yellow-0:hover { background-color: #f6ae2d; }
 .hover\:bg-orange-0:hover { background-color: #f78b0f; }
+.hover\:bg-orange-1:hover { background-color: #fbc88d; }
 
 /* Ring Colors for Focus States */
 .ring-orange-0 { --tw-ring-color: #f78b0f; }
 .ring-orange-1 { --tw-ring-color: #fbc88d; }
 .ring-yellow-0 { --tw-ring-color: #f6ae2d; }
 .ring-yellow-1 { --tw-ring-color: #fad38e; }
+.ring-blue-0 { --tw-ring-color: #014091; }
 
 .focus\:ring-orange-0:focus { --tw-ring-color: #f78b0f; }
 .focus\:ring-orange-1:focus { --tw-ring-color: #fbc88d; }
 .focus\:ring-yellow-0:focus { --tw-ring-color: #f6ae2d; }
 .focus\:ring-yellow-1:focus { --tw-ring-color: #fad38e; }
+.focus\:ring-blue-0:focus { --tw-ring-color: #014091; }
