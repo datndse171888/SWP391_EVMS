@@ -36,29 +36,29 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             
         {/* Navigation */}
         <nav className="flex-1 p-6">
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             <li>
               <Link 
                 to="/admin" 
                 className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin') 
-                    ? 'bg-white/20 text-white shadow-md backdrop-blur-sm' 
-                    : 'hover:bg-white/10 text-white/80'
+                  isActive('/admin') ? 'bg-white/20 text-white shadow-lg' : 'hover:bg-white/10 text-white/80'
                 }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                 </svg>
-                <span className="font-semibold">Dashboard</span>
+                <span className="font-medium">Dashboard</span>
               </Link>
             </li>
             <li>
               <Link 
-                to="#" 
-                className="flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-white/10 text-white/80 transition-all duration-300"
+                to="/admin/events" 
+                className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ${
+                  isActive('/admin/events') ? 'bg-white/20 text-white shadow-lg' : 'hover:bg-white/10 text-white/80'
+                }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm8 0a2 2 0 114 0 2 2 0 01-4 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
                 <span className="font-medium">Sự kiện</span>
               </Link>
@@ -67,9 +67,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <Link 
                 to="/admin/users" 
                 className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin/users') 
-                    ? 'bg-white/20 text-white shadow-md backdrop-blur-sm' 
-                    : 'hover:bg-white/10 text-white/80'
+                  isActive('/admin/users') ? 'bg-white/20 text-white shadow-lg' : 'hover:bg-white/10 text-white/80'
                 }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -82,14 +80,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <Link 
                 to="/admin/technicians" 
                 className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin/technicians') 
-                    ? 'bg-white/20 text-white shadow-md backdrop-blur-sm' 
-                    : 'hover:bg-white/10 text-white/80'
+                  isActive('/admin/technicians') ? 'bg-white/20 text-white shadow-lg' : 'hover:bg-white/10 text-white/80'
                 }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                  <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
                 </svg>
                 <span className="font-medium">Kỹ thuật viên</span>
               </Link>
@@ -107,20 +102,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </li>
           </ul>
         </nav>
-
-        {/* Upgrade Banner */}
-        <div className="p-6 m-6 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20">
-          <div className="flex items-center gap-3 mb-3">
-            <svg className="w-6 h-6 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-bold">Nâng cấp ngay</span>
-          </div>
-          <p className="text-xs text-white/80 mb-4">Tận dụng tối đa các tính năng</p>
-          <button className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white text-sm py-3 rounded-xl hover:from-orange-500 hover:to-orange-600 transition-all duration-300 shadow-md hover:shadow-lg">
-            Nâng cấp
-              </button>
-            </div>
 
         {/* User Profile */}
         <div className="p-6 border-t border-blue-400">
