@@ -1,11 +1,15 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Input } from '../../components/ui/input/authentication/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
 import type { AccountLogin } from '../../types/account/Account';
 import loginBackground from '../../assets/images/login_background.jpg'
-import { authApi } from '../../services/api/AuthApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
+  const [error, setError] = useState<string>('');
 
   const [account, setAccount] = useState<AccountLogin>({
     email: '',
@@ -14,23 +18,16 @@ export const Login: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
     try {
-      const response = await authApi.login(account);
+      await login(account.email, account.password);
       
-      // Handle successful login
-      const { accessToken, user } = response.data;
-      
-      // Store tokens
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', user);
-      
-      // Redirect to dashboard or home page
-      // navigate('/dashboard');
+      // Redirect to appropriate dashboard based on user role
+      navigate('/');
       
     } catch (error: any) {
-      console.error('Login failed:', error.response?.data?.message || error.message);
-      // Handle login error (show toast, set error state, etc.)
+      setError(error.message || 'Đăng nhập thất bại');
     }
   };
 
@@ -72,9 +69,23 @@ export const Login: React.FC = () => {
               />
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+
             {/* Login Button */}
             <div>
-              <Button variant="outline" size="lg" type="submit">Login</Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </Button>
             </div>
           </form>
 

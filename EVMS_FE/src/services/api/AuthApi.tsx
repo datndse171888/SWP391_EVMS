@@ -6,17 +6,43 @@ export const authApi = {
     return api.post('/auth/login', credentials);
   },
 
-  register: (userData: { email: string; password: string; name: string }) => {
+  register: (userData: { 
+    email: string; 
+    password: string; 
+    userName: string;
+    fullName?: string;
+    phoneNumber?: string;
+    photoURL?: string;
+    role?: 'admin' | 'staff' | 'technician' | 'customer';
+    gender?: string;
+  }) => {
     return api.post('/auth/register', userData);
   },
 
   logout: () => {
-    return api.post('/auth/logout');
+    // Since we're using JWT, logout is handled client-side
+    // by removing the token from localStorage
+    return Promise.resolve();
   },
 
-  refreshToken: () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    return api.post('/auth/refresh', { refreshToken });
+  getProfile: () => {
+    return api.get('/auth/profile');
+  },
+
+  updateProfile: (userData: {
+    fullName?: string;
+    phoneNumber?: string;
+    photoURL?: string;
+    gender?: string;
+  }) => {
+    return api.put('/auth/profile', userData);
+  },
+
+  changePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
+    return api.put('/auth/change-password', data);
   },
 
   forgotPassword: (email: string) => {

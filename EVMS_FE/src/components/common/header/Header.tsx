@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { COLOR } from '../../../constants/color/Color';
+import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/images/logo.png';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAtTop, setIsAtTop] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navigationItems = [
     { name: 'TRANG CHỦ', path: '/' },
@@ -18,6 +21,22 @@ const Header: React.FC = () => {
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const getDashboardPath = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'admin': return '/admin/dashboard';
+      case 'staff': return '/staff/dashboard';
+      case 'technician': return '/technician/dashboard';
+      case 'customer': return '/customer/dashboard';
+      default: return '/login';
+    }
   };
 
   // Show header only when at top of the page
@@ -112,20 +131,68 @@ const Header: React.FC = () => {
             ))}
           </nav>
 
-          {/* Right side - Search and Login */}
+          {/* Right side - User Menu */}
           <div className="hidden lg:flex items-center space-x-4">
+            {isAuthenticated && user ? (
+              <div className="flex items-center space-x-4">
+                {/* User Info */}
+                <div className="flex items-center space-x-2">
+                  {user.photoURL && (
+                    <img
+                      src={user.photoURL}
+                      alt="Avatar"
+                      className="w-8 h-8 rounded-full"
+                    />
+                  )}
+                  <span className="text-sm text-white font-medium">
+                    {user.fullName || user.userName}
+                  </span>
+                  <span className="text-xs text-gray-300 uppercase">
+                    ({user.role})
+                  </span>
+                </div>
 
-            {/* Login Button */}
-            <button
-              className="px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
-              style={{
-                backgroundColor: COLOR.yellow[0],
-                color: COLOR.blue[0],
-                fontFamily: 'Arial, sans-serif'
-              }}
-            >
-              ĐĂNG NHẬP
-            </button>
+                {/* Dashboard Button */}
+                <Link to={getDashboardPath()}>
+                  <button
+                    className="px-4 py-2 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
+                    style={{
+                      backgroundColor: COLOR.blue[0],
+                      color: 'white',
+                      fontFamily: 'Arial, sans-serif'
+                    }}
+                  >
+                    Dashboard
+                  </button>
+                </Link>
+
+                {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
+                  style={{
+                    backgroundColor: COLOR.red[0],
+                    color: 'white',
+                    fontFamily: 'Arial, sans-serif'
+                  }}
+                >
+                  ĐĂNG XUẤT
+                </button>
+              </div>
+            ) : (
+              <Link to="/login">
+                <button
+                  className="px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
+                  style={{
+                    backgroundColor: COLOR.yellow[0],
+                    color: COLOR.blue[0],
+                    fontFamily: 'Arial, sans-serif'
+                  }}
+                >
+                  ĐĂNG NHẬP
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -171,16 +238,50 @@ const Header: React.FC = () => {
                 </Link>
               ))}
               <div className="pt-4">
-                <button
-                  className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
-                  style={{
-                    backgroundColor: COLOR.yellow[0],
-                    color: COLOR.blue[0],
-                    fontFamily: 'Arial, sans-serif'
-                  }}
-                >
-                  Đăng nhập
-                </button>
+                {isAuthenticated && user ? (
+                  <div className="space-y-2">
+                    <div className="text-center text-white text-sm">
+                      <p>{user.fullName || user.userName}</p>
+                      <p className="text-xs text-gray-300 uppercase">({user.role})</p>
+                    </div>
+                    <Link to={getDashboardPath()}>
+                      <button
+                        className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                        style={{
+                          backgroundColor: COLOR.blue[0],
+                          color: 'white',
+                          fontFamily: 'Arial, sans-serif'
+                        }}
+                      >
+                        Dashboard
+                      </button>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                      style={{
+                        backgroundColor: COLOR.red[0],
+                        color: 'white',
+                        fontFamily: 'Arial, sans-serif'
+                      }}
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                ) : (
+                  <Link to="/login">
+                    <button
+                      className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                      style={{
+                        backgroundColor: COLOR.yellow[0],
+                        color: COLOR.blue[0],
+                        fontFamily: 'Arial, sans-serif'
+                      }}
+                    >
+                      Đăng nhập
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
