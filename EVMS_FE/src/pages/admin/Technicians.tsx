@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { AddUserModal } from '../../components/AddUserModal'
 import { UserDetailModal } from '../../components/UserDetailModal'
-import { AdminLayout } from '../../components/AdminLayout'
 
 interface User {
   _id: string
@@ -147,7 +146,7 @@ export const Technicians: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
+    <div>
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -351,7 +350,7 @@ export const Technicians: React.FC = () => {
         onClose={() => setShowDetailModal(false)}
         user={selectedUser}
       />
-    </AdminLayout>
+    </div>
   )
 }
 

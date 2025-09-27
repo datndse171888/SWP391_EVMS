@@ -12,12 +12,10 @@ import {
 import { 
   AdminLayout, 
   StaffLayout, 
-  TechnicianLayout, 
-  CustomerLayout 
+  TechnicianLayout
 } from './components/layout'
 
 // Placeholder components for different dashboards
-const AdminDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Admin Dashboard</h1></div>;
 const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
 const TechnicianDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Technician Dashboard</h1></div>;
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -38,13 +36,24 @@ export const Router: React.FC = () => {
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Admin Routes */}
-        <Route path="/admin/*" element={
+        <Route path="/admin" element={
           <AdminRoute>
             <AdminLayout>
-              <Routes>
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-              </Routes>
+              <Dashboard />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/users" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Users />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/technicians" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Technicians />
             </AdminLayout>
           </AdminRoute>
         } />
@@ -73,23 +82,18 @@ export const Router: React.FC = () => {
           </TechnicianRoute>
         } />
 
-        {/* Customer Routes */}
-        <Route path="/customer/*" element={
+        {/* Customer Routes - Using regular Layout */}
+        <Route path="/customer" element={
           <CustomerRoute>
-            <CustomerLayout>
-              <Routes>
-                <Route path="dashboard" element={<CustomerDashboard />} />
-                <Route path="*" element={<Navigate to="/customer/dashboard" replace />} />
-              </Routes>
-            </CustomerLayout>
+            <Layout />
           </CustomerRoute>
-        } />
+        }>
+          <Route path="dashboard" element={<CustomerDashboard />} />
+          <Route path="*" element={<Navigate to="/customer/dashboard" replace />} />
+        </Route>
 
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
-        <Route path="/admin" element={<Dashboard />} />
-        <Route path="/admin/users" element={<Users />} />
-        <Route path="/admin/technicians" element={<Technicians />} />
       </Routes>
     </BrowserRouter>
   )

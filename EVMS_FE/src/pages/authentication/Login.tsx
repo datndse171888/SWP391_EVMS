@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Input } from '../../components/ui/input/authentication/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
@@ -8,13 +8,36 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth();
   const [error, setError] = useState<string>('');
 
   const [account, setAccount] = useState<AccountLogin>({
     email: '',
     password: ''
   });
+
+  // Handle redirect after successful login
+  useEffect(() => {
+    if (user && !isLoading) {
+      // Redirect based on user role
+      switch (user.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'staff':
+          navigate('/staff/dashboard');
+          break;
+        case 'technician':
+          navigate('/technician/dashboard');
+          break;
+        case 'customer':
+          navigate('/');
+          break;
+        default:
+          navigate('/');
+      }
+    }
+  }, [user, isLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,11 +46,12 @@ export const Login: React.FC = () => {
     try {
       await login(account.email, account.password);
       
-      // Redirect to appropriate dashboard based on user role
-      navigate('/');
+      // Note: User data will be available after login completes
+      // We'll handle redirect in useEffect when user state updates
       
-    } catch (error: any) {
-      setError(error.message || 'Đăng nhập thất bại');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+      setError(errorMessage);
     }
   };
 

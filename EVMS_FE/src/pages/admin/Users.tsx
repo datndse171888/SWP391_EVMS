@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import AddUserModal from '../../components/AddUserModal'
 import UserDetailModal from '../../components/UserDetailModal'
-import { AdminLayout } from '../../components/AdminLayout'
 
 interface User {
   _id: string
@@ -45,11 +44,7 @@ export const Users: React.FC = () => {
 
   const limit = 10
 
-  useEffect(() => {
-    fetchUsers()
-  }, [currentPage, searchTerm, roleFilter])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
@@ -86,7 +81,11 @@ export const Users: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, searchTerm, roleFilter, limit])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,9 +113,8 @@ export const Users: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
-      <div className="flex flex-col">
-        {/* Header */}
+    <div className="flex flex-col">
+      {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-8 py-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
@@ -276,7 +274,6 @@ export const Users: React.FC = () => {
             )}
           </div>
         </main>
-      </div>
 
       {/* Modals */}
       <AddUserModal
@@ -290,7 +287,7 @@ export const Users: React.FC = () => {
         onClose={() => setShowDetailModal(false)}
         user={selectedUser}
       />
-    </AdminLayout>
+    </div>
   )
 }
 

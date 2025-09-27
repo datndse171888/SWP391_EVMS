@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { AdminLayout } from '../../components/AdminLayout'
+
+// Interface cho User
+interface User {
+  _id: string;
+  userName: string;
+  email: string;
+  fullName?: string;
+  phoneNumber?: string;
+  role: string;
+  isDisabled: boolean;
+}
 
 // Component cho các thẻ thống kê
 const StatCard: React.FC<{
@@ -32,7 +42,7 @@ const StatCard: React.FC<{
 
 // Component cho bảng users
 const UsersTable: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -128,58 +138,56 @@ const UsersTable: React.FC = () => {
 
 export const Dashboard: React.FC = () => {
   return (
-    <AdminLayout>
-      <div className="p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Chào mừng bạn đến với hệ thống quản lý sự kiện EVMS</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Tổng sự kiện"
-            value="24"
-            change="+12%"
-            changeType="positive"
-            icon="📅"
-            linkText="Xem tất cả sự kiện"
-            accentColor="bg-gradient-to-br from-blue-400 to-blue-500"
-          />
-          <StatCard
-            title="Người dùng"
-            value="1,234"
-            change="+8%"
-            changeType="positive"
-            icon="👥"
-            linkText="Quản lý người dùng"
-            accentColor="bg-gradient-to-br from-green-400 to-green-500"
-          />
-          <StatCard
-            title="Kỹ thuật viên"
-            value="45"
-            change="+3%"
-            changeType="positive"
-            icon="🔧"
-            linkText="Quản lý kỹ thuật viên"
-            accentColor="bg-gradient-to-br from-purple-400 to-purple-500"
-          />
-          <StatCard
-            title="Doanh thu"
-            value="₫12.5M"
-            change="-2%"
-            changeType="negative"
-            icon="💰"
-            linkText="Xem báo cáo"
-            accentColor="bg-gradient-to-br from-orange-400 to-orange-500"
-          />
-        </div>
-
-        {/* Users Table */}
-        <UsersTable />
+    <div className="p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
+        <p className="text-gray-600">Chào mừng bạn đến với hệ thống quản lý sự kiện EVMS</p>
       </div>
-    </AdminLayout>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Tổng sự kiện"
+          value="24"
+          change="+12%"
+          changeType="positive"
+          icon="📅"
+          linkText="Xem tất cả sự kiện"
+          accentColor="bg-gradient-to-br from-blue-400 to-blue-500"
+        />
+        <StatCard
+          title="Người dùng"
+          value="1,234"
+          change="+8%"
+          changeType="positive"
+          icon="👥"
+          linkText="Quản lý người dùng"
+          accentColor="bg-gradient-to-br from-green-400 to-green-500"
+        />
+        <StatCard
+          title="Kỹ thuật viên"
+          value="45"
+          change="+3%"
+          changeType="positive"
+          icon="🔧"
+          linkText="Quản lý kỹ thuật viên"
+          accentColor="bg-gradient-to-br from-purple-400 to-purple-500"
+        />
+        <StatCard
+          title="Doanh thu"
+          value="₫12.5M"
+          change="-2%"
+          changeType="negative"
+          icon="💰"
+          linkText="Xem báo cáo"
+          accentColor="bg-gradient-to-br from-orange-400 to-orange-500"
+        />
+      </div>
+
+      {/* Users Table */}
+      <UsersTable />
+    </div>
   )
 }
 

@@ -7,6 +7,7 @@ import logo from '../../../assets/images/logo.png';
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAtTop, setIsAtTop] = useState(true);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
@@ -26,18 +27,31 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+    setIsAvatarDropdownOpen(false);
+  };
+
+  const getProfilePath = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'admin': return '/admin/profile';
+      case 'staff': return '/staff/profile';
+      case 'technician': return '/technician/profile';
+      case 'customer': return '/customer/profile';
+      default: return '/profile';
+    }
   };
 
   const getDashboardPath = () => {
     if (!user) return '/login';
     switch (user.role) {
-      case 'admin': return '/admin/dashboard';
+      case 'admin': return '/admin';
       case 'staff': return '/staff/dashboard';
       case 'technician': return '/technician/dashboard';
       case 'customer': return '/customer/dashboard';
       default: return '/login';
     }
   };
+
 
   // Show header only when at top of the page
   useEffect(() => {
@@ -50,6 +64,21 @@ const Header: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close avatar dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isAvatarDropdownOpen) {
+        const target = event.target as Element;
+        if (!target.closest('.avatar-dropdown')) {
+          setIsAvatarDropdownOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isAvatarDropdownOpen]);
 
   return (
     <header 
@@ -134,50 +163,57 @@ const Header: React.FC = () => {
           {/* Right side - User Menu */}
           <div className="hidden lg:flex items-center space-x-4">
             {isAuthenticated && user ? (
-              <div className="flex items-center space-x-4">
-                {/* User Info */}
-                <div className="flex items-center space-x-2">
-                  {user.photoURL && (
+              <div className="relative avatar-dropdown">
+                {/* Avatar with Dropdown */}
+                <button
+                  onClick={() => setIsAvatarDropdownOpen(!isAvatarDropdownOpen)}
+                  className="flex items-center space-x-2 focus:outline-none"
+                >
+                  {user.photoURL ? (
                     <img
                       src={user.photoURL}
                       alt="Avatar"
-                      className="w-8 h-8 rounded-full"
+                      className="w-10 h-10 rounded-full border-2 border-white hover:border-gray-300 transition-colors cursor-pointer"
                     />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center border-2 border-white hover:border-gray-300 transition-colors cursor-pointer">
+                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                   )}
-                  <span className="text-sm text-white font-medium">
-                    {user.fullName || user.userName}
-                  </span>
-                  <span className="text-xs text-gray-300 uppercase">
-                    ({user.role})
-                  </span>
-                </div>
-
-                {/* Dashboard Button */}
-                <Link to={getDashboardPath()}>
-                  <button
-                    className="px-4 py-2 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
-                    style={{
-                      backgroundColor: COLOR.blue[0],
-                      color: 'white',
-                      fontFamily: 'Arial, sans-serif'
-                    }}
-                  >
-                    Dashboard
-                  </button>
-                </Link>
-
-                {/* Logout Button */}
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    backgroundColor: COLOR.red[0],
-                    color: 'white',
-                    fontFamily: 'Arial, sans-serif'
-                  }}
-                >
-                  ĐĂNG XUẤT
                 </button>
+
+                {/* Dropdown Menu */}
+                {isAvatarDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="py-2">
+                      {/* Dashboard - Only for admin, staff, technician */}
+                      {user.role !== 'customer' && (
+                        <Link
+                          to={getDashboardPath()}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setIsAvatarDropdownOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                      )}
+                      <Link
+                        to={getProfilePath()}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setIsAvatarDropdownOpen(false)}
+                      >
+                        View Profile
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Link to="/login">
@@ -240,33 +276,67 @@ const Header: React.FC = () => {
               <div className="pt-4">
                 {isAuthenticated && user ? (
                   <div className="space-y-2">
-                    <div className="text-center text-white text-sm">
-                      <p>{user.fullName || user.userName}</p>
-                      <p className="text-xs text-gray-300 uppercase">({user.role})</p>
+                    {/* Mobile Avatar */}
+                    <div className="flex items-center justify-center space-x-3">
+                      {user.photoURL ? (
+                        <img
+                          src={user.photoURL}
+                          alt="Avatar"
+                          className="w-12 h-12 rounded-full border-2 border-white"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gray-400 flex items-center justify-center border-2 border-white">
+                          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                      <span className="text-white text-sm font-medium">
+                        {user.fullName || user.userName}
+                      </span>
                     </div>
-                    <Link to={getDashboardPath()}>
-                      <button
-                        className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                    
+                    {/* Mobile Menu Options */}
+                    <div className="space-y-2">
+                      {/* Dashboard - Only for admin, staff, technician */}
+                      {user.role !== 'customer' && (
+                        <Link
+                          to={getDashboardPath()}
+                          className="block w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200 text-center"
+                          style={{
+                            backgroundColor: COLOR.blue[0],
+                            fontFamily: 'Arial, sans-serif'
+                          }}
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                      )}
+                      <Link
+                        to={getProfilePath()}
+                        className="block w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200 text-center"
                         style={{
                           backgroundColor: COLOR.blue[0],
-                          color: 'white',
+                          fontFamily: 'Arial, sans-serif'
+                        }}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        View Profile
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsMenuOpen(false);
+                        }}
+                        className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                        style={{
+                          backgroundColor: COLOR.red[0],
                           fontFamily: 'Arial, sans-serif'
                         }}
                       >
-                        Dashboard
+                        Log out
                       </button>
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
-                      style={{
-                        backgroundColor: COLOR.red[0],
-                        color: 'white',
-                        fontFamily: 'Arial, sans-serif'
-                      }}
-                    >
-                      Đăng xuất
-                    </button>
+                    </div>
                   </div>
                 ) : (
                   <Link to="/login">
