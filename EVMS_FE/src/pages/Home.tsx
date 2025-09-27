@@ -1,58 +1,58 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { COLOR } from '../constants/color/Color';
 import homeImage from '../assets/images/home.jpg';
+import cleanImage from '../assets/images/clean.png';
+import motobyImage from '../assets/images/motoby.jpg';
+import scheduleImage from '../assets/images/schedule.png';
+import chartImage from '../assets/images/chart.jpg';
+
+// Debug: Log image paths
+console.log('Image paths:', {
+  cleanImage,
+  motobyImage, 
+  scheduleImage,
+  chartImage
+});
 
 const Home: React.FC = () => {
-  const services = [
+  // Factory images slider state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  const factoryImages = [
     {
-      title: 'Bảo dưỡng ô tô điện',
-      description: 'Dịch vụ bảo dưỡng chuyên nghiệp cho các dòng xe ô tô điện hàng đầu với công nghệ tiên tiến',
-      icon: '🚗',
-      features: ['Kiểm tra pin lithium-ion', 'Bảo dưỡng động cơ điện', 'Cập nhật phần mềm OTA', 'Kiểm tra hệ thống sạc'],
-      price: 'Từ 500.000đ'
+      url: 'https://assets-persist.lovart.ai/agent_images/e25a3bdd-6089-4f63-9949-675ca4316678.jpg',
+      alt: 'Kho linh kiện phụ tùng xe điện'
     },
     {
-      title: 'Bảo dưỡng xe máy điện',
-      description: 'Chăm sóc và bảo dưỡng xe máy điện với thiết bị chuyên dụng và kỹ thuật viên giàu kinh nghiệm',
-      icon: '🏍️',
-      features: ['Thay pin lithium', 'Kiểm tra hệ thống điện', 'Bảo trì motor điện', 'Cân chỉnh phanh'],
-      price: 'Từ 200.000đ'
+      url: 'https://assets-persist.lovart.ai/agent_images/b254ee8e-e5b8-4c4b-a356-e78209f0f892.jpg',
+      alt: 'Phụ tùng chính hãng cho xe điện'
     },
     {
-      title: 'Bảo dưỡng xe đạp điện',
-      description: 'Dịch vụ bảo dưỡng xe đạp điện chất lượng cao, giá cả hợp lý cho mọi đối tượng',
-      icon: '🚲',
-      features: ['Sửa chữa pin', 'Bảo dưỡng motor', 'Kiểm tra an toàn', 'Thay lốp và phanh'],
-      price: 'Từ 100.000đ'
+      url: 'https://assets-persist.lovart.ai/agent_images/e5cd1190-6f8e-463a-8b43-5e880c9c0d6c.jpg',
+      alt: 'Linh kiện bảo dưỡng xe điện'
+    },
+    {
+      url: 'https://assets-persist.lovart.ai/agent_images/372b21f5-5ec0-4628-a107-299905cebb39.jpg',
+      alt: 'Phụ tùng thay thế xe điện'
+    },
+    {
+      url: 'https://assets-persist.lovart.ai/agent_images/adb47a4b-5f69-4094-9899-150ca57fafba.jpg',
+      alt: 'Kho linh kiện đa dạng'
     }
   ];
 
-  const features = [
-    {
-      title: 'Đội ngũ chuyên gia',
-      description: 'Kỹ thuật viên được đào tạo chuyên sâu về xe điện với chứng chỉ quốc tế',
-      icon: '👨‍🔧',
-      stat: '50+'
-    },
-    {
-      title: 'Thiết bị hiện đại',
-      description: 'Máy móc và công cụ chuyên dụng cho xe điện được nhập khẩu từ châu Âu',
-      icon: '🔧',
-      stat: '100%'
-    },
-    {
-      title: 'Bảo hành uy tín',
-      description: 'Chế độ bảo hành linh hoạt và dịch vụ hậu mãi tốt lên đến 24 tháng',
-      icon: '🛡️',
-      stat: '24 tháng'
-    },
-    {
-      title: 'Khách hàng hài lòng',
-      description: 'Mức độ hài lòng của khách hàng luôn đạt trên 95%',
-      icon: '⭐',
-      stat: '95%'
-    }
-  ];
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % factoryImages.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + factoryImages.length) % factoryImages.length);
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
+
 
   const testimonials = [
     {
@@ -102,14 +102,16 @@ const Home: React.FC = () => {
           <div className="max-w-2xl">
             {/* Slogan */}
             <h1 
-              className="text-6xl lg:text-7xl font-bold mb-8 leading-tight"
+              className="text-5xl lg:text-6xl font-bold mb-8 leading-tight"
               style={{ 
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 color: 'white',
                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5)'
               }}
             >
-              Chuyên nghiệp nhanh chóng
+              Chuyên nghiệp 
+              <br />
+              nhanh chóng
               <br />
               tin cậy bền lâu
             </h1>
@@ -311,13 +313,23 @@ const Home: React.FC = () => {
                   style={{ backgroundColor: COLOR.yellow[0] }}
                 ></div>
               </div>
-              <div className="relative h-64 overflow-hidden">
+              <div 
+                className="relative h-64 overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${COLOR.azure[1]}, ${COLOR.blue[1]})`
+                }}
+              >
                 <img 
-                  src="./clean.png"
+                  src="/images/schedule.png"
                   alt="AC Charger Services"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.log('Error loading clean image:', e);
+                    console.log('Clean image path:', cleanImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                <div className="absolute inset-0 bg-opacity-20"></div>
                 <button 
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
@@ -344,13 +356,23 @@ const Home: React.FC = () => {
                   style={{ backgroundColor: COLOR.yellow[0] }}
                 ></div>
               </div>
-              <div className="relative h-64 overflow-hidden">
+              <div 
+                className="relative h-64 overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${COLOR.blue[1]}, ${COLOR.azure[0]})`
+                }}
+              >
                 <img 
-                  src="/src/assets/images/motoby.jpg"
+                  src="/images/clean.png"
                   alt="DC Charger Services"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.log('Error loading motoby image:', e);
+                    console.log('Motoby image path:', motobyImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                <div className="absolute inset-0 bg-opacity-20"></div>
                 <button 
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
@@ -377,13 +399,23 @@ const Home: React.FC = () => {
                   style={{ backgroundColor: COLOR.yellow[0] }}
                 ></div>
               </div>
-              <div className="relative h-64 overflow-hidden">
+              <div 
+                className="relative h-64 overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${COLOR.yellow[1]}, ${COLOR.blue[1]})`
+                }}
+              >
                 <img 
-                  src="/src/assets/images/schedule.png"
+                  src="/images/motoby.jpg"
                   alt="Home Charger"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.log('Error loading schedule image:', e);
+                    console.log('Schedule image path:', scheduleImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                <div className="absolute inset-0 bg-opacity-20"></div>
                 <button 
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
@@ -397,131 +429,356 @@ const Home: React.FC = () => {
       </section>
 
       {/* Services Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: COLOR.gray[0] }}>
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
+            <div 
+              className="text-sm font-bold uppercase tracking-wider mb-4"
+              style={{ color: COLOR.azure[0] }}
+            >
+              GÓI DỊCH VỤ
+            </div>
             <h2 
               className="text-4xl lg:text-5xl font-bold mb-6"
               style={{ color: COLOR.blue[0] }}
             >
-              Dịch vụ của chúng tôi
+              Chọn gói dịch vụ phù hợp với nhu cầu của bạn
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Chúng tôi cung cấp đầy đủ các dịch vụ bảo dưỡng cho mọi loại xe điện với chất lượng cao nhất
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Chúng tôi cung cấp các gói dịch vụ bảo dưỡng xe điện đa dạng, từ cơ bản đến cao cấp, đáp ứng mọi nhu cầu và ngân sách của khách hàng.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2"
-              >
-                <div className="text-center mb-6">
-                  <div 
-                    className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4"
-                    style={{
-                      background: `linear-gradient(135deg, ${COLOR.azure[1]}, ${COLOR.blue[1]})`
-                    }}
-                  >
-                    {service.icon}
-                  </div>
-                  <h3 
-                    className="text-2xl font-bold mb-3"
+            {/* Basic Plan */}
+            <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
+              <div className="bg-gray-100 rounded-xl p-8 h-full">
+                <h3 
+                  className="text-3xl font-bold mb-4 text-center"
+                  style={{ color: COLOR.blue[0] }}
+                >
+                  Cơ Bản
+                </h3>
+                <p className="text-gray-500 mb-6 text-center">
+                  Dịch vụ bảo dưỡng cơ bản cho xe điện với các kiểm tra thiết yếu
+                </p>
+                <div className="mb-6 text-center">
+                  <span 
+                    className="text-5xl font-bold"
                     style={{ color: COLOR.blue[0] }}
                   >
-                    {service.title}
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    {service.description}
-                  </p>
-                  <div 
-                    className="text-2xl font-bold mb-4"
-                    style={{ color: COLOR.orange[0] }}
-                  >
-                    {service.price}
-                  </div>
+                    200.000₫
+                  </span>
+                  <span className="text-gray-500 ml-2">/lần</span>
                 </div>
-                <ul className="space-y-3 mb-6">
-                  {service.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center text-gray-700">
-                      <span 
-                        className="w-2 h-2 rounded-full mr-3"
-                        style={{ backgroundColor: COLOR.orange[0] }}
-                      ></span>
-                      {feature}
-                    </li>
-                  ))}
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Kiểm tra pin lithium-ion</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Kiểm tra hệ thống điện</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Kiểm tra an toàn cơ bản</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-400">Bảo dưỡng động cơ điện</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-400">Cập nhật phần mềm OTA</span>
+                  </li>
                 </ul>
                 <button
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
                   style={{
                     color: 'white',
-                    backgroundColor: COLOR.azure[0]
+                    backgroundColor: COLOR.blue[0]
                   }}
                 >
-                  Xem chi tiết
+                  CHỌN GÓI
                 </button>
+                <p className="text-xs text-gray-400 mt-4 text-center">
+                  *Áp dụng cho xe máy điện và xe đạp điện
+                </p>
               </div>
-            ))}
+            </div>
+
+            {/* Standard Plan - Featured */}
+            <div className="bg-white rounded-2xl p-2 shadow-xl transition-all duration-300 relative transform scale-105">
+              {/* Best Choice Ribbon */}
+              <div 
+                className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
+                style={{ 
+                  backgroundColor: COLOR.yellow[0],
+                  color: COLOR.blue[0]
+                }}
+              >
+                LỰA CHỌN TỐT NHẤT
+              </div>
+              
+              <div 
+                className="rounded-xl p-8 h-full"
+                style={{
+                  background: `linear-gradient(135deg, ${COLOR.blue[2]}, ${COLOR.blue[1]}, ${COLOR.blue[0]})`
+                }}
+              >
+                <h3 className="text-3xl font-bold mb-4 text-white text-center">
+                  Tiêu Chuẩn
+                </h3>
+                <p className="text-white mb-6 text-center">
+                  Dịch vụ bảo dưỡng toàn diện với đầy đủ tính năng cho xe điện
+                </p>
+                <div className="mb-6 text-center">
+                  <span className="text-5xl font-bold text-white">
+                    500.000₫
+                  </span>
+                  <span className="text-white ml-2">/lần</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-white">Kiểm tra pin lithium-ion</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-white">Bảo dưỡng động cơ điện</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-white">Cập nhật phần mềm OTA</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-white">Kiểm tra hệ thống sạc</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-white">Bảo hành 6 tháng</span>
+                  </li>
+                </ul>
+                <button
+                  className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
+                    style={{
+                    color: COLOR.blue[0],
+                    backgroundColor: COLOR.yellow[0]
+                  }}
+                >
+                  CHỌN GÓI
+                </button>
+                <p className="text-xs text-white mt-4 text-center">
+                  *Áp dụng cho tất cả loại xe điện
+                </p>
+              </div>
+                  </div>
+
+            {/* Premium Plan */}
+            <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
+              <div className="bg-gray-100 rounded-xl p-8 h-full">
+                  <h3 
+                  className="text-3xl font-bold mb-4 text-center"
+                    style={{ color: COLOR.blue[0] }}
+                  >
+                  Cao Cấp
+                  </h3>
+                <p className="text-gray-500 mb-6 text-center">
+                  Dịch vụ bảo dưỡng cao cấp với hỗ trợ 24/7 và bảo hành dài hạn
+                </p>
+                <div className="mb-6 text-center">
+                  <span 
+                    className="text-5xl font-bold"
+                    style={{ color: COLOR.blue[0] }}
+                  >
+                    800.000₫
+                  </span>
+                  <span className="text-gray-500 ml-2">/lần</span>
+                  </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Tất cả dịch vụ Tiêu Chuẩn</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Hỗ trợ kỹ thuật 24/7</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Bảo hành 12 tháng</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Dịch vụ tại nhà</span>
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Ưu tiên đặt lịch</span>
+                    </li>
+                </ul>
+                <button
+                  className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
+                  style={{
+                    color: 'white',
+                    backgroundColor: COLOR.blue[0]
+                  }}
+                >
+                  CHỌN GÓI
+                </button>
+                <p className="text-xs text-gray-400 mt-4 text-center">
+                  *Dành cho khách hàng doanh nghiệp
+                </p>
+              </div>
+              </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Our Factory Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 
-              className="text-4xl lg:text-5xl font-bold mb-6"
-              style={{ color: COLOR.blue[0] }}
-            >
-              Tại sao chọn chúng tôi?
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Những lý do khiến chúng tôi trở thành lựa chọn hàng đầu cho dịch vụ bảo dưỡng xe điện
-            </p>
+          {/* Top Half - Text and Button */}
+          <div className="grid lg:grid-cols-2 gap-12 mb-16">
+            {/* Left Column - Heading */}
+            <div>
+              <div 
+                className="text-sm font-bold uppercase tracking-wider mb-4"
+                style={{ color: COLOR.azure[0] }}
+              >
+                KHO LINH KIỆN CỦA CHÚNG TÔI
+              </div>
+              <h2 
+                className="text-4xl lg:text-5xl font-bold leading-tight mb-4"
+                style={{ color: COLOR.blue[0] }}
+              >
+                Phụ tùng chính hãng với chất lượng đảm bảo
+              </h2>
+              <div 
+                className="w-16 h-1 mb-8"
+                style={{ backgroundColor: COLOR.yellow[0] }}
+              ></div>
+            </div>
+
+            {/* Right Column - Description and Button */}
+            <div className="flex flex-col justify-center">
+              <p className="text-gray-600 text-lg leading-relaxed mb-8">
+              Với kho linh kiện đa dạng và phong phú, chúng tôi luôn sẵn sàng cung cấp phụ tùng chính hãng cho mọi dòng xe. Từ linh kiện cơ bản như dầu máy, lọc gió, bugi đến các bộ phận chuyên dụng cho xe điện như pin lithium, motor điện, controller. Tất cả đều được nhập khẩu từ các thương hiệu uy tín và có chế độ bảo hành rõ ràng.
+              </p>
+              <button
+                className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105 self-start"
+                style={{
+                  backgroundColor: COLOR.yellow[0],
+                  color: COLOR.blue[0]
+                }}
+              >
+                KHÁM PHÁ THÊM
+              </button>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="text-center bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
+          {/* Bottom Half - Image Carousel */}
+          <div className="relative">
+            {/* Navigation Arrows */}
+            <button 
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 text-black hover:text-gray-600 transition-all duration-200"
+              style={{ marginLeft: '-60px' }}
+            >
+              <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+              </svg>
+            </button>
+            <button 
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 text-black hover:text-gray-600 transition-all duration-200"
+              style={{ marginRight: '-60px' }}
+            >
+              <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
+              </svg>
+            </button>
+
+            {/* Image Slider */}
+            <div className="overflow-hidden rounded-lg">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
-                <div 
-                  className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-6"
-                  style={{
-                    background: `linear-gradient(135deg, ${COLOR.orange[0]}, ${COLOR.yellow[0]})`
-                  }}
-                >
-                  {feature.icon}
-                </div>
-                <div 
-                  className="text-3xl font-bold mb-2"
-                  style={{ color: COLOR.blue[0] }}
-                >
-                  {feature.stat}
-                </div>
-                <h3 
-                  className="text-xl font-bold mb-3"
-                  style={{ color: COLOR.blue[0] }}
-                >
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600">
-                  {feature.description}
-                </p>
+                {Array.from({ length: Math.ceil(factoryImages.length / 4) }, (_, slideIndex) => (
+                  <div key={slideIndex} className="w-full flex-shrink-0">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+                      {factoryImages.slice(slideIndex * 4, (slideIndex + 1) * 4).map((img, imgIndex) => (
+                        <div key={imgIndex} className="relative overflow-hidden rounded-lg w-full max-w-xs">
+                          <div 
+                            className="aspect-square bg-cover bg-center"
+                            style={{
+                              backgroundImage: `url("${img.url}")`
+                            }}
+                          ></div>
+                          <div className="absolute inset-0 bg-opacity-20"></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Pagination Dots */}
+            <div className="flex justify-center mt-8 space-x-2">
+              {Array.from({ length: Math.ceil(factoryImages.length / 4) }, (_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                    index === currentSlide ? '' : 'bg-gray-400'
+                  }`}
+                  style={{ 
+                    backgroundColor: index === currentSlide ? COLOR.yellow[0] : '#9CA3AF'
+                  }}
+                ></button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials Section */}
       <section 
-        className="py-20 px-4 sm:px-6 lg:px-8"
-        style={{ backgroundColor: COLOR.gray[0] }}
+        className="py-20 px-4 sm:px-6 lg:px-8 bg-white"
       >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -547,7 +804,14 @@ const Home: React.FC = () => {
                     <span key={i} className="text-yellow-400 text-xl">⭐</span>
                   ))}
                 </div>
-                <p className="text-gray-700 mb-6 italic">
+                <p 
+                  className="text-gray-700 mb-6 italic overflow-hidden"
+                  style={{ 
+                    display: '-webkit-box', 
+                    WebkitLineClamp: 2, 
+                    WebkitBoxOrient: 'vertical' 
+                  }}
+                >
                   "{testimonial.content}"
                 </p>
                 <div className="flex items-center">
@@ -579,17 +843,17 @@ const Home: React.FC = () => {
       <section 
         className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden"
         style={{
-          backgroundImage: 'url("./chart.jpg")',
+          backgroundImage: `url(${chartImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}
       >
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        <div className="absolute inset-0 bg-opacity-50"></div>
         
         <div className="relative max-w-7xl mx-auto">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl text-left">
             {/* Main Slogan */}
             <h2 
               className="text-5xl lg:text-6xl font-bold mb-6 leading-tight"
@@ -619,7 +883,7 @@ const Home: React.FC = () => {
             <button
               className="px-10 py-4 rounded-lg text-white font-bold text-xl uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"
               style={{
-                backgroundColor: '#3bbada', // Lime green color
+                backgroundColor: '#fd8c40', // Lime green color
                 fontFamily: 'Inter, sans-serif'
               }}
             >
