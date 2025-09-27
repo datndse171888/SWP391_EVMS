@@ -1,28 +1,48 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Input } from '../../components/ui/input/authentication/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
+import type { AccountLogin } from '../../types/account/Account';
+import loginBackground from '../../assets/images/login_background.jpg'
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Login: React.FC = () => {
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
+  const [error, setError] = useState<string>('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [account, setAccount] = useState<AccountLogin>({
+    email: '',
+    password: ''
+  });
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', { username, password });
+    setError('');
+
+    try {
+      await login(account.email, account.password);
+      
+      // Redirect to appropriate dashboard based on user role
+      navigate('/');
+      
+    } catch (error: any) {
+      setError(error.message || 'Đăng nhập thất bại');
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50 p-4">
+    <div className={`min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat`}
+      style={{ backgroundImage: `url(${loginBackground})` }}>
       <div className="w-full max-w-md">
         {/* Blur container with light background */}
-        <div className="backdrop-blur-md bg-white/70 rounded-2xl shadow-xl border border-white/20 p-8">
+        <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Please sign in to your account</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6" method='GET'>
             {/* Username Input */}
             <div>
               <Input
@@ -30,8 +50,8 @@ export const Login: React.FC = () => {
                 type="text"
                 label='Username'
                 name='username'
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={account.email}
+                onChange={(e) => setAccount({ ...account, email: e.target.value })}
                 placeholder="Enter your username"
               />
             </div>
@@ -43,15 +63,29 @@ export const Login: React.FC = () => {
                 type="password"
                 label='Password'
                 name='password'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={account.password}
+                onChange={(e) => setAccount({ ...account, password: e.target.value })}
                 placeholder="Enter your password"
               />
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+
             {/* Login Button */}
             <div>
-              <Button variant="primary" size="lg" type="submit">Login</Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </Button>
             </div>
           </form>
 

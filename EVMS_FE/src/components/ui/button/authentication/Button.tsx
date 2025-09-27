@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     const variantStyles = {
         primary: `
             bg-orange-0 hover:bg-orange-6 active:bg-orange-7
-            text-gray-0 
+            text-gray-1 hover:text-gray-0
             focus:ring-orange-1
             shadow-md hover:shadow-lg
             ${disabled ? 'bg-gray-2 text-gray-5 cursor-not-allowed' : ''}
@@ -48,16 +48,16 @@ export const Button: React.FC<ButtonProps> = ({
             ${disabled ? 'bg-gray-2 text-gray-5 cursor-not-allowed' : ''}
         `,
         outline: `
-            bg-azure-1 hover:bg-azure-0 active:bg-azure-6
-            border-2 border-orange-0 hover:border-orange-6
+            bg-yellow-1 hover:bg-yellow-0 active:bg-yellow-6
+            border-2 border-orange-1 hover:border-orange-0
             text-orange-0 hover:text-gray-0
             focus:ring-orange-1
             ${disabled ? 'bg-gray-0 border-gray-3 text-gray-5 cursor-not-allowed' : ''}
         `,
         ghost: `
-            bg-blue-1 hover:bg-blue-0 active:bg-blue-6
-            text-gray-10 hover:text-gray-0
-            focus:ring-blue-1
+            bg-yellow-1 hover:bg-yellow-0 active:bg-yellow-6
+            text-gray-2 hover:text-gray-0
+            focus:ring-yellow-1
             ${disabled ? 'bg-transparent text-gray-5 cursor-not-allowed' : ''}
         `
     };
