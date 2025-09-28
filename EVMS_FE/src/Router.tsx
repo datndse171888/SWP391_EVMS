@@ -3,26 +3,29 @@ import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import { Login } from './pages/authentication/Login'
 import Home from './pages/Home'
 import { Layout } from './components/common/layout/Layout'
-import { 
-  AdminRoute, 
-  StaffRoute, 
-  TechnicianRoute, 
+import {
+  AdminRoute,
+  StaffRoute,
+  TechnicianRoute,
   CustomerRoute
 } from './components/auth/ProtectedRoute'
-import { 
-  AdminLayout, 
-  StaffLayout, 
+import {
+  AdminLayout,
+  StaffLayout,
   TechnicianLayout
 } from './components/layout'
+import { Dashboard } from './pages/admin/Dashboard'
+import { Users } from './pages/admin/Users'
+import { Technicians } from './pages/admin/Technicians'
+import Introduction from './pages/public/Introduction'
+
 
 // Placeholder components for different dashboards
 const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
 const TechnicianDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Technician Dashboard</h1></div>;
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
 const Unauthorized = () => <div className="p-6"><h1 className="text-2xl font-bold text-red-600">Unauthorized Access</h1></div>;
-import { Dashboard } from './pages/admin/Dashboard'
-import { Users } from './pages/admin/Users'
-import { Technicians } from './pages/admin/Technicians'
+
 
 export const Router: React.FC = () => {
   return (
@@ -31,6 +34,7 @@ export const Router: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path="/introduction" element={<Introduction />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />

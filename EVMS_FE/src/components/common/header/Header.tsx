@@ -14,7 +14,7 @@ const Header: React.FC = () => {
 
   const navigationItems = [
     { name: 'TRANG CHỦ', path: '/' },
-    { name: 'GIỚI THIỆU', path: '/about' },
+    { name: 'GIỚI THIỆU', path: '/introduction' },
     { name: 'DỊCH VỤ', path: '/services', hasDropdown: true },
     { name: 'LINH KIỆN', path: '/pages', hasDropdown: true },
     { name: 'LIÊN HỆ', path: '/contact' },
