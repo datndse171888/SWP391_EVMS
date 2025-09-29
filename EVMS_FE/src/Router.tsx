@@ -18,7 +18,7 @@ import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import Introduction from './pages/public/Introduction'
-
+import { Register } from './pages/authentication/Register'
 
 // Placeholder components for different dashboards
 const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
@@ -36,6 +36,7 @@ export const Router: React.FC = () => {
           <Route index element={<Home />} />
           <Route path="/introduction" element={<Introduction />} />
         </Route>
+        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 

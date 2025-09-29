@@ -1,3 +1,4 @@
+import type { AccountRegister } from "../../types/account/Account";
 import { api } from "../../utils/Axios";
 
 // Auth API methods
@@ -6,16 +7,7 @@ export const authApi = {
     return api.post('/auth/login', credentials);
   },
 
-  register: (userData: { 
-    email: string; 
-    password: string; 
-    userName: string;
-    fullName?: string;
-    phoneNumber?: string;
-    photoURL?: string;
-    role?: 'admin' | 'staff' | 'technician' | 'customer';
-    gender?: string;
-  }) => {
+  register: (userData: AccountRegister) => {
     return api.post('/auth/register', userData);
   },
 

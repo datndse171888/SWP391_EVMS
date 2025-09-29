@@ -45,10 +45,10 @@ export const Login: React.FC = () => {
 
     try {
       await login(account.email, account.password);
-      
+
       // Note: User data will be available after login completes
       // We'll handle redirect in useEffect when user state updates
-      
+
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
       setError(errorMessage);
@@ -102,9 +102,9 @@ export const Login: React.FC = () => {
 
             {/* Login Button */}
             <div>
-              <Button 
-                variant="outline" 
-                size="lg" 
+              <Button
+                variant="outline"
+                size="lg"
                 type="submit"
                 disabled={isLoading}
               >
@@ -118,6 +118,17 @@ export const Login: React.FC = () => {
             <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
               Forgot your password?
             </a>
+
+            <div className="text-sm text-gray-600 mt-2">
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
+              >
+                Sign up here
+              </button>
+            </div>
           </div>
         </div>
       </div>
