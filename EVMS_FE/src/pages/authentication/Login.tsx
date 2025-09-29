@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Input } from '../../components/ui/input/authentication/Input'
+import { Input } from '../../components/ui/input/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
 import type { AccountLogin } from '../../types/account/Account';
 import loginBackground from '../../assets/images/login_background.jpg'

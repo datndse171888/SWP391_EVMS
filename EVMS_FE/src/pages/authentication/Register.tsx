@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import type { AccountRegister } from '../../types/account/Account';
 import loginBackground from '../../assets/images/login_background.jpg'
-import { Input } from '../../components/ui/input/authentication/Input'
+import { Input } from '../../components/ui/input/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../services/api/AuthApi';

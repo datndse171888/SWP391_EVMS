@@ -1,23 +1,22 @@
 import React, { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { COLOR } from '../../constants/color/Color';
+import { useAuth } from '../../../contexts/AuthContext';
+import { COLOR } from '../../../constants/color/Color';
 
-interface StaffLayoutProps {
+interface TechnicianLayoutProps {
   children: ReactNode;
 }
 
-export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
+export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  const staffMenuItems = [
-    { name: 'Dashboard', path: '/staff/dashboard', icon: '📊' },
-    { name: 'Quản lý khách hàng', path: '/staff/customers', icon: '👥' },
-    { name: 'Quản lý dịch vụ', path: '/staff/services', icon: '🔧' },
-    { name: 'Lịch hẹn', path: '/staff/appointments', icon: '📅' },
-    { name: 'Báo cáo', path: '/staff/reports', icon: '📈' },
-    { name: 'Hồ sơ cá nhân', path: '/staff/profile', icon: '👤' },
+  const technicianMenuItems = [
+    { name: 'Dashboard', path: '/technician/dashboard', icon: '📊' },
+    { name: 'Công việc của tôi', path: '/technician/tasks', icon: '🔧' },
+    { name: 'Lịch hẹn', path: '/technician/appointments', icon: '📅' },
+    { name: 'Dịch vụ', path: '/technician/services', icon: '⚙️' },
+    { name: 'Hồ sơ cá nhân', path: '/technician/profile', icon: '👤' },
   ];
 
   const isActive = (path: string) => {
@@ -32,7 +31,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
-                Staff Dashboard
+                Technician Dashboard
               </h1>
             </div>
             
@@ -57,7 +56,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         <aside className="w-64 bg-white shadow-sm min-h-screen">
           <nav className="mt-5 px-2">
             <div className="space-y-1">
-              {staffMenuItems.map((item) => (
+              {technicianMenuItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}

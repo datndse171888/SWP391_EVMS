@@ -1,9 +1,10 @@
+import type { AccountLogin } from "../../types/account/Account";
 import type { AccountRegister } from "../../types/account/Account";
 import { api } from "../../utils/Axios";
 
 // Auth API methods
 export const authApi = {
-  login: (credentials: { email: string; password: string }) => {
+  login: (credentials: AccountLogin) => {
     return api.post('/auth/login', credentials);
   },
 

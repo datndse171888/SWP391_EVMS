@@ -1,7 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import { Login } from './pages/authentication/Login'
-import Home from './pages/Home'
+import Home from './pages/public/Home'
 import { Layout } from './components/common/layout/Layout'
 import {
   AdminRoute,
@@ -13,12 +13,14 @@ import {
   AdminLayout,
   StaffLayout,
   TechnicianLayout
-} from './components/layout'
+} from './components/common/layout'
 import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import Introduction from './pages/public/Introduction'
 import { Register } from './pages/authentication/Register'
+import { Test } from './Test'
+
 
 // Placeholder components for different dashboards
 const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
@@ -39,7 +41,8 @@ export const Router: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
-
+        <Route path="/test" element={<Test />} />
+        
         {/* Admin Routes */}
         <Route path="/admin" element={
           <AdminRoute>

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { COLOR } from '../constants/color/Color';
-import homeImage from '../assets/images/home.jpg';
-import cleanImage from '../assets/images/clean.png';
-import motobyImage from '../assets/images/motoby.jpg';
-import scheduleImage from '../assets/images/schedule.png';
-import chartImage from '../assets/images/chart.jpg';
+import homeImage from '../../assets/images/home.jpg';
+import cleanImage from '../../assets/images/clean.png';
+import motobyImage from '../../assets/images/motoby.jpg';
+import scheduleImage from '../../assets/images/schedule.png';
+import chartImage from '../../assets/images/chart.jpg';
+import { COLOR } from '../../constants/color/Color';
 
 // Debug: Log image paths
 console.log('Image paths:', {
