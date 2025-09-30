@@ -62,21 +62,21 @@ export const Login: React.FC = () => {
         {/* Blur container with light background */}
         <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Please sign in to your account</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Đăng Nhập</h1>
+            <p className="text-gray-600">Kết nối mọi sự kiện - Khởi tạo trải nghiệm</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6" method='GET'>
             {/* Username Input */}
             <div>
               <Input
-                id="username"
-                type="text"
-                label='Username'
-                name='username'
+                id="email"
+                type="email"
+                label='Email'
+                name='email'
                 value={account.email}
                 onChange={(e) => setAccount({ ...account, email: e.target.value })}
-                placeholder="Enter your username"
+                placeholder="youremail@gmail.com"
               />
             </div>
 
@@ -85,11 +85,11 @@ export const Login: React.FC = () => {
               <Input
                 id="password"
                 type="password"
-                label='Password'
+                label='Mật khẩu'
                 name='password'
                 value={account.password}
                 onChange={(e) => setAccount({ ...account, password: e.target.value })}
-                placeholder="Enter your password"
+                placeholder="Nhập mật khẩu"
               />
             </div>
 
@@ -116,17 +116,17 @@ export const Login: React.FC = () => {
           {/* Additional Links */}
           <div className="mt-6 text-center">
             <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
-              Forgot your password?
+              Quên mật khẩu?
             </a>
 
             <div className="text-sm text-gray-600 mt-2">
-              Don't have an account?{' '}
+              Chưa có tài khoản?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/register')}
                 className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
               >
-                Sign up here
+                Đăng ký
               </button>
             </div>
           </div>

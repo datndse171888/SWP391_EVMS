@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 
 interface InputProps {
-    type: "text" | "password" | "email";
+    type: "text" | "password" | "email" | "tel";
     id?: string;
     name: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;

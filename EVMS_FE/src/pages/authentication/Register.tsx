@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input/Input'
 import { Button } from '../../components/ui/button/authentication/Button';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../services/api/AuthApi';
+import { Select } from '../../components/ui/input/Select';
 
 
 interface FormError {
@@ -29,7 +30,7 @@ export const Register: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const [confirmPassword, setConfirmPassword] = useState('');
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 
 
@@ -37,38 +38,38 @@ export const Register: React.FC = () => {
   const validateForm = (): boolean => {
     const newError: FormError = {};
 
-    if (!account.fullName.trim()) newError.fullName = 'Fullname is required';
+    if (!account.fullName.trim()) newError.fullName = 'Họ và tên không được để trống';
 
     if (!account.email.trim()) {
-      newError.email = 'Email is required';
+      newError.email = 'Email không được để trống';
     } else if (!/\S+@\S+\.\S+/.test(account.email)) {
-      newError.email = 'Please enter a valid email';
+      newError.email = 'Sai định dạng email';
     }
 
     if (!account.phoneNumber.trim()) {
-      newError.phoneNumber = 'Phone number is required';
+      newError.phoneNumber = 'Số điện thoại không được để trống';
     } else if (!/^\+?[\d\s-()]+$/.test(account.phoneNumber)) {
-      newError.phoneNumber = 'Please enter a valid phone number';
+      newError.phoneNumber = 'Sai định dạng số điện thoại';
     }
 
     if (!account.password) {
-      newError.password = 'Password is required';
+      newError.password = 'Mật khẩu không được để trống';
     } else if (account.password.length < 8) {
-      newError.password = 'Password must be at least 8 characters';
+      newError.password = 'Mật khẩu phải có ít nhất 8 ký tự';
     }
 
     if (!confirmPassword) {
-      newError.confirmPassword = 'Confirm password is required';
+      newError.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     } else if (account.password !== confirmPassword) {
-      newError.confirmPassword = 'Passwords do not match';
+      newError.confirmPassword = 'Mật khẩu xác nhận không khớp';
     }
 
-    if(!account.userName.trim()){
-      newError.userName = 'Username is required';
+    if (!account.userName.trim()) {
+      newError.userName = 'Tên đăng nhập không được để trống';
     }
 
-     if (!account.gender) {
-      newError.gender = 'Please select a gender';
+    if (!account.gender) {
+      newError.gender = 'Vui lòng chọn giới tính';
     }
 
     setError(newError);
@@ -117,11 +118,8 @@ export const Register: React.FC = () => {
         {/* Blur container with light background */}
         <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to EV Repair</h1>
-            <p className="text-gray-600">Join EV Service Center Management System</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Chào mừng</h1>
+            <p className="text-gray-600">Đăng ký ngay để trải nghiệm dịch vụ xe điện tốt nhất</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" method='POST'>
@@ -131,11 +129,11 @@ export const Register: React.FC = () => {
               <Input
                 id="fullname"
                 type="text"
-                label='Fullname'
+                label='Họ và tên'
                 name='fullname'
                 value={account.fullName}
                 onChange={(e) => setAccount({ ...account, fullName: e.target.value })}
-                placeholder="Enter your fullname"
+                placeholder="Nguyen Van A"
               />
             </div>
 
@@ -148,7 +146,7 @@ export const Register: React.FC = () => {
                 name='email'
                 value={account.email}
                 onChange={(e) => setAccount({ ...account, email: e.target.value })}
-                placeholder="Enter your email"
+                placeholder="youremail@gmail.com"
               />
             </div>
 
@@ -156,12 +154,12 @@ export const Register: React.FC = () => {
             <div>
               <Input
                 id="phoneNumber"
-                type="text"
-                label='Phone Number'
+                type="tel"
+                label='Số điện thoại'
                 name='phoneNumber'
                 value={account.phoneNumber}
                 onChange={(e) => setAccount({ ...account, phoneNumber: e.target.value })}
-                placeholder="Enter your phone number"
+                placeholder="03xxxxxxxx"
               />
             </div>
 
@@ -170,54 +168,27 @@ export const Register: React.FC = () => {
               <Input
                 id="username"
                 type="text"
-                label='Username'
+                label='Tên đăng nhập'
                 name='username'
                 value={account.userName}
                 onChange={(e) => setAccount({ ...account, userName: e.target.value })}
-                placeholder="Enter your username"
+                placeholder="NguyenA123"
               />
             </div>
 
-              {/* Gender Selection */}
+            {/* Gender Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gender
-              </label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="male"
-                    checked={account.gender === 'male'}
-                    onChange={(e) => setAccount({ ...account, gender: e.target.value })}
-                    className="mr-2 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-700">Male</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="female"
-                    checked={account.gender === 'female'}
-                    onChange={(e) => setAccount({ ...account, gender: e.target.value })}
-                    className="mr-2 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-700">Female</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="other"
-                    checked={account.gender === 'other'}
-                    onChange={(e) => setAccount({ ...account, gender: e.target.value })}
-                    className="mr-2 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-700">Other</span>
-                </label>
-              </div>
+              <Select
+                label="Giới tính"
+                value={account.gender || ''}
+                onChange={(e) => setAccount({ ...account, gender: e.target.value })}
+                name='gender'
+                option={[
+                  {value: '', label: 'Chọn giới tính'},
+                  { value: 'Male', label: 'Nam' },
+                  { value: 'Female', label: 'Nữ' },
+                  { value: 'Other', label: 'Khác' },
+                ]} />
             </div>
 
             {/* Password Input */}
@@ -226,11 +197,11 @@ export const Register: React.FC = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  label='Password'
+                  label='Mật khẩu'
                   name='password'
                   value={account.password}
                   onChange={(e) => setAccount({ ...account, password: e.target.value })}
-                  placeholder="Enter your password"
+                  placeholder="Nhập mật khẩu"
                 />
                 <button
                   type="button"
@@ -249,11 +220,11 @@ export const Register: React.FC = () => {
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  label='Confirm Password'
+                  label='Xác nhận mật khẩu'
                   name='confirmPassword'
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
-                  placeholder="Confirm your password"
+                  placeholder="Nhập lại mật khẩu"
                 />
                 <button
                   type="button"
@@ -290,13 +261,13 @@ export const Register: React.FC = () => {
           {/* Additional Links */}
           <div className="text-center mt-6">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              Đã có tài khoản?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/login')}
                 className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
               >
-                Sign in here
+                Đăng nhập
               </button>
             </p>
           </div>

@@ -548,7 +548,6 @@
 .focus\:border-orange-8:focus { border-color: #8a4c04; }
 .focus\:border-orange-9:focus { border-color: #673903; }
 .focus\:border-orange-10:focus { border-color: #452602; }
-.hover\:bg-orange-1:hover { background-color: #fbc88d; }
 
 /* Ring Colors for Focus States */
 .ring-gray-0 { --tw-ring-color: #e1e3e7; }
@@ -658,7 +657,6 @@
 .focus\:ring-yellow-8:focus { --tw-ring-color: #885905; }
 .focus\:ring-yellow-9:focus { --tw-ring-color: #664304; }
 .focus\:ring-yellow-10:focus { --tw-ring-color: #442c02; }
-.ring-blue-0 { --tw-ring-color: #014091; }
 
 .focus\:ring-orange-0:focus { --tw-ring-color: #f78b0f; }
 .focus\:ring-orange-1:focus { --tw-ring-color: #fbc88d; }
@@ -671,4 +669,3 @@
 .focus\:ring-orange-8:focus { --tw-ring-color: #8a4c04; }
 .focus\:ring-orange-9:focus { --tw-ring-color: #673903; }
 .focus\:ring-orange-10:focus { --tw-ring-color: #452602; }
-.focus\:ring-blue-0:focus { --tw-ring-color: #014091; }
