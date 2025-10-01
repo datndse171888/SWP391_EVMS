@@ -1,7 +1,6 @@
 import React, { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { COLOR } from '../../../constants/color/Color';
 
 interface TechnicianLayoutProps {
   children: ReactNode;
@@ -42,7 +41,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
               <button
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-white rounded-md hover:bg-red-600 transition-colors"
-                style={{ backgroundColor: COLOR.red[0] }}
+                style={{ backgroundColor: '#ef4444' }}
               >
                 Đăng xuất
               </button>
@@ -66,7 +65,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                   style={{
-                    backgroundColor: isActive(item.path) ? COLOR.blue[0] : 'transparent'
+                    backgroundColor: isActive(item.path) ? '#014091' : 'transparent'
                   }}
                 >
                   <span className="mr-3 text-lg">{item.icon}</span>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { COLOR } from '../../../constants/color/Color';
 import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/images/logo.png';
 
@@ -85,7 +84,7 @@ const Header: React.FC = () => {
       className="fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300"
       style={{ 
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderBottom: `1px solid ${COLOR.gray[2]}`,
+        borderBottom: `1px solid #aaafbb`,
         transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)'
       }}
     >
@@ -127,7 +126,7 @@ const Header: React.FC = () => {
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? COLOR.yellow[0] : COLOR.blue[0],
+                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
                     fontFamily: '"Open Sans", sans-serif',
                     fontSize: '14px',
                     textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
@@ -220,8 +219,8 @@ const Header: React.FC = () => {
                 <button
                   className="px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider transition-all duration-200 hover:shadow-lg"
                   style={{
-                    backgroundColor: COLOR.yellow[0],
-                    color: COLOR.blue[0],
+                    backgroundColor: '#f6ae2d',
+                    color: '#014091',
                     fontFamily: 'Arial, sans-serif'
                   }}
                 >
@@ -262,7 +261,7 @@ const Header: React.FC = () => {
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? COLOR.yellow[0] : COLOR.blue[0],
+                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
                     fontFamily: '"Open Sans", sans-serif',
                     fontSize: '14px',
                     textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
@@ -304,7 +303,7 @@ const Header: React.FC = () => {
                           to={getDashboardPath()}
                           className="block w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200 text-center"
                           style={{
-                            backgroundColor: COLOR.blue[0],
+                            backgroundColor: '#014091',
                             fontFamily: 'Arial, sans-serif'
                           }}
                           onClick={() => setIsMenuOpen(false)}
@@ -316,7 +315,7 @@ const Header: React.FC = () => {
                         to={getProfilePath()}
                         className="block w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200 text-center"
                         style={{
-                          backgroundColor: COLOR.blue[0],
+                          backgroundColor: '#014091',
                           fontFamily: 'Arial, sans-serif'
                         }}
                         onClick={() => setIsMenuOpen(false)}
@@ -330,7 +329,7 @@ const Header: React.FC = () => {
                         }}
                         className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
                         style={{
-                          backgroundColor: COLOR.red[0],
+                          backgroundColor: '#ef4444',
                           fontFamily: 'Arial, sans-serif'
                         }}
                       >
@@ -343,8 +342,8 @@ const Header: React.FC = () => {
                     <button
                       className="w-full px-6 py-3 rounded-lg text-white font-semibold text-sm uppercase tracking-wider transition-all duration-200"
                       style={{
-                        backgroundColor: COLOR.yellow[0],
-                        color: COLOR.blue[0],
+                        backgroundColor: '#f6ae2d',
+                        color: '#014091',
                         fontFamily: 'Arial, sans-serif'
                       }}
                     >

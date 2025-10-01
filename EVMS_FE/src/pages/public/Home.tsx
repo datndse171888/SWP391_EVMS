@@ -4,7 +4,6 @@ import cleanImage from '../../assets/images/clean.png';
 import motobyImage from '../../assets/images/motoby.jpg';
 import scheduleImage from '../../assets/images/schedule.png';
 import chartImage from '../../assets/images/chart.jpg';
-import { COLOR } from '../../constants/color/Color';
 
 // Debug: Log image paths
 console.log('Image paths:', {
@@ -132,8 +131,8 @@ const Home: React.FC = () => {
               <button
                 className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"
                 style={{
-                  backgroundColor: COLOR.yellow[0],
-                  color: COLOR.blue[0],
+                  backgroundColor: '#f6ae2d',
+                  color: '#014091',
                   fontFamily: 'Inter, sans-serif'
                 }}
               >
@@ -164,13 +163,13 @@ const Home: React.FC = () => {
               <div key={index} className="text-center">
                 <div 
                   className="text-4xl lg:text-5xl font-bold mb-2"
-                  style={{ color: COLOR.blue[0] }}
+                  style={{ color: '#014091' }}
                 >
                   {stat.number}
                 </div>
                 <div 
                   className="text-lg font-semibold"
-                  style={{ color: COLOR.gray[6] }}
+                  style={{ color: '#5f6777' }}
                 >
                   {stat.label}
                 </div>
@@ -188,7 +187,7 @@ const Home: React.FC = () => {
             <div className="relative">
               <div 
                 className="relative overflow-hidden rounded-lg"
-                style={{ border: `2px solid ${COLOR.yellow[0]}` }}
+                style={{ border: `2px solid #f6ae2d` }}
               >
                 <div 
                   className="aspect-[4/3] bg-cover bg-center"
@@ -201,17 +200,17 @@ const Home: React.FC = () => {
               {/* Experience Badge */}
               <div 
                 className="absolute -top-4 -left-4 bg-white rounded-lg shadow-lg p-4 border-2"
-                style={{ borderColor: COLOR.yellow[0] }}
+                style={{ borderColor: '#f6ae2d' }}
               >
                 <div 
                   className="text-3xl font-bold text-center"
-                  style={{ color: COLOR.yellow[0] }}
+                  style={{ color: '#f6ae2d' }}
                 >
                   5+
                 </div>
                 <div 
                   className="text-xs font-bold uppercase tracking-wider text-center"
-                  style={{ color: COLOR.blue[0] }}
+                  style={{ color: '#014091' }}
                 >
                   Năm kinh nghiệm
                 </div>
@@ -222,14 +221,14 @@ const Home: React.FC = () => {
             <div className="space-y-6">
               <div 
                 className="text-sm font-bold uppercase tracking-wider"
-                style={{ color: COLOR.azure[0] }}
+                style={{ color: '#0991f3' }}
               >
                 CHÚNG TÔI LÀ AI
               </div>
               
               <h2 
                 className="text-4xl lg:text-5xl font-bold leading-tight"
-                style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
               >
                 Chúng tôi là bạn đồng hành bảo đảm sức khỏe cho xe của bạn!
               </h2>
@@ -245,8 +244,8 @@ const Home: React.FC = () => {
               <button
                 className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"
                 style={{
-                  backgroundColor: COLOR.yellow[0],
-                  color: COLOR.blue[0]
+                  backgroundColor: '#f6ae2d',
+                  color: '#014091'
                 }}
               >
                 THÊM VỀ CHÚNG TÔI
@@ -264,13 +263,13 @@ const Home: React.FC = () => {
             <div>
               <div 
                 className="text-sm font-bold uppercase tracking-wider mb-4"
-                style={{ color: COLOR.azure[0] }}
+                style={{ color: '#0991f3' }}
               >
                 CHÚNG TÔI MANG ĐẾN
               </div>
               <h2 
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-4"
-                style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
               >
                 Sửa Chữa &
                 <br />
@@ -284,7 +283,7 @@ const Home: React.FC = () => {
               <a 
                 href="#services" 
                 className="inline-flex items-center text-lg font-semibold transition-all duration-200 hover:opacity-80"
-                style={{ color: COLOR.azure[0] }}
+                style={{ color: '#0991f3' }}
               >
                 TẤT CẢ DỊCH VỤ
                 <svg className="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 20 20">
@@ -301,7 +300,7 @@ const Home: React.FC = () => {
               <div className="p-6">
                 <h3 
                   className="text-xl font-bold mb-3"
-                  style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
                 >
                   Bảo Dưỡng Định Kỳ
                 </h3>
@@ -310,13 +309,13 @@ const Home: React.FC = () => {
                 </p>
                 <div 
                   className="w-12 h-0.5 mb-4"
-                  style={{ backgroundColor: COLOR.yellow[0] }}
+                style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
               <div 
                 className="relative h-64 overflow-hidden"
                 style={{
-                  background: `linear-gradient(135deg, ${COLOR.azure[1]}, ${COLOR.blue[1]})`
+                  background: `linear-gradient(135deg, #8dcdfa, #8abdfe)`
                 }}
               >
                 <img 
@@ -344,7 +343,7 @@ const Home: React.FC = () => {
               <div className="p-6">
                 <h3 
                   className="text-xl font-bold mb-3"
-                  style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
                 >
                   Vệ Sinh Xe Toàn Diện
                 </h3>
@@ -353,13 +352,13 @@ const Home: React.FC = () => {
                 </p>
                 <div 
                   className="w-12 h-0.5 mb-4"
-                  style={{ backgroundColor: COLOR.yellow[0] }}
+                style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
               <div 
                 className="relative h-64 overflow-hidden"
                 style={{
-                  background: `linear-gradient(135deg, ${COLOR.blue[1]}, ${COLOR.azure[0]})`
+                  background: `linear-gradient(135deg, #8abdfe, #0991f3)`
                 }}
               >
                 <img 
@@ -387,7 +386,7 @@ const Home: React.FC = () => {
               <div className="p-6">
                 <h3 
                   className="text-xl font-bold mb-3"
-                  style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
                 >
                   Bảo Dưỡng Xe Máy Điện
                 </h3>
@@ -396,13 +395,13 @@ const Home: React.FC = () => {
                 </p>
                 <div 
                   className="w-12 h-0.5 mb-4"
-                  style={{ backgroundColor: COLOR.yellow[0] }}
+                style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
               <div 
                 className="relative h-64 overflow-hidden"
                 style={{
-                  background: `linear-gradient(135deg, ${COLOR.yellow[1]}, ${COLOR.blue[1]})`
+                  background: `linear-gradient(135deg, #fad38e, #8abdfe)`
                 }}
               >
                 <img 
@@ -434,13 +433,13 @@ const Home: React.FC = () => {
           <div className="text-center mb-16">
             <div 
               className="text-sm font-bold uppercase tracking-wider mb-4"
-              style={{ color: COLOR.azure[0] }}
+              style={{ color: '#0991f3' }}
             >
               GÓI DỊCH VỤ
             </div>
             <h2 
               className="text-4xl lg:text-5xl font-bold mb-6"
-              style={{ color: COLOR.blue[0] }}
+              style={{ color: '#014091' }}
             >
               Chọn gói dịch vụ phù hợp với nhu cầu của bạn
             </h2>
@@ -455,7 +454,7 @@ const Home: React.FC = () => {
               <div className="bg-gray-100 rounded-xl p-8 h-full">
                 <h3 
                   className="text-3xl font-bold mb-4 text-center"
-                  style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
                 >
                   Cơ Bản
                 </h3>
@@ -465,7 +464,7 @@ const Home: React.FC = () => {
                 <div className="mb-6 text-center">
                   <span 
                     className="text-5xl font-bold"
-                    style={{ color: COLOR.blue[0] }}
+                  style={{ color: '#014091' }}
                   >
                     200.000₫
                   </span>
@@ -507,7 +506,7 @@ const Home: React.FC = () => {
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
                   style={{
                     color: 'white',
-                    backgroundColor: COLOR.blue[0]
+                    backgroundColor: '#014091'
                   }}
                 >
                   CHỌN GÓI
@@ -524,8 +523,8 @@ const Home: React.FC = () => {
               <div 
                 className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
                 style={{ 
-                  backgroundColor: COLOR.yellow[0],
-                  color: COLOR.blue[0]
+                  backgroundColor: '#f6ae2d',
+                  color: '#014091'
                 }}
               >
                 LỰA CHỌN TỐT NHẤT
@@ -534,7 +533,7 @@ const Home: React.FC = () => {
               <div 
                 className="rounded-xl p-8 h-full"
                 style={{
-                  background: `linear-gradient(135deg, ${COLOR.blue[2]}, ${COLOR.blue[1]}, ${COLOR.blue[0]})`
+                  background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
                 }}
               >
                 <h3 className="text-3xl font-bold mb-4 text-white text-center">
@@ -584,8 +583,8 @@ const Home: React.FC = () => {
                 <button
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
                     style={{
-                    color: COLOR.blue[0],
-                    backgroundColor: COLOR.yellow[0]
+                    color: '#014091',
+                    backgroundColor: '#f6ae2d'
                   }}
                 >
                   CHỌN GÓI
@@ -601,7 +600,7 @@ const Home: React.FC = () => {
               <div className="bg-gray-100 rounded-xl p-8 h-full">
                   <h3 
                   className="text-3xl font-bold mb-4 text-center"
-                    style={{ color: COLOR.blue[0] }}
+                    style={{ color: '#014091' }}
                   >
                   Cao Cấp
                   </h3>
@@ -611,7 +610,7 @@ const Home: React.FC = () => {
                 <div className="mb-6 text-center">
                   <span 
                     className="text-5xl font-bold"
-                    style={{ color: COLOR.blue[0] }}
+                    style={{ color: '#014091' }}
                   >
                     800.000₫
                   </span>
@@ -653,7 +652,7 @@ const Home: React.FC = () => {
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
                   style={{
                     color: 'white',
-                    backgroundColor: COLOR.blue[0]
+                    backgroundColor: '#014091'
                   }}
                 >
                   CHỌN GÓI
@@ -676,19 +675,19 @@ const Home: React.FC = () => {
             <div>
               <div 
                 className="text-sm font-bold uppercase tracking-wider mb-4"
-                style={{ color: COLOR.azure[0] }}
+                style={{ color: '#0991f3' }}
               >
                 KHO LINH KIỆN CỦA CHÚNG TÔI
               </div>
               <h2 
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-4"
-                style={{ color: COLOR.blue[0] }}
+                style={{ color: '#014091' }}
               >
                 Phụ tùng chính hãng với chất lượng đảm bảo
               </h2>
               <div 
                 className="w-16 h-1 mb-8"
-                style={{ backgroundColor: COLOR.yellow[0] }}
+                style={{ backgroundColor: '#f6ae2d' }}
               ></div>
             </div>
 
@@ -700,8 +699,8 @@ const Home: React.FC = () => {
               <button
                 className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105 self-start"
                 style={{
-                  backgroundColor: COLOR.yellow[0],
-                  color: COLOR.blue[0]
+                  backgroundColor: '#f6ae2d',
+                  color: '#014091'
                 }}
               >
                 KHÁM PHÁ THÊM
@@ -767,7 +766,7 @@ const Home: React.FC = () => {
                     index === currentSlide ? '' : 'bg-gray-400'
                   }`}
                   style={{ 
-                    backgroundColor: index === currentSlide ? COLOR.yellow[0] : '#9CA3AF'
+                    backgroundColor: index === currentSlide ? '#f6ae2d' : '#9CA3AF'
                   }}
                 ></button>
               ))}
@@ -784,7 +783,7 @@ const Home: React.FC = () => {
           <div className="text-center mb-16">
             <h2 
               className="text-4xl lg:text-5xl font-bold mb-6"
-              style={{ color: COLOR.blue[0] }}
+              style={{ color: '#014091' }}
             >
               Khách hàng nói gì về chúng tôi?
             </h2>
@@ -817,14 +816,14 @@ const Home: React.FC = () => {
                 <div className="flex items-center">
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4"
-                    style={{ backgroundColor: COLOR.azure[1] }}
+                    style={{ backgroundColor: '#8dcdfa' }}
                   >
                     {testimonial.avatar}
                   </div>
                   <div>
                     <div 
                       className="font-bold"
-                      style={{ color: COLOR.blue[0] }}
+                      style={{ color: '#014091' }}
                     >
                       {testimonial.name}
                     </div>
