@@ -4,11 +4,17 @@ import { Service } from '../models/Service.js';
 
 export async function createServicePackage(req: Request, res: Response) {
   try {
-    // Expecting serviceItems: [{ serviceID, duration }]
+    // Expecting serviceItems: [{ serviceID }] - duration từng service tự lấy từ Service
     const { name, description, price, duration, status, discount, serviceItems, createAt, updateAt } = req.body as any;
     if (!name || price === undefined) {
       return res.status(400).json({ message: 'Thiếu name hoặc price' });
     }
+
+    // Giới hạn giảm giá < 15%
+    if (discount !== undefined && (discount < 0 || discount >= 15)) {
+      return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    }
+    
     let services: any[] | undefined = undefined;
     let finalDuration: number | undefined = duration;
     if (Array.isArray(serviceItems) && serviceItems.length > 0) {
@@ -26,7 +32,7 @@ export async function createServicePackage(req: Request, res: Response) {
             serviceID: String(doc._id),
             name: doc.name,
             price: doc.price,
-            duration: item.duration,
+            duration: doc.duration, // chỉ dùng duration từ Service
           };
         })
         .filter(Boolean) as any[];
@@ -128,6 +134,11 @@ export async function updateServicePackage(req: Request, res: Response) {
     const existing: any = await ServicePackage.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ message: 'Không tìm thấy gói dịch vụ' });
 
+    // Giới hạn giảm giá < 15%
+    if (discount !== undefined && (discount < 0 || discount >= 15)) {
+      return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    }
+
     let resolvedServices = services ?? existing.services;
     let finalDuration: number | undefined = duration ?? existing.duration;
 
@@ -147,7 +158,7 @@ export async function updateServicePackage(req: Request, res: Response) {
             serviceID: String(doc._id),
             name: doc.name,
             price: doc.price,
-            duration: item.duration,
+            duration: doc.duration, // chỉ dùng duration từ Service
           };
         })
         .filter(Boolean) as any[];
@@ -228,5 +239,3 @@ export async function deleteServicePackage(req: Request, res: Response) {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
-
-

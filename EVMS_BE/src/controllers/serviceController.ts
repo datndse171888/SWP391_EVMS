@@ -3,12 +3,12 @@ import { Service } from '../models/Service.js';
 
 export async function createService(req: Request, res: Response) {
   try {
-    const { name, price, description, image, status } = req.body;
-    if (!name || price === undefined) {
-      return res.status(400).json({ message: 'Thiếu name hoặc price' });
+    const { name, price, duration, description, image, status } = req.body;
+    if (!name || price === undefined || duration === undefined) {
+      return res.status(400).json({ message: 'Thiếu name, price hoặc duration' });
     }
 
-    const created = await Service.create({ name, price, description, image, status });
+    const created = await Service.create({ name, price, duration, description, image, status });
     return res.status(201).json({ message: 'Tạo dịch vụ thành công', service: created });
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -51,10 +51,10 @@ export async function getServiceById(req: Request, res: Response) {
 
 export async function updateService(req: Request, res: Response) {
   try {
-    const { name, price, description, image, status } = req.body;
+    const { name, price, duration, description, image, status } = req.body;
     const updated = await Service.findByIdAndUpdate(
       req.params.id,
-      { name, price, description, image, status },
+      { name, price, duration, description, image, status },
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
