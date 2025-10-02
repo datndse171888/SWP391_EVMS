@@ -8,6 +8,10 @@ export const authApi = {
     return api.post('/auth/login', credentials);
   },
 
+  loginWithGoogle: (data: { email: string; userName: string; photoURL?: string }) => {
+    return api.post('/auth/google-login', data);
+  },
+
   register: (userData: AccountRegister) => {
     return api.post('/auth/register', userData);
   },

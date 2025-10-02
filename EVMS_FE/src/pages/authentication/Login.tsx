@@ -5,10 +5,12 @@ import { Button } from '../../components/ui/button/authentication/Button';
 import type { AccountLogin } from '../../types/account/Account';
 import loginBackground from '../../assets/images/login_background.jpg'
 import { useAuth } from '../../contexts/AuthContext';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
+import { jwtDecode } from 'jwt-decode'
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading, user } = useAuth();
+  const { login, loginWithGoogle, isLoading, user } = useAuth();
   const [error, setError] = useState<string>('');
 
   const [account, setAccount] = useState<AccountLogin>({
@@ -53,6 +55,36 @@ export const Login: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
       setError(errorMessage);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    try {
+      setError('');
+      const credential = credentialResponse.credential;
+      if (!credential) {
+        throw new Error('Không nhận được mã xác thực từ Google');
+      }
+
+      interface GoogleJwtPayload { email?: string; name?: string; picture?: string }
+      const decoded = jwtDecode<GoogleJwtPayload>(credential);
+      const email: string = decoded?.email ?? '';
+      const userName: string = decoded?.name || (email ? email.split('@')[0] : 'google_user');
+      const photoURL: string | undefined = decoded?.picture || undefined;
+
+      if (!email) {
+        throw new Error('Không lấy được email từ Google');
+      }
+
+      await loginWithGoogle({ email, userName, photoURL });
+      // redirect is handled by useEffect when user updates
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Đăng nhập Google thất bại';
+      setError(errorMessage);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Không thể đăng nhập với Google. Vui lòng thử lại.');
   };
 
   return (
@@ -112,6 +144,19 @@ export const Login: React.FC = () => {
               </Button>
             </div>
           </form>
+
+          {/* Or divider and Google Login Button */}
+          <div className="mt-4">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-white/40"></div>
+              <span className="mx-4 text-gray-700 text-sm">hoặc</span>
+              <div className="flex-grow border-t border-white/40"></div>
+            </div>
+
+            <div className="mt-4 w-full">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} useOneTap />
+            </div>
+          </div>
 
           {/* Additional Links */}
           <div className="mt-6 text-center">

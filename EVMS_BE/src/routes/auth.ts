@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller.js';
+import { register, login, loginWithGoogle } from '../controllers/auth.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const authRouter = Router();
@@ -7,6 +7,7 @@ export const authRouter = Router();
 // Public routes
 authRouter.post('/register', register);
 authRouter.post('/login', login);
+authRouter.post('/google-login', loginWithGoogle);
 
 // Protected routes
 authRouter.get('/profile', authMiddleware, (req, res) => {

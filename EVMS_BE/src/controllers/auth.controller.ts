@@ -109,3 +109,103 @@ export async function login(req: Request, res: Response) {
 }
 
 
+export async function loginWithGoogle(req: Request, res: Response) {
+  try {
+    // Accept both camelCase and snake-case-like fields from FE
+    const { email, username, userName: userNameInput, photoUrl, photoURL: photoURLInput } = req.body as {
+      email?: string;
+      username?: string;
+      userName?: string;
+      photoUrl?: string;
+      photoURL?: string;
+    };
+
+    if (!email) {
+      return res.status(400).json({ message: 'Thiếu email' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Helper to generate a short random string
+    const randomText = (len: number) => Math.random().toString(36).slice(2, 2 + len);
+
+    // Derive username: prefer provided username, else userNameInput, else from email prefix
+    const baseUserName = (username || userNameInput || normalizedEmail.split('@')[0]).trim();
+    const formattedUserName = `${baseUserName}-${randomText(5)}`;
+
+    const normalizedPhoto = (photoUrl ?? photoURLInput ?? '').toString();
+
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      // Create a random password hash (Google users will not use password login)
+      const randomPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36);
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+      user = await User.create({
+        email: normalizedEmail,
+        userName: formattedUserName,
+        passwordHash,
+        photoURL: normalizedPhoto,
+        role: 'customer',
+      });
+    } else {
+      if (user.isDisabled) {
+        return res.status(403).json({
+          message:
+            'Tài khoản của bạn đã bị khóa! Vui lòng liên hệ quản trị viên để được hỗ trợ',
+        });
+      }
+
+      // Update minimal profile fields if empty
+      if (!user.photoURL && normalizedPhoto) {
+        user.photoURL = normalizedPhoto;
+      }
+      if (!user.userName) {
+        user.userName = baseUserName;
+      }
+      await user.save();
+    }
+
+    const secret: Secret | undefined = env.jwtSecret as unknown as Secret;
+    if (!secret) {
+      return res.status(500).json({ message: 'Thiếu JWT_SECRET' });
+    }
+
+    const payload = { sub: String(user._id), role: user.role } as const;
+    const token = jwt.sign(
+      payload,
+      secret as Secret,
+      { expiresIn: (env.jwtExpiresIn || '1d') as any } as any
+    );
+
+    // Respond in a way compatible with both current FE and the provided snippet
+    return res.status(200).json({
+      message: 'Đăng nhập thành công!',
+      data: {
+        id: user._id,
+        username: user.userName,
+        email: user.email,
+        role: user.role,
+        isVerified: true,
+        token,
+      },
+      accessToken: token,
+      user: {
+        id: user._id,
+        email: user.email,
+        userName: user.userName,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        photoURL: user.photoURL,
+        role: user.role,
+        gender: user.gender,
+        isDisabled: user.isDisabled,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Đã xảy ra lỗi khi xử lý đăng nhập Google' });
+  }
+}
+
+

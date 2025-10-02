@@ -21,6 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (payload: { email: string; userName: string; photoURL?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   hasRole: (roles: string | string[]) => boolean;
@@ -85,6 +86,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.response?.data?.message || 'Đăng nhập thất bại');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Google Login function
+  const loginWithGoogle = async (payload: { email: string; userName: string; photoURL?: string }): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const response = await authApi.loginWithGoogle(payload);
+      const { accessToken, user: userData } = response.data;
+
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setToken(accessToken);
+      setUser(userData);
+    } catch (error: any) {
+      console.error('Google Login error:', error);
+      throw new Error(error.response?.data?.message || 'Đăng nhập Google thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated,
     login,
+    loginWithGoogle,
     logout,
     updateUser,
     hasRole,
