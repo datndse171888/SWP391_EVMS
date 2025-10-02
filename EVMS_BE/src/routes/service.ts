@@ -10,8 +10,8 @@ serviceRouter.get('/', getServices);
 serviceRouter.get('/:id', getServiceById);
 
 // Admin/staff manage
-serviceRouter.post('/', authMiddleware, roleMiddleware(['admin', 'staff']), createService);
-serviceRouter.put('/:id', authMiddleware, roleMiddleware(['admin', 'staff']), updateService);
+serviceRouter.post('/', authMiddleware, roleMiddleware(['admin']), createService);
+serviceRouter.put('/:id', authMiddleware, roleMiddleware(['admin']), updateService);
 serviceRouter.delete('/:id', authMiddleware, roleMiddleware(['admin']), deleteService); 
 
 
