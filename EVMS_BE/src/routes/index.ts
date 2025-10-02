@@ -1,6 +1,8 @@
 ﻿import { Router } from 'express';
 import { authRouter } from './auth.js';
 import { demoRouter } from './demo.js';
+import { appointmentRouter } from './appointment.js';
+import { serviceRouter } from './service.js';
 
 import { userRouter } from './user.js';
 
@@ -10,3 +12,5 @@ router.get('/health', (_req, res) => { res.json({ status: 'ok' }); });
 router.use('/auth', authRouter);
 router.use('/demo', demoRouter);
 router.use('/users', userRouter);
+router.use('/appointments', appointmentRouter);
+router.use('/services', serviceRouter);
