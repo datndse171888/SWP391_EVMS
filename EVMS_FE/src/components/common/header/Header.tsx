@@ -14,7 +14,7 @@ const Header: React.FC = () => {
   const navigationItems = [
     { name: 'TRANG CHỦ', path: '/' },
     { name: 'GIỚI THIỆU', path: '/introduction' },
-    { name: 'DỊCH VỤ', path: '/services', hasDropdown: true },
+    { name: 'DỊCH VỤ', path: '/service', hasDropdown: true },
     { name: 'LINH KIỆN', path: '/pages', hasDropdown: true },
     { name: 'LIÊN HỆ', path: '/contact' },
   ];
@@ -143,7 +143,7 @@ const Header: React.FC = () => {
                 {item.hasDropdown && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="py-2">
-                      <Link to="/services/car" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link to="/carService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng ô tô điện
                       </Link>
                       <Link to="/services/motorcycle" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">

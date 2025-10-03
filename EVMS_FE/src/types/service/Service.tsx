@@ -1,0 +1,18 @@
+export interface Service {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    duration: string;
+    image: string;
+}
+
+
+export interface Reason {
+    id: number;
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    color: string;
+    
+}

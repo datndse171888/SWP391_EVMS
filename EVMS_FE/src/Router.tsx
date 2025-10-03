@@ -20,6 +20,8 @@ import { Technicians } from './pages/admin/Technicians'
 import Introduction from './pages/public/Introduction'
 import { Register } from './pages/authentication/Register'
 import { Test } from './Test'
+import { CarServicePage } from './pages/public/Service/CarServicePage'
+import Service from './pages/public/Service/Service'
 
 
 // Placeholder components for different dashboards
@@ -37,6 +39,8 @@ export const Router: React.FC = () => {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="/introduction" element={<Introduction />} />
+          <Route path="/service" element={<Service />} />
+          <Route path="/carService" element={<CarServicePage />} />
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />

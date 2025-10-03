@@ -120,6 +120,7 @@ export const Register: React.FC = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Chào mừng</h1>
             <p className="text-gray-600">Đăng ký ngay để trải nghiệm dịch vụ xe điện tốt nhất</p>
+
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" method='POST'>
