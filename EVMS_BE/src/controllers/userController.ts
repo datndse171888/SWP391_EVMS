@@ -30,9 +30,10 @@ export async function updateUserStatus(req: Request, res: Response) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
-    // Staff không được phép thao tác tài khoản admin
-    if (req.user.role === 'staff' && target.role === 'admin') {
-      return res.status(403).json({ message: 'Staff không được phép thay đổi trạng thái tài khoản admin' });
+    // Theo yêu cầu hệ thống chỉ có 1 admin và admin chỉ đổi 3 role còn lại
+    // Không cho phép đổi trạng thái tài khoản có role 'admin' (kể cả bởi admin)
+    if (target.role === 'admin') {
+      return res.status(403).json({ message: 'Không được phép thay đổi trạng thái tài khoản admin' });
     }
 
     target.isDisabled = isDisabled;

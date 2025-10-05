@@ -10,5 +10,5 @@ userRouter.post('/', createUser);
 userRouter.get('/certificates', getCertificates);
 userRouter.get('/:userId/technician', getTechnicianInfo);
 userRouter.get('/:userId/certificates', getTechnicianCertificates);
-// Update user status (enable/disable) - admin or staff only
-userRouter.patch('/:userId/status', authMiddleware, staffOnly, updateUserStatus);
+// Update user status (enable/disable) - admin only (the system has single admin)
+userRouter.patch('/:userId/status', authMiddleware, adminOnly, updateUserStatus);
