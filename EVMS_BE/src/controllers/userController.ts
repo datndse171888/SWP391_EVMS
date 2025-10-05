@@ -6,6 +6,51 @@ import { Technician } from '../models/Technician.js';
 import { TechnicianCertificate } from '../models/TechnicianCertificate.js';
 import { Certificate } from '../models/Certificate.js';
 
+export async function updateUserStatus(req: Request, res: Response) {
+  try {
+    const { userId } = req.params as { userId: string };
+    const { isDisabled } = req.body as { isDisabled?: boolean };
+
+    if (typeof isDisabled !== 'boolean') {
+      return res.status(400).json({ message: 'Thiếu hoặc sai kiểu isDisabled (boolean)' });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Không cho tự vô hiệu hóa/chỉnh trạng thái chính mình
+    if (req.user.id === userId) {
+      return res.status(400).json({ message: 'Không thể thay đổi trạng thái tài khoản của chính bạn' });
+    }
+
+    // Tìm user mục tiêu
+    const target = await User.findById(userId);
+    if (!target) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Staff không được phép thao tác tài khoản admin
+    if (req.user.role === 'staff' && target.role === 'admin') {
+      return res.status(403).json({ message: 'Staff không được phép thay đổi trạng thái tài khoản admin' });
+    }
+
+    target.isDisabled = isDisabled;
+    await target.save();
+
+    const sanitized = await User.findById(userId).select('-passwordHash').lean();
+
+    return res.status(200).json({
+      success: true,
+      message: isDisabled ? 'Đã vô hiệu hóa tài khoản' : 'Đã kích hoạt tài khoản',
+      data: { user: sanitized }
+    });
+  } catch (error) {
+    console.error('Lỗi cập nhật trạng thái người dùng:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật trạng thái người dùng' });
+  }
+}
+
 export async function getAllUsers(req: Request, res: Response) {
   try {
     const page = parseInt(req.query.page as string) || 1;
