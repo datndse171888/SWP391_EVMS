@@ -123,7 +123,7 @@ export const Users: React.FC = () => {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="bg-yellow-0 text-blue-0 px-6 py-3 rounded-xl hover:bg-yellow-0 hover:opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -145,7 +145,7 @@ export const Users: React.FC = () => {
                     placeholder="Tìm kiếm theo tên, email, số điện thoại..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent"
                   />
                   <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
@@ -156,7 +156,7 @@ export const Users: React.FC = () => {
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent"
                 >
                   <option value="all">Tất cả vai trò</option>
                   <option value="admin">Admin</option>
@@ -167,7 +167,7 @@ export const Users: React.FC = () => {
               </div>
               <button
                 type="submit"
-                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="bg-yellow-0 text-blue-0 px-6 py-3 rounded-xl hover:opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Tìm kiếm
               </button>
@@ -178,14 +178,14 @@ export const Users: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-azure-0"></div>
                 <span className="ml-3 text-gray-600">Đang tải...</span>
               </div>
             ) : (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
                         <th className="text-left py-4 px-6 text-gray-600 font-semibold">Người dùng</th>
                         <th className="text-left py-4 px-6 text-gray-600 font-semibold">Vai trò</th>
@@ -193,12 +193,12 @@ export const Users: React.FC = () => {
                         <th className="text-left py-4 px-6 text-gray-600 font-semibold">Chi tiết</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {users.map((user) => (
-                        <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
+                        <tr key={user._id} className="hover:bg-gray-50 transition-colors duration-200">
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-md">
+                              <div className="w-12 h-12 rounded-full bg-blue-0 flex items-center justify-center shadow-md">
                                 {user.photoURL ? (
                                   <img
                                     src={user.photoURL}
@@ -235,7 +235,7 @@ export const Users: React.FC = () => {
                           <td className="py-4 px-6">
                             <button
                               onClick={() => handleViewDetails(user)}
-                              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+                              className="px-4 py-2 rounded-lg border border-yellow-0 text-yellow-0 hover:bg-yellow-0 hover:text-blue-0 transition-all duration-200 shadow-sm hover:shadow text-sm"
                             >
                               Xem chi tiết
                             </button>

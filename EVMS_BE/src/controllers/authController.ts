@@ -4,6 +4,75 @@ import { User } from '../models/User.js';
 import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Chưa đăng nhập' });
+    }
+
+    const { fullName, phoneNumber, photoURL, gender, userName } = req.body as Partial<{
+      fullName: string;
+      phoneNumber: string;
+      photoURL: string;
+      gender: string;
+      userName: string;
+    }>;
+
+    // Chỉ cho phép cập nhật các field cho phép
+    const update: any = {};
+    if (typeof fullName === 'string') update.fullName = fullName.trim();
+    if (typeof phoneNumber === 'string') update.phoneNumber = phoneNumber.trim();
+    if (typeof photoURL === 'string') update.photoURL = photoURL.trim();
+    if (typeof gender === 'string') update.gender = gender.trim();
+    if (typeof userName === 'string' && userName.trim()) update.userName = userName.trim();
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: 'Không có dữ liệu để cập nhật' });
+    }
+
+    // Nếu đổi username, kiểm tra trùng
+    if (update.userName) {
+      const existed = await User.findOne({ userName: update.userName, _id: { $ne: userId } }).lean();
+      if (existed) {
+        return res.status(400).json({ message: 'userName đã tồn tại' });
+      }
+    }
+
+    const updated = await User.findByIdAndUpdate(userId, update, { new: true })
+      .select('-passwordHash')
+      .lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật hồ sơ thành công',
+      data: {
+        user: {
+          id: updated._id,
+          email: updated.email,
+          userName: updated.userName,
+          fullName: updated.fullName,
+          phoneNumber: updated.phoneNumber,
+          photoURL: updated.photoURL,
+          role: updated.role,
+          gender: updated.gender,
+          isDisabled: updated.isDisabled,
+        },
+      },
+    });
+  } catch (error) {
+    // Validation error
+    if ((error as any)?.name === 'ValidationError') {
+      return res.status(422).json({ message: 'Dữ liệu không hợp lệ' });
+    }
+    return res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật hồ sơ' });
+  }
+}
+
 export async function register(req: Request, res: Response) {
   try {
     const { email, password, userName, fullName, phoneNumber, photoURL, role, gender } = req.body;
