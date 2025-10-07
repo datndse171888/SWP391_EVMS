@@ -1,17 +1,14 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/authMiddleware.js';
-import { authenticatedOnly } from '../middleware/roleMiddleware.js';
-import { sendMessage, listMessagesByConversation, getMessage } from '../controllers/messageController.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
+import { sendMessage, listMessagesByConversationID } from '../controllers/messageController.js';
 
 export const messageRouter = Router();
 
 // Gửi message (user/staff thuộc conversation)
-messageRouter.post('/', authMiddleware, authenticatedOnly, sendMessage);
+messageRouter.post('/', authMiddleware, roleMiddleware(['customer','staff']), sendMessage);
 
 // Lấy danh sách message theo conversation
-messageRouter.get('/by-conversation/:conversationID', authMiddleware, listMessagesByConversation);
-
-// Lấy chi tiết message
-messageRouter.get('/:id', authMiddleware, getMessage);
+messageRouter.get('/by-conversation/:conversationID', authMiddleware, listMessagesByConversationID);
 
 

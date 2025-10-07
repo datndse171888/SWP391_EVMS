@@ -4,22 +4,23 @@ import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
 import { User } from '../models/User.js';
 
-export async function sendMessage(req: Request, res: Response) {
+export async function sendMessage(req: Request, res: Response) { 
   try {
-    const { conversationID, senderID, content } = req.body as {
+    const { conversationID, content } = req.body as {
       conversationID?: string;
-      senderID?: string;
       content?: string;
     };
 
     if (!conversationID || !mongoose.Types.ObjectId.isValid(conversationID)) {
       return res.status(400).json({ message: 'conversationID không hợp lệ' });
     }
-    if (!senderID || !mongoose.Types.ObjectId.isValid(senderID)) {
-      return res.status(400).json({ message: 'senderID không hợp lệ (sai định dạng ObjectId)' });
-    }
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'content không được rỗng' });
+    }
+
+    const currentUserId = req.user?.id?.toString();
+    if (!currentUserId || !mongoose.Types.ObjectId.isValid(currentUserId)) {
+      return res.status(401).json({ message: 'Không xác thực được người dùng' });
     }
 
     const conv = await Conversation
@@ -30,19 +31,19 @@ export async function sendMessage(req: Request, res: Response) {
       return res.status(404).json({ message: 'Không tìm thấy conversation' });
     }
 
-    const sender = await User.findById(senderID).select('_id role isDisabled').lean();
+    const sender = await User.findById(currentUserId).select('_id role isDisabled').lean();
     if (!sender) {
       return res.status(404).json({ message: 'senderID không tồn tại' });
     }
 
     // Check membership: sender must be userID or staffID
-    const isUser = conv.userID && String(conv.userID) === senderID;
-    const isStaff = conv.staffID ? String(conv.staffID) === senderID : false;
+    const isUser = conv.userID && String(conv.userID) === currentUserId;
+    const isStaff = conv.staffID ? String(conv.staffID) === currentUserId : false;
     if (!isUser && !isStaff) {
       return res.status(403).json({ message: 'Người gửi không thuộc cuộc hội thoại này' });
     }
 
-    const message = await Message.create({ conversationID, senderID, content: content.trim() });
+    const message = await Message.create({ conversationID, senderID: currentUserId, content: content.trim() });
     return res.status(201).json({ success: true, data: message });
   } catch (error) {
     console.error('Lỗi gửi message:', error);
@@ -50,7 +51,7 @@ export async function sendMessage(req: Request, res: Response) {
   }
 }
 
-export async function listMessagesByConversation(req: Request, res: Response) {
+export async function listMessagesByConversationID(req: Request, res: Response) {
   try {
     const { conversationID } = req.params as { conversationID: string };
 
@@ -88,19 +89,5 @@ export async function listMessagesByConversation(req: Request, res: Response) {
   }
 }
 
-export async function getMessage(req: Request, res: Response) {
-  try {
-    const { id } = req.params as { id: string };
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'message id không hợp lệ' });
-    }
-    const msg = await Message.findById(id).populate('senderID', 'userName role').lean();
-    if (!msg) return res.status(404).json({ message: 'Không tìm thấy message' });
-    return res.status(200).json({ success: true, data: msg });
-  } catch (error) {
-    console.error('Lỗi lấy message:', error);
-    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy tin nhắn' });
-  }
-}
 
 
