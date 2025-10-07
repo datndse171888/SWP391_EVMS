@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { sendForgotPasswordEmail } from '../services/emailService.js';
 
 export async function updateProfile(req: Request, res: Response) {
   try {
@@ -274,6 +275,183 @@ export async function loginWithGoogle(req: Request, res: Response) {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Đã xảy ra lỗi khi xử lý đăng nhập Google' });
+  }
+}
+
+// Forgot Password API
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { email } = req.body as { email: string };
+
+    // Validate input
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email là bắt buộc'
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tài khoản với email này'
+      });
+    }
+
+    // Check if user is disabled
+    if (user.isDisabled) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên'
+      });
+    }
+
+    // Create reset token using JWT
+    const secret: Secret | undefined = env.jwtSecret as unknown as Secret;
+    if (!secret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi cấu hình máy chủ'
+      });
+    }
+
+    const resetToken = jwt.sign(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        type: 'password-reset',
+        exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+      },
+      secret
+    );
+
+    // Send reset email
+    try {
+      await sendForgotPasswordEmail(user.email, resetToken);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.',
+        data: {
+          email: user.email,
+          // For testing purposes, include token in response (remove in production)
+          ...(env.nodeEnv === 'development' && { resetToken })
+        }
+      });
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Không thể gửi email. Vui lòng thử lại sau.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi xử lý yêu cầu đặt lại mật khẩu'
+    });
+  }
+}
+
+// Reset Password API
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const { token, newPassword } = req.body as {
+      token: string;
+      newPassword: string;
+    };
+
+    // Validate input
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token và mật khẩu mới là bắt buộc'
+      });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mật khẩu phải có ít nhất 6 ký tự'
+      });
+    }
+
+    // Verify reset token
+    const secret: Secret | undefined = env.jwtSecret as unknown as Secret;
+    if (!secret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi cấu hình máy chủ'
+      });
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, secret);
+    } catch (jwtError) {
+      if (jwtError instanceof jwt.TokenExpiredError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Token không hợp lệ'
+      });
+    }
+
+    // Validate token type
+    if (decoded.type !== 'password-reset') {
+      return res.status(400).json({
+        success: false,
+        message: 'Token không hợp lệ'
+      });
+    }
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng'
+      });
+    }
+
+    // Check if user is disabled
+    if (user.isDisabled) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tài khoản đã bị khóa'
+      });
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    await User.findByIdAndUpdate(user._id, { passwordHash });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.',
+      data: {
+        email: user.email,
+        userName: user.userName
+      }
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi đặt lại mật khẩu'
+    });
   }
 }
 

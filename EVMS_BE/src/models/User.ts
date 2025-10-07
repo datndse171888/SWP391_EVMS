@@ -20,10 +20,10 @@ const UserSchema = new Schema<IUser>(
     photoURL: { type: String },
     fullName: { type: String },
     phoneNumber: { type: String },
-    role: { 
-      type: String, 
-      enum: ['admin', 'staff', 'technician', 'customer'], 
-      default: 'customer' 
+    role: {
+      type: String,
+      enum: ['admin', 'staff', 'technician', 'customer'],
+      default: 'customer'
     },
     gender: { type: String },
     isDisabled: { type: Boolean, default: false },

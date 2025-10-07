@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, loginWithGoogle, updateProfile } from '../controllers/authController.js';
+import { register, login, loginWithGoogle, updateProfile, forgotPassword, resetPassword } from '../controllers/authController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { customerOnly, authenticatedOnly } from '../middleware/roleMiddleware.js';
 
@@ -22,5 +22,9 @@ authRouter.put('/change-password', authMiddleware, (req, res) => {
   // TODO: Implement password change
   res.json({ message: 'Password change not implemented yet' });
 });
+
+// Forgot Password & Reset Password routes
+authRouter.post('/forgot-password', forgotPassword);
+authRouter.post('/reset-password', resetPassword);
 
 
