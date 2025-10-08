@@ -9,11 +9,9 @@ import {
   TechnicianRoute,
   CustomerRoute
 } from './components/auth/ProtectedRoute'
-import {
-  AdminLayout,
-  StaffLayout,
-  TechnicianLayout
-} from './components/layout'
+import { AdminLayout } from './components/layout/AdminLayout'
+import { StaffLayout } from './components/layout/StaffLayout'
+import { TechnicianLayout } from './components/layout/TechnicianLayout'
 import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
