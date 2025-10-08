@@ -1,5 +1,5 @@
 import React from 'react'
-import { Select } from './components/ui/input/Select'
+import { Select } from './components/ui/Select'
 
 export const Test: React.FC = () => {
 

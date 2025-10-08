@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Input } from '../../components/ui/input/Input'
-import { Button } from '../../components/ui/button/authentication/Button';
-import type { AccountLogin } from '../../types/account/Account';
-import loginBackground from '../../assets/images/login_background.jpg'
-import { useAuth } from '../../contexts/AuthContext';
+import { Input } from '../components/ui/Input'
+import { Button } from '../components/ui/Button';
+import type { AccountLogin } from '../types/Account';
+import loginBackground from '../assets/images/login_background.jpg'
+import { useAuth } from '../contexts/AuthContext';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 

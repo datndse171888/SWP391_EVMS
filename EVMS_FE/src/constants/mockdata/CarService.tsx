@@ -1,5 +1,5 @@
 import { Wrench } from 'lucide-react';
-import type { CarService } from '../../types/vehicle/Car';
+import type { CarService } from '../../types/Car';
 
 export const carService : CarService[] = [
     {

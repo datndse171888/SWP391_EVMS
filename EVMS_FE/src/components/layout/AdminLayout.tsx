@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../../contexts/AuthContext'
-import logo from '../../../assets/images/logo.png'
+import { useAuth } from '../../contexts/AuthContext'
+import logo from '../../assets/images/logo.png'
 
 interface AdminLayoutProps {
   children: React.ReactNode

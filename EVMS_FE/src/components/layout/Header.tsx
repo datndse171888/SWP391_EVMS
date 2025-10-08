@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import logo from '../../../assets/images/logo.png';
+import { useAuth } from '../../contexts/AuthContext';
+import logo from '../../assets/images/logo.png';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -92,11 +92,11 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-1">
               <img 
                 src={logo} 
                 alt="EVMS Logo" 
-                className="w-20 h-20"
+                className="w-23 h-23"
               />
               <span 
                 className="text-2xl text-white"
@@ -109,7 +109,7 @@ const Header: React.FC = () => {
                   textTransform: 'none'
                 }}
               >
-                EVRepair
+                EVCare
               </span>
             </Link>
           </div>

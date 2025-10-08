@@ -1,8 +1,8 @@
 import React from 'react'
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
-import { Login } from './pages/authentication/Login'
-import Home from './pages/public/Home'
-import { Layout } from './components/common/layout/Layout'
+import { Login } from './pages/Login'
+import Home from './pages/Home'
+import { Layout } from './components/layout/Layout'
 import {
   AdminRoute,
   StaffRoute,
@@ -13,15 +13,15 @@ import {
   AdminLayout,
   StaffLayout,
   TechnicianLayout
-} from './components/common/layout'
+} from './components/layout'
 import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
-import Introduction from './pages/public/Introduction'
-import { Register } from './pages/authentication/Register'
+import Introduction from './pages/Introduction'
+import { Register } from './pages/Register'
 import { Test } from './Test'
-import { CarServicePage } from './pages/public/Service/CarServicePage'
-import Service from './pages/public/Service/Service'
+import { CarServicePage } from './pages/Service/CarServicePage'
+import Service from './pages/Service/Service'
 
 
 // Placeholder components for different dashboards

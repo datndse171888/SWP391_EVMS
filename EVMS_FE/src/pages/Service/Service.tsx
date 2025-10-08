@@ -1,11 +1,11 @@
 import React from 'react';
 import { Car, Wrench, Zap, Shield, Clock, Settings, Cog } from 'lucide-react';
-import Clean from '../../../assets/images/clean.png';
+import Clean from '../../assets/images/clean.png';
 import { DollarSign, AlertTriangle, Heart } from 'lucide-react';
-import { carService } from '../../../constants/data/CarService';
+import { carService } from '../../constants/mockdata/CarService';
 import { Link } from 'react-router-dom';
 import { Bike, Recycle as Motorcycle, ArrowRight } from 'lucide-react';
-import { reasons } from '../../../constants/data/Service';
+import { reasons } from '../../constants/mockdata/Service';
 
 
 export const CarServicePage: React.FC = () => {

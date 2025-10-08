@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import homeImage from '../../assets/images/home.jpg';
-import cleanImage from '../../assets/images/clean.png';
-import motobyImage from '../../assets/images/motoby.jpg';
-import scheduleImage from '../../assets/images/schedule.png';
-import chartImage from '../../assets/images/chart.jpg';
+import homeImage from '../assets/images/home.jpg';
+import cleanImage from '../assets/images/clean.png';
+import motobyImage from '../assets/images/motoby.jpg';
+import scheduleImage from '../assets/images/schedule.png';
+import chartImage from '../assets/images/chart.jpg';
 
 // Debug: Log image paths
 console.log('Image paths:', {
@@ -319,7 +319,7 @@ const Home: React.FC = () => {
                 }}
               >
                 <img 
-                  src="/images/schedule.png"
+                  src={scheduleImage}
                   alt="AC Charger Services"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -362,7 +362,7 @@ const Home: React.FC = () => {
                 }}
               >
                 <img 
-                  src="/images/clean.png"
+                  src={cleanImage}
                   alt="DC Charger Services"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -405,7 +405,7 @@ const Home: React.FC = () => {
                 }}
               >
                 <img 
-                  src="/images/motoby.jpg"
+                  src={motobyImage}
                   alt="Home Charger"
                   className="w-full h-full object-cover"
                   onError={(e) => {

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
-import type { AccountRegister } from '../../types/account/Account';
-import loginBackground from '../../assets/images/login_background.jpg'
-import { Input } from '../../components/ui/input/Input'
-import { Button } from '../../components/ui/button/authentication/Button';
+import { Eye, EyeOff } from 'lucide-react';
+import type { AccountRegister } from '../types/Account';
+import loginBackground from '../assets/images/login_background.jpg'
+import { Input } from '../components/ui/Input'
+import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../../services/api/AuthApi';
-import { Select } from '../../components/ui/input/Select';
+import { authApi } from '../api/AuthApi';
+import { Select } from '../components/ui/Select';
 
 
 interface FormError {
@@ -103,9 +103,9 @@ export const Register: React.FC = () => {
 
     // Simulate API call
     try {
-      const response = await authApi.register(account);
+      await authApi.register(account);
       alert('Registration successful! Welcome to EV Service Center Management System.');
-    } catch (error) {
+    } catch {
       alert('Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);

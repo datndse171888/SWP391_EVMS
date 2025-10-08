@@ -1,8 +1,8 @@
 import React from 'react';
-import { Car, Wrench, Zap, Shield, Clock, Settings, Cog } from 'lucide-react';
-import Clean from '../../../assets/images/clean.png';
-import { DollarSign, AlertTriangle, Heart } from 'lucide-react';
-import { carService } from '../../../constants/data/CarService';
+import { Car, Wrench, Zap, Shield, Clock } from 'lucide-react';
+import Clean from '../../assets/images/clean.png';
+// removed unused lucide-react icons
+import { carService } from '../../constants/mockdata/CarService';
 
 
 export const CarServicePage: React.FC = () => {
@@ -51,44 +51,7 @@ export const CarServicePage: React.FC = () => {
         }
     ];
     
-    const reasons = [
-        {
-            icon: Shield,
-            title: 'Safety First',
-            description: 'Regular maintenance ensures all safety systems function properly, protecting you and your passengers.',
-            color: 'bg-red-500'
-        },
-        {
-            icon: DollarSign,
-            title: 'Cost Savings',
-            description: 'Preventive maintenance costs far less than major repairs and extends your vehicle\'s lifespan.',
-            color: 'bg-green-500'
-        },
-        {
-            icon: Clock,
-            title: 'Reliability',
-            description: 'Well-maintained vehicles are less likely to break down, ensuring you reach your destination on time.',
-            color: 'bg-blue-500'
-        },
-        {
-            icon: Zap,
-            title: 'Performance',
-            description: 'Regular service keeps your vehicle running at peak efficiency with optimal fuel economy.',
-            color: 'bg-yellow-500'
-        },
-        {
-            icon: AlertTriangle,
-            title: 'Early Detection',
-            description: 'Routine inspections catch small problems before they become expensive major issues.',
-            color: 'bg-orange-500'
-        },
-        {
-            icon: Heart,
-            title: 'Longevity',
-            description: 'Proper maintenance significantly extends the life of your vehicle and maintains its value.',
-            color: 'bg-purple-500'
-        }
-    ];
+    // reasons list was unused
     return (
         <div className="relative min-h-screen bg-gray-900">
             <div className="relative z-10">

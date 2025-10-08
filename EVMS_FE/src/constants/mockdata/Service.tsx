@@ -1,5 +1,5 @@
 import { Car, Wrench, Zap, Shield, Clock, Settings, Cog, DollarSign, AlertTriangle, Heart} from 'lucide-react';
-import type { Reason } from '../../types/service/Service';
+import type { Reason } from '../../types/Service';
 
 // export const services: Service[] = [
 //     {

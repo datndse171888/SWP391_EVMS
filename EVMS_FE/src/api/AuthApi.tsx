@@ -1,6 +1,6 @@
-import type { AccountLogin } from "../../types/account/Account";
-import type { AccountRegister } from "../../types/account/Account";
-import { api } from "../../utils/Axios";
+import type { AccountLogin } from "../types/Account";
+import type { AccountRegister } from "../types/Account";
+import { api } from "../utils/Axios";
 
 // Auth API methods
 export const authApi = {
