@@ -1,9 +1,9 @@
-export interface AccountLogin{
+export interface AccountLogin {
     email: string;
     password: string;
 }
 
-export interface AccountRegister{
+export interface AccountRegister {
     email: string;
     userName: string;
     fullName: string;
@@ -12,6 +12,13 @@ export interface AccountRegister{
     gender: string;
     photoURL: string;
     role: ' admin' | 'staff' | 'technician' | 'customer';
+}
 
+export interface ResetPasswordRequest {
+    token: string;
+    newPassword: string;
+}
 
+export interface ForgotPasswordRequest {
+    email: string;
 }

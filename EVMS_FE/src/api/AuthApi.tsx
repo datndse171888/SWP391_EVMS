@@ -1,4 +1,4 @@
-import type { AccountLogin } from "../types/Account";
+import type { AccountLogin, ForgotPasswordRequest, ResetPasswordRequest } from "../types/Account";
 import type { AccountRegister } from "../types/Account";
 import { api } from "../utils/Axios";
 
@@ -42,12 +42,12 @@ export const authApi = {
     return api.put('/auth/change-password', data);
   },
 
-  forgotPassword: (email: string) => {
-    return api.post('/auth/forgot-password', { email });
+  forgotPassword: (data: ForgotPasswordRequest) => {
+    return api.post('/auth/forgot-password', data);
   },
 
-  resetPassword: (token: string, password: string) => {
-    return api.post('/auth/reset-password', { token, password });
+  resetPassword: (data: ResetPasswordRequest) => {
+    return api.post('/auth/reset-password', data);
   },
 };
 

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import type { AccountRegister } from '../types/Account';
-import loginBackground from '../assets/images/login_background.jpg'
-import { Input } from '../components/ui/Input'
-import { Button } from '../components/ui/Button';
+import type { AccountRegister } from '../../types/Account';
+import loginBackground from '../../assets/images/login_background.jpg';
+import { Input } from '../../components/ui/Input'
+import { Button } from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../api/AuthApi';
-import { Select } from '../components/ui/Select';
+import { authApi } from '../../api/AuthApi';
+import { Select } from '../../components/ui/Select';
 
 
 interface FormError {

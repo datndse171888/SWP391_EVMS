@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Input } from '../components/ui/Input'
-import { Button } from '../components/ui/Button';
-import type { AccountLogin } from '../types/Account';
-import loginBackground from '../assets/images/login_background.jpg'
-import { useAuth } from '../contexts/AuthContext';
+import { Input } from '../../components/ui/Input'
+import { Button } from '../../components/ui/Button';
+import type { AccountLogin } from '../../types/Account';
+import loginBackground from '../../assets/images/login_background.jpg'
+import { useAuth } from '../../contexts/AuthContext';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 
@@ -160,7 +160,7 @@ export const Login: React.FC = () => {
 
           {/* Additional Links */}
           <div className="mt-6 text-center">
-            <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+            <a href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
               Quên mật khẩu?
             </a>
 
