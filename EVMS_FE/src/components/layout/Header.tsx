@@ -35,7 +35,7 @@ const Header: React.FC = () => {
       case 'admin': return '/admin/profile';
       case 'staff': return '/staff/profile';
       case 'technician': return '/technician/profile';
-      case 'customer': return '/customer/profile';
+      case 'customer': return '/profile';
       default: return '/profile';
     }
   };
