@@ -477,6 +477,19 @@
 .bg-red-100 { background-color: #fee2e2; }
 .text-red-600 { color: #dc2626; }
 
+/* Gradient backgrounds for admin layout */
+.bg-gradient-admin-light { 
+  background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 25%, #81d4fa 50%, #4fc3f7 75%, #29b6f6 100%);
+}
+
+.bg-gradient-admin-medium { 
+  background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 25%, #4fc3f7 50%, #29b6f6 75%, #0288d1 100%);
+}
+
+.bg-gradient-admin-soft { 
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 20%, #bae6fd 40%, #7dd3fc 60%, #38bdf8 80%, #0ea5e9 100%);
+}
+
 .hover\:bg-orange-0:hover { background-color: #f78b0f; }
 .hover\:bg-orange-1:hover { background-color: #fbc88d; }
 .hover\:bg-orange-2:hover { background-color: #fab76a; }

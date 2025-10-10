@@ -70,9 +70,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <div className="h-screen bg-white flex overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${collapsed ? 'w-20' : 'w-72'} bg-blue-0 text-white flex flex-col shadow-2xl transition-all duration-300 relative`}>
+      <aside className={`${collapsed ? 'w-20' : 'w-72'} bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 text-white flex flex-col shadow-2xl transition-all duration-300 relative`}>
         {/* Logo */}
-        <div className="p-6 border-b border-yellow-0 relative">
+        <div className="p-6 border-b border-slate-600 relative">
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-4'}`}>
             <img src={logo} alt="EVRepair Logo" className="w-12 h-12 rounded-lg bg-white shrink-0" style={{ minWidth: 48, minHeight: 48 }} />
             {!collapsed && (
@@ -91,7 +91,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               </span>
             )}
             {/* toggle button positioned on the edge to avoid clipping */}
-            <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-yellow-0 bg-yellow-0 text-blue-0 hover:opacity-90 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
+            <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-orange-400 bg-orange-500 text-white hover:bg-orange-600 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 {collapsed ? (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -111,7 +111,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <Link 
                   to={item.path} 
                   className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                    isActive(item.path) ? 'bg-yellow-0 text-blue-0 shadow-lg' : 'hover:bg-blue-7 text-white/80'
+                    isActive(item.path) ? 'bg-orange-500 text-white shadow-lg' : 'hover:bg-white/10 text-gray-200'
                   }`}
                 >
                   {item.icon}
@@ -123,7 +123,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </nav>
 
         {/* User Profile */}
-        <div className="p-6 border-t border-blue-400">
+        <div className="p-6 border-t border-slate-600">
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-4'} mb-4`}>
             {user?.photoURL ? (
               <img
@@ -132,7 +132,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 className="w-10 h-10 rounded-full border-2 border-white/30 flex-none"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-none">
+              <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center flex-none">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                 </svg>
@@ -141,7 +141,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             {!collapsed && (
               <div className="flex-1">
                 <div className="text-sm font-semibold">{user?.fullName || user?.userName || 'Admin User'}</div>
-                <div className="text-xs text-white/70">{user?.email || 'admin@evms.com'}</div>
+                <div className="text-xs text-gray-300">{user?.email || 'admin@evms.com'}</div>
               </div>
             )}
           </div>
@@ -149,7 +149,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-yellow-0 text-yellow-0 hover:bg-yellow-0 hover:text-blue-0 rounded-lg transition-all duration-200 group`}
+            className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-orange-400 text-orange-400 hover:bg-orange-500 hover:text-white rounded-lg transition-all duration-200 group`}
             title="Đăng xuất"
             aria-label="Đăng xuất"
           >

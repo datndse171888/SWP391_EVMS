@@ -123,7 +123,7 @@ export const Users: React.FC = () => {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-yellow-0 text-blue-0 px-6 py-3 rounded-xl hover:bg-yellow-0 hover:opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -167,7 +167,7 @@ export const Users: React.FC = () => {
               </div>
               <button
                 type="submit"
-              className="bg-yellow-0 text-blue-0 px-6 py-3 rounded-xl hover:opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Tìm kiếm
               </button>
@@ -235,7 +235,7 @@ export const Users: React.FC = () => {
                           <td className="py-4 px-6">
                             <button
                               onClick={() => handleViewDetails(user)}
-                              className="px-4 py-2 rounded-lg border border-yellow-0 text-yellow-0 hover:bg-yellow-0 hover:text-blue-0 transition-all duration-200 shadow-sm hover:shadow text-sm"
+                              className="px-4 py-2 rounded-lg border border-orange-400 text-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
                             >
                               Xem chi tiết
                             </button>
