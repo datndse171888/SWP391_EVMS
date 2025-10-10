@@ -7,6 +7,36 @@ interface AdminLayoutProps {
   children: React.ReactNode
 }
 
+const adminMenuItems = [
+  {
+    name: 'Dashboard',
+    path: '/admin',
+    icon: (
+      <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Người dùng',
+    path: '/admin/users',
+    icon: (
+      <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Kỹ thuật viên',
+    path: '/admin/technicians',
+    icon: (
+      <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+];
+
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -76,49 +106,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {/* Navigation */}
         <nav className="flex-1 p-4">
           <ul className="space-y-2">
-            <li>
-              <Link 
-                to="/admin" 
-                className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin') ? 'bg-yellow-0 text-blue-0 shadow-lg' : 'hover:bg-blue-7 text-white/80'
-                }`}
-              >
-                <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                </svg>
-                {!collapsed && <span className="font-medium">Dashboard</span>}
-              </Link>
-            </li>
-            <li>
-              {/* Sự kiện đã bị loại bỏ */}
-            </li>
-            <li>
-              <Link 
-                to="/admin/users" 
-                className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin/users') ? 'bg-yellow-0 text-blue-0 shadow-lg' : 'hover:bg-blue-7 text-white/80'
-                }`}
-              >
-                <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                </svg>
-                {!collapsed && <span className="font-medium">Người dùng</span>}
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/technicians" 
-                className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                  isActive('/admin/technicians') ? 'bg-yellow-0 text-blue-0 shadow-lg' : 'hover:bg-blue-7 text-white/80'
-                }`}
-              >
-                <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-                {!collapsed && <span className="font-medium">Kỹ thuật viên</span>}
-              </Link>
-            </li>
-            {/* Báo cáo đã bị loại bỏ */}
+            {adminMenuItems.map((item) => (
+              <li key={item.path}>
+                <Link 
+                  to={item.path} 
+                  className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
+                    isActive(item.path) ? 'bg-yellow-0 text-blue-0 shadow-lg' : 'hover:bg-blue-7 text-white/80'
+                  }`}
+                >
+                  {item.icon}
+                  {!collapsed && <span className="font-medium">{item.name}</span>}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
 

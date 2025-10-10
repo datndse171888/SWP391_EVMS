@@ -11,7 +11,7 @@ export const ResetPassword: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [data, setData] = useState<ResetPasswordRequest>({
-    token: '',
+    token: new URLSearchParams(window.location.search).get('token') || '',
     newPassword: ''
   });
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -30,11 +30,9 @@ export const ResetPassword: React.FC = () => {
     }
 
     try {
-      const response = await authApi.resetPassword(data);
-      console.log(response.data.message);
-
-      // Note: User data will be available after login completes
-      // We'll handle redirect in useEffect when user state updates
+      await authApi.resetPassword(data);
+      // Redirect to login page after successful password reset
+      navigate('/login');
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Tạo mật khẩu mới thất bại';

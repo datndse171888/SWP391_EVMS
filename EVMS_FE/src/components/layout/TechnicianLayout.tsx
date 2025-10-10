@@ -33,7 +33,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
                 Technician Dashboard
               </h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
                 Xin chào, {user?.fullName || user?.userName}
@@ -59,11 +59,10 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive(item.path)
-                      ? 'text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.path)
+                    ? 'text-white'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
                   style={{
                     backgroundColor: isActive(item.path) ? '#014091' : 'transparent'
                   }}
