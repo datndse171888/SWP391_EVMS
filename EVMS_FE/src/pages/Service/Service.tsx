@@ -15,7 +15,7 @@ export const CarServicePage: React.FC = () => {
                 <section className=" py-20 pt-20 pb-16 px-4 sm:px-6 lg:px-8" style={{ backgroundImage: `url(${Clean})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-6x md:text-6xl font-bold text-blue-900 mb-6 mt-10 drop-shadow-lg ">
-                                Dịch vụ 
+                                Dịch vụ
                         </h1>
                         <p className="text-xl text-blue-300 mb-8 max-w-3xl mx-auto">
                             Dịch vụ chăm sóc ô tô hiện đại với chẩn đoán tiên tiến, kỹ thuật viên chuyên nghiệp,

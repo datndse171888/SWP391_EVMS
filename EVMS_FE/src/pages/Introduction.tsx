@@ -9,6 +9,7 @@ import {
   CheckCircle, 
   ArrowRight
 } from 'lucide-react';
+import schedule from '../assets/images/schedule.png'
 const Introduction: React.FC = () => {
 const services = [
     {
@@ -60,7 +61,8 @@ const services = [
   return (
      <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-orange-50 via-blue-50 to-blue-50 py-20">
+      <section className={`bg-cover bg-center bg-no-repeat py-20`}
+             style={{ backgroundImage: `url(${schedule})` }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-bold text-blue-900 mb-6 mt-5">

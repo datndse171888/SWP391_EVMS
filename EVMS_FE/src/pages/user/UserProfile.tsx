@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { Appointment, Profile } from "../../types/account/Account";
+import type { Appointment, Profile } from "../../types/Account";
 import { User } from 'lucide-react';
 import ProfileView from './ProfileView';
 import ProfileEdit from './ProfileEdit';
 import AppointmentsList from './AppoitmentList';
-import { authApi } from '../../services/api/AuthApi';
+import { authApi } from '../../api/AuthApi';
 
 type View = 'profile' | 'edit-profile' | 'appointments';
 
