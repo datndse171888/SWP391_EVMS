@@ -1,59 +1,12 @@
 import React from 'react';
-import { Car, Wrench, Zap, Shield, Clock, Settings, Cog } from 'lucide-react';
+import { Car, Zap, Shield, Clock } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
-import { DollarSign, AlertTriangle, Heart } from 'lucide-react';
-import { carService } from '../../constants/mockdata/CarService';
 import { Link } from 'react-router-dom';
 import { Bike, Recycle as Motorcycle, ArrowRight } from 'lucide-react';
 import { reasons } from '../../constants/mockdata/Service';
 
 
 export const CarServicePage: React.FC = () => {
-
-    const services = [
-        {
-            icon: <Wrench className="h-12 w-12 text-blue-500" />,
-            title: "Basic Maintenance",
-            description: "Essential car care services",
-            price: "$99",
-            features: [
-                "Oil change & filter replacement",
-                "Tire pressure check",
-                "Fluid level inspection",
-                "Basic diagnostic scan",
-                "Visual safety inspection"
-            ]
-        },
-        {
-            icon: <Car className="h-12 w-12 text-orange-500" />,
-            title: "Premium Service",
-            description: "Comprehensive vehicle care",
-            price: "$199",
-            features: [
-                "Complete maintenance package",
-                "Brake system inspection",
-                "Engine performance tuning",
-                "Electrical system check",
-                "Air conditioning service",
-                "6-month warranty"
-            ],
-            popular: true
-        },
-        {
-            icon: <Zap className="h-12 w-12 text-yellow-500" />,
-            title: "Performance Upgrade",
-            description: "High-performance modifications",
-            price: "$399",
-            features: [
-                "ECU tuning & optimization",
-                "Performance exhaust system",
-                "Cold air intake installation",
-                "Suspension upgrades",
-                "Custom modifications",
-                "1-year performance warranty"
-            ]
-        }
-    ];
 
     return (
         <div className="relative min-h-screen bg-white">

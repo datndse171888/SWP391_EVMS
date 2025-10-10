@@ -42,7 +42,7 @@ export async function updateProfile(req: Request, res: Response) {
 
     const updated = await User.findByIdAndUpdate(userId, update, { new: true })
       .select('-passwordHash')
-      .lean();
+      .lean() as any;
 
     if (!updated) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
