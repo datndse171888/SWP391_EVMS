@@ -22,6 +22,7 @@ import { CarServicePage } from './pages/Service/CarServicePage'
 import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
+import ProfileView from './pages/user/UserProfile';
 
 
 // Placeholder components for different dashboards
@@ -48,6 +49,7 @@ export const Router: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
+        <Route path="/profile" element={<ProfileView />} />
         
         {/* Admin Routes */}
         <Route path="/admin" element={
