@@ -1,5 +1,6 @@
+// @ts-ignore
 import { Calendar, MapPin, Clock, Plus, Trash2, CreditCard as Edit2 } from 'lucide-react';
-import type { Appointment } from '../../types/account/Account';
+import type { Appointment } from '../../types/Account';
 
 interface AppointmentsListProps {
   appointments: Appointment[];

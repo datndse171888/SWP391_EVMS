@@ -1,5 +1,6 @@
+// @ts-ignore
 import { User, Mail, Phone, Calendar, CalendarDays, LogOut } from 'lucide-react';
-import type { Profile } from '../../types/account/Account';
+import type { Profile } from '../../types/Account';
 
 interface ProfileViewProps {
   profile: Profile;

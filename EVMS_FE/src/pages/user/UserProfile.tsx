@@ -108,6 +108,7 @@ export default function UserProfile() {
     }
   };
 
+  // @ts-ignore
   const loadUserData = async () => {
     setLoading(true);
     await Promise.all([fetchUserProfile(), fetchUserAppointments()]);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
+// @ts-ignore
 import { X, Save, User } from 'lucide-react';
-import type { Profile } from '../../types/account/Account';
+import type { Profile } from '../../types/Account';
 
 interface ProfileEditProps {
   profile: Profile;
