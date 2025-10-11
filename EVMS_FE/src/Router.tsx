@@ -22,11 +22,11 @@ import { CarServicePage } from './pages/Service/CarServicePage'
 import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
-import ProfileView from './pages/user/UserProfile';
+import ProfileView from './pages/user/UserProfile'
+import StaffDashboard from './pages/staff/StaffDashboard';
 
 
 // Placeholder components for different dashboards
-const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
 const TechnicianDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Technician Dashboard</h1></div>;
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
 const Unauthorized = () => <div className="p-6"><h1 className="text-2xl font-bold text-red-600">Unauthorized Access</h1></div>;
