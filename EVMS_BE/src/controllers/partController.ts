@@ -9,7 +9,12 @@ export async function getParts(req: Request, res: Response) {
     const status = (req.query.status as string) || undefined;
 
     const filter: any = {};
-    if (q) filter.name = { $regex: q, $options: 'i' };
+    if (q) {
+      filter.$or = [
+        { name: { $regex: q, $options: 'i' } },
+        { partNumber: { $regex: q, $options: 'i' } }
+      ];
+    }
     if (status) filter.status = status;
 
     const [items, total] = await Promise.all([

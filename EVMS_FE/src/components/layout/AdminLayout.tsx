@@ -44,6 +44,17 @@
         </svg>
       ),
     },
+    {
+      name: 'Kho phụ tùng',
+      path: '/admin/parts',
+      icon: (
+        <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 7l9-4 9 4-9 4-9-4z" />
+          <path d="M3 10l9 4 9-4" />
+          <path d="M3 13l9 4 9-4v4l-9 4-9-4v-4z" />
+        </svg>
+      ),
+    },
   ];
 
   export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {

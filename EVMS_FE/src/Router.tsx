@@ -16,6 +16,7 @@ import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
+import { Parts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
@@ -57,6 +58,13 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Dashboard />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/parts" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Parts />
             </AdminLayout>
           </AdminRoute>
         } />
