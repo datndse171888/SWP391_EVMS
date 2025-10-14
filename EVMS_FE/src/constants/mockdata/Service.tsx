@@ -1,5 +1,4 @@
 import { Zap, Shield, Clock, DollarSign, AlertTriangle, Heart} from 'lucide-react';
-import type { Reason } from '../../types/Service';
 
 // export const services: Service[] = [
 //     {
@@ -27,7 +26,7 @@ import type { Reason } from '../../types/Service';
 //         image: "bike_service.jpg"
 //     }
 // ];
-export const reasons: Reason[] = [
+export const reasons = [
      {
         id: 1,
             icon: Shield,
