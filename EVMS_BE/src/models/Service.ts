@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type ServiceStatus = 'active' | 'inactive' | 'hidden';
+export type VehicleType = 'electric_bike' | 'electric_motorcycle' | 'electric_car';
 
 export interface IService extends Document {
   name: string;
@@ -9,6 +10,7 @@ export interface IService extends Document {
   description?: string;
   image?: string;
   status: ServiceStatus;
+  vehicleType: VehicleType;
 }
 
 const ServiceSchema = new Schema<IService>(
@@ -20,6 +22,7 @@ const ServiceSchema = new Schema<IService>(
     description: { type: String, trim: true },
     image: { type: String, trim: true },
     status: { type: String, enum: ['active', 'inactive', 'hidden'], default: 'active', index: true },
+    vehicleType: { type: String, enum: ['electric_bike', 'electric_motorcycle', 'electric_car'], required: true, index: true },
   },
   { timestamps: true }
 );

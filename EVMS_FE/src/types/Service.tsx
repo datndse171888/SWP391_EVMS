@@ -5,6 +5,7 @@ export interface Service {
     price: number;
     duration: string;
     image: string;
+    vehicleType?: 'electric_bike' | 'electric_motorcycle' | 'electric_car';
 }
 
 

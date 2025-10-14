@@ -43,7 +43,8 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     price: it.price,
     // BE duration is number (minutes), FE expects string
     duration: typeof it.duration === 'number' ? `${it.duration} phút` : (it.duration || ''),
-    image: it.image
+    image: it.image,
+    vehicleType: it.vehicleType
   }))
 
   const totalPages = Math.max(1, Math.ceil((raw.total || 0) / (raw.limit || params.limit)))

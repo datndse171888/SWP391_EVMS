@@ -123,6 +123,7 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Dịch vụ</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Thời lượng</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -155,6 +156,12 @@ export const Services: React.FC = () => {
                           {typeof svc.price === 'number' ? currencyFormatter.format(svc.price) : '—'}
                         </td>
                         <td className="py-4 px-6">{svc.duration || '—'}</td>
+                        <td className="py-4 px-6">
+                          {svc.vehicleType === 'electric_bike' && 'Xe đạp điện'}
+                          {svc.vehicleType === 'electric_motorcycle' && 'Xe máy điện'}
+                          {svc.vehicleType === 'electric_car' && 'Xe ô tô điện'}
+                          {!svc.vehicleType && '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
