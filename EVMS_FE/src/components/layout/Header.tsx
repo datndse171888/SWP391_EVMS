@@ -109,7 +109,7 @@ const Header: React.FC = () => {
                   textTransform: 'none'
                 }}
               >
-                EVCare
+                Car Care
               </span>
             </Link>
           </div>

@@ -41,7 +41,7 @@ export const CarServicePage: React.FC = () => {
                                     <div className="text-blue-500 mb-6">
                                         <Car size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ ô tô</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ ô tô điện</h3>
                                     <p className="text-blue-800 mb-6">
                                         Dịch vụ chăm sóc ô tô toàn diện từ bảo trì định kỳ đến sửa chữa phức tạp
                                     </p>
@@ -56,7 +56,7 @@ export const CarServicePage: React.FC = () => {
                                     <div className="text-orange-500 mb-6">
                                         <Motorcycle size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe máy</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe máy điện</h3>
                                     <p className="text-blue-800 mb-6">
                                         Dịch vụ bảo trì và sữa chữa xe máy và tối ưu hóa hiệu suất
                                     </p>
@@ -71,7 +71,7 @@ export const CarServicePage: React.FC = () => {
                                     <div className="text-yellow-500 mb-6">
                                         <Bike size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe đạp</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe đạp điện</h3>
                                     <p className="text-blue-800 mb-6">
                                         Dịch vụ bảo trì và sửa chữa xe đạp chuyên nghiệp
                                     </p>
