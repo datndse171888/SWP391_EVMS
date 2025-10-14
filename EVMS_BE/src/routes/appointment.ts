@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -15,5 +15,8 @@ appointmentRouter.get('/me', authMiddleware, listMyAppointments);
 
 // Get appointment by id
 appointmentRouter.get('/:id', authMiddleware, getAppointmentById);
+
+// Cancel appointment
+appointmentRouter.patch('/:id/cancel', authMiddleware, cancelAppointment);
 
 

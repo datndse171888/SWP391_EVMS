@@ -270,4 +270,111 @@ export async function getAppointmentById(req: Request, res: Response) {
   }
 }
 
+// Cancel Appointment API
+export async function cancelAppointment(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+    const { reason } = req.body as { reason?: string };
+
+    // Find appointment
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    // Check permissions
+    const role = req.user.role;
+    const isOwner = String(appointment.userID) === req.user.id;
+
+    if (role === 'customer' && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn chỉ có thể hủy lịch hẹn của chính mình'
+      });
+    }
+
+    // Check if appointment can be cancelled
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Lịch hẹn đã được hủy trước đó'
+      });
+    }
+
+    if (appointment.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể hủy lịch hẹn đã hoàn thành'
+      });
+    }
+
+    if (appointment.status === 'in_progress') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể hủy lịch hẹn đang thực hiện'
+      });
+    }
+
+    // Check if appointment is too close to booking date (optional business rule)
+    const now = new Date();
+    const bookingDate = new Date(appointment.bookingDate);
+    const timeDiff = bookingDate.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 3600);
+
+    // Only allow cancellation if appointment is more than 2 hours away (business rule)
+    if (role === 'customer' && hoursDiff < 2 && hoursDiff > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể hủy lịch hẹn trong vòng 2 giờ trước giờ hẹn'
+      });
+    }
+
+    // Update appointment status
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      {
+        status: 'cancelled',
+        ...(reason && { reason: `${appointment.reason ? appointment.reason + ' | ' : ''}Lý do hủy: ${reason}` })
+      },
+      { new: true }
+    ).populate([
+      { path: 'userID', select: 'userName email fullName' },
+      { path: 'serviceID', select: 'name price duration' },
+      { path: 'servicePackageID', select: 'name price duration' },
+      { path: 'technicianLeaderID', select: 'userID', populate: { path: 'userID', select: 'userName fullName' } }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Hủy lịch hẹn thành công',
+      data: {
+        appointment: updatedAppointment,
+        cancelledAt: new Date(),
+        cancelledBy: {
+          id: req.user.id,
+          role: req.user.role,
+          name: req.user.fullName || req.user.userName
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Cancel appointment error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi hủy lịch hẹn'
+    });
+  }
+}
+
 
