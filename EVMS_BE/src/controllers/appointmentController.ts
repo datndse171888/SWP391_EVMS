@@ -14,7 +14,6 @@ export async function createAppointment(req: Request, res: Response) {
       serviceID,
       servicePackageID,
       bookingDate,
-      reason,
       status,
     } = req.body;
 
@@ -94,7 +93,6 @@ const ALLOWED_APPOINTMENT_FIELDS = new Set([
   'serviceID',
   'servicePackageID',
   'bookingDate',
-  'reason',
   'status',
   'createdAt',
   'updatedAt',
@@ -345,8 +343,7 @@ export async function cancelAppointment(req: Request, res: Response) {
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
       {
-        status: 'cancelled',
-        ...(reason && { reason: `${appointment.reason ? appointment.reason + ' | ' : ''}Lý do hủy: ${reason}` })
+        status: 'cancelled'
       },
       { new: true }
     ).populate([
@@ -530,12 +527,7 @@ export async function assignTechnician(req: Request, res: Response) {
       updateData.status = 'confirmed';
     }
 
-    // Add notes to reason if provided
-    if (notes) {
-      updateData.reason = appointment.reason
-        ? `${appointment.reason} | Ghi chú phân công: ${notes}`
-        : `Ghi chú phân công: ${notes}`;
-    }
+    // Add notes: (bỏ reason) có thể mở rộng trường notes riêng trong tương lai
 
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,

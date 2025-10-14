@@ -11,7 +11,6 @@ export interface IAppointment extends Document {
   serviceID?: mongoose.Types.ObjectId; // ref Service
   servicePackageID?: mongoose.Types.ObjectId; // ref ServicePackage
   bookingDate: Date;
-  reason?: string;
   status: AppointmentStatus;
 }
 
@@ -26,7 +25,6 @@ const AppointmentSchema = new Schema<IAppointment>(
     serviceID: { type: Schema.Types.ObjectId, ref: 'Service' },
     servicePackageID: { type: Schema.Types.ObjectId, ref: 'ServicePackage' },
     bookingDate: { type: Date, required: true, index: true },
-    reason: { type: String, trim: true },
     status: {
       type: String,
       required: true,

@@ -9,6 +9,7 @@ import { messageRouter } from './message.js';
 import { partRouter } from './part.js';
 
 import { userRouter } from './user.js';
+import { vehicleRouter } from './vehicle.js';
 
 export const router = Router();
 
@@ -16,6 +17,7 @@ router.get('/health', (_req, res) => { res.json({ status: 'ok' }); });
 router.use('/auth', authRouter);
 router.use('/demo', demoRouter);
 router.use('/users', userRouter);
+router.use('/vehicles', vehicleRouter);
 router.use('/appointments', appointmentRouter);
 router.use('/services', serviceRouter);
 router.use('/service-packages', servicePackageRouter);
