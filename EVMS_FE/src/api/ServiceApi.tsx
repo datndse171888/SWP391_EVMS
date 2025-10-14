@@ -44,7 +44,12 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     // BE duration is number (minutes), FE expects string
     duration: typeof it.duration === 'number' ? `${it.duration} phút` : (it.duration || ''),
     image: it.image,
-    vehicleType: it.vehicleType
+    vehicleType: it.vehicleType,
+    pricing: Array.isArray(it.pricing)
+      ? it.pricing
+          .filter((p: any) => p && typeof p.price === 'number' && ['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category)))
+          .map((p: any) => ({ category: String(p.category) as 'CAR'|'BICYCLE'|'MOTOBIKE', price: p.price }))
+      : undefined
   }))
 
   const totalPages = Math.max(1, Math.ceil((raw.total || 0) / (raw.limit || params.limit)))

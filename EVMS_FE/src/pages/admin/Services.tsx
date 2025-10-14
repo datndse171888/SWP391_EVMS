@@ -123,6 +123,9 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Dịch vụ</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Thời lượng</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">CAR</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">BICYCLE</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
                     </tr>
                   </thead>
@@ -156,6 +159,18 @@ export const Services: React.FC = () => {
                           {typeof svc.price === 'number' ? currencyFormatter.format(svc.price) : '—'}
                         </td>
                         <td className="py-4 px-6">{svc.duration || '—'}</td>
+                        {(() => {
+                          const car = svc.pricing?.find(p => p.category === 'CAR')?.price
+                          const bicycle = svc.pricing?.find(p => p.category === 'BICYCLE')?.price
+                          const motobike = svc.pricing?.find(p => p.category === 'MOTOBIKE')?.price
+                          return (
+                            <>
+                              <td className="py-4 px-6">{typeof car === 'number' ? currencyFormatter.format(car) : '—'}</td>
+                              <td className="py-4 px-6">{typeof bicycle === 'number' ? currencyFormatter.format(bicycle) : '—'}</td>
+                              <td className="py-4 px-6">{typeof motobike === 'number' ? currencyFormatter.format(motobike) : '—'}</td>
+                            </>
+                          )
+                        })()}
                         <td className="py-4 px-6">
                           {svc.vehicleType === 'electric_bike' && 'Xe đạp điện'}
                           {svc.vehicleType === 'electric_motorcycle' && 'Xe máy điện'}

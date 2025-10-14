@@ -39,8 +39,8 @@
       name: 'Dịch vụ',
       path: '/admin/services',
       icon: (
-        <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+        <svg className="w-6 h-6 flex-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232a3 3 0 11-4.464 4.464l-7.071 7.071a2 2 0 11-2.828-2.828l7.071-7.071a3 3 0 014.464-4.464z" />
         </svg>
       ),
     },
