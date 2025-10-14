@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
+import { Technician } from '../models/Technician.js';
+import { User } from '../models/User.js';
 
 export async function createAppointment(req: Request, res: Response) {
   try {
@@ -373,6 +375,278 @@ export async function cancelAppointment(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi hủy lịch hẹn'
+    });
+  }
+}
+
+// Assign Technician to Appointment API
+export async function assignTechnician(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Check permissions - only admin and staff can assign technicians
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin và staff mới có thể phân công technician'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+    const {
+      technicianLeaderID,
+      technicianSupport1ID,
+      technicianSupport2ID,
+      notes
+    } = req.body as {
+      technicianLeaderID?: string;
+      technicianSupport1ID?: string;
+      technicianSupport2ID?: string;
+      notes?: string;
+    };
+
+    // Validate at least one technician is provided
+    if (!technicianLeaderID && !technicianSupport1ID && !technicianSupport2ID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phải chỉ định ít nhất một technician'
+      });
+    }
+
+    // Find appointment
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    // Check if appointment can be assigned technicians
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể phân công technician cho lịch hẹn đã hủy'
+      });
+    }
+
+    if (appointment.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể phân công technician cho lịch hẹn đã hoàn thành'
+      });
+    }
+
+    // Validate technician IDs and check if they exist
+    const technicianIds = [technicianLeaderID, technicianSupport1ID, technicianSupport2ID]
+      .filter(Boolean) as string[];
+
+    if (technicianIds.length > 0) {
+      // Check for duplicate technician assignments
+      const uniqueIds = new Set(technicianIds);
+      if (uniqueIds.size !== technicianIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể phân công cùng một technician vào nhiều vị trí'
+        });
+      }
+
+      // Verify all technicians exist and are active
+      const technicians = await Technician.find({
+        _id: { $in: technicianIds }
+      }).populate('userID', 'userName fullName isDisabled role');
+
+      if (technicians.length !== technicianIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Một hoặc nhiều technician không tồn tại'
+        });
+      }
+
+      // Check if any technician is disabled or not a technician role
+      const invalidTechnicians = technicians.filter(tech => {
+        const user = tech.userID as any;
+        return user.isDisabled || user.role !== 'technician';
+      });
+
+      if (invalidTechnicians.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Một hoặc nhiều technician không khả dụng hoặc không có quyền'
+        });
+      }
+
+      // Check technician availability for the appointment time (optional business rule)
+      const appointmentDate = new Date(appointment.bookingDate);
+      const startTime = new Date(appointmentDate.getTime() - 30 * 60 * 1000); // 30 min before
+      const endTime = new Date(appointmentDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours after
+
+      const conflictingAppointments = await Appointment.find({
+        _id: { $ne: appointmentId }, // Exclude current appointment
+        bookingDate: { $gte: startTime, $lte: endTime },
+        status: { $in: ['confirmed', 'in_progress'] },
+        $or: [
+          { technicianLeaderID: { $in: technicianIds } },
+          { technicianSupport1ID: { $in: technicianIds } },
+          { technicianSupport2ID: { $in: technicianIds } }
+        ]
+      }).populate('technicianLeaderID technicianSupport1ID technicianSupport2ID', 'userID')
+        .populate({
+          path: 'technicianLeaderID technicianSupport1ID technicianSupport2ID',
+          populate: { path: 'userID', select: 'userName fullName' }
+        });
+
+      if (conflictingAppointments.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Một hoặc nhiều technician đã có lịch hẹn trùng thời gian',
+          conflicts: conflictingAppointments.map(apt => ({
+            appointmentId: apt._id,
+            bookingDate: apt.bookingDate,
+            conflictingTechnicians: [
+              apt.technicianLeaderID,
+              apt.technicianSupport1ID,
+              apt.technicianSupport2ID
+            ].filter(Boolean)
+          }))
+        });
+      }
+    }
+
+    // Update appointment with technician assignments
+    const updateData: any = {};
+    if (technicianLeaderID !== undefined) updateData.technicianLeaderID = technicianLeaderID || null;
+    if (technicianSupport1ID !== undefined) updateData.technicianSupport1ID = technicianSupport1ID || null;
+    if (technicianSupport2ID !== undefined) updateData.technicianSupport2ID = technicianSupport2ID || null;
+
+    // Update status to confirmed if it was pending
+    if (appointment.status === 'pending') {
+      updateData.status = 'confirmed';
+    }
+
+    // Add notes to reason if provided
+    if (notes) {
+      updateData.reason = appointment.reason
+        ? `${appointment.reason} | Ghi chú phân công: ${notes}`
+        : `Ghi chú phân công: ${notes}`;
+    }
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      updateData,
+      { new: true }
+    ).populate([
+      { path: 'userID', select: 'userName email fullName phoneNumber' },
+      { path: 'serviceID', select: 'name price duration description' },
+      { path: 'servicePackageID', select: 'name price duration description' },
+      {
+        path: 'technicianLeaderID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      },
+      {
+        path: 'technicianSupport1ID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      },
+      {
+        path: 'technicianSupport2ID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Phân công technician thành công',
+      data: {
+        appointment: updatedAppointment,
+        assignedAt: new Date(),
+        assignedBy: {
+          id: req.user.id,
+          role: req.user.role,
+          name: req.user.fullName || req.user.userName
+        },
+        techniciansAssigned: {
+          leader: technicianLeaderID ? true : false,
+          support1: technicianSupport1ID ? true : false,
+          support2: technicianSupport2ID ? true : false
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Assign technician error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi phân công technician'
+    });
+  }
+}
+
+// Get Available Technicians API (helper for assignment)
+export async function getAvailableTechnicians(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Check permissions - only admin and staff can view technicians
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin và staff mới có thể xem danh sách technician'
+      });
+    }
+
+    // Get all active technicians
+    const technicians = await Technician.find({})
+      .populate({
+        path: 'userID',
+        select: 'userName fullName email phoneNumber isDisabled role',
+        match: { isDisabled: false, role: 'technician' }
+      })
+      .lean();
+
+    // Filter out technicians with disabled users
+    const availableTechnicians = technicians
+      .filter(tech => tech.userID) // Only include technicians with valid user
+      .map(tech => ({
+        id: tech._id,
+        technicianID: tech.technicianID,
+        user: tech.userID,
+        introduction: tech.introduction,
+        role: tech.role,
+        experience: tech.experience,
+        startDate: tech.startDate,
+        createdAt: tech.createdAt,
+        updatedAt: tech.updatedAt
+      }));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách technician thành công',
+      data: {
+        technicians: availableTechnicians,
+        total: availableTechnicians.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Get available technicians error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy danh sách technician'
     });
   }
 }
