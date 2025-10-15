@@ -95,7 +95,5 @@ const VehicleSchema = new Schema<IVehicle>(
 
 // Compound indexes for efficient queries
 VehicleSchema.index({ userID: 1, status: 1 });
-VehicleSchema.index({ plateNumber: 1 });
-VehicleSchema.index({ VIN: 1 });
 
 export const Vehicle = mongoose.models.Vehicle || mongoose.model<IVehicle>('Vehicle', VehicleSchema);
