@@ -129,20 +129,7 @@ export async function createVehicle(req: Request, res: Response) {
       success: true,
       message: 'Tạo thông tin xe thành công',
       data: {
-        vehicle: {
-          id: populatedVehicle?._id,
-          userID: populatedVehicle?.userID,
-          VIN: populatedVehicle?.VIN,
-          vehicleType: populatedVehicle?.vehicleType,
-          plateNumber: populatedVehicle?.plateNumber,
-          brand: populatedVehicle?.brand,
-          year: populatedVehicle?.year,
-          mileage: populatedVehicle?.mileage,
-          batteryCapacity: populatedVehicle?.batteryCapacity,
-          status: populatedVehicle?.status,
-          createdAt: populatedVehicle?.createdAt,
-          updatedAt: populatedVehicle?.updatedAt
-        }
+        vehicle: populatedVehicle
       }
     });
 
@@ -172,6 +159,84 @@ export async function createVehicle(req: Request, res: Response) {
       success: false,
       message: 'Lỗi máy chủ khi tạo thông tin xe' 
     });
+  }
+}
+
+export async function getAllVehicles(req: Request, res: Response) {
+  try {
+    const {
+      page = '1',
+      limit = '10',
+      search = '',
+      status,
+      vehicleType,
+      userID
+    } = req.query as Record<string, string>;
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
+
+    const filter: any = {};
+
+    if (status) {
+      filter.status = status;
+    }
+    if (vehicleType) {
+      filter.vehicleType = vehicleType;
+    }
+    if (userID && mongoose.Types.ObjectId.isValid(userID)) {
+      filter.userID = new mongoose.Types.ObjectId(userID);
+    }
+
+    if (search) {
+      const keyword = search.trim().toUpperCase();
+      filter.$or = [
+        { VIN: keyword },
+        { plateNumber: keyword },
+        { brand: new RegExp(search.trim(), 'i') }
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      Vehicle.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .populate('userID', 'userName email fullName phoneNumber')
+        .lean(),
+      Vehicle.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: { items, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) } }
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách xe:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy danh sách xe' });
+  }
+}
+
+export async function getVehicleByID(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID xe không hợp lệ' });
+    }
+
+    const vehicle = await Vehicle.findById(id)
+      .populate('userID', 'userName email fullName phoneNumber')
+      .lean();
+
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy xe' });
+    }
+
+    return res.status(200).json({ success: true, data: { vehicle } });
+  } catch (error) {
+    console.error('Lỗi khi lấy thông tin xe:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy thông tin xe' });
   }
 }
 
