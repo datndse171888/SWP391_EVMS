@@ -74,6 +74,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
     return location.pathname === path;
   };
 
+  // Make chat and dashboard pages full width
+  const isFullWidth = location.pathname.startsWith('/staff/customers') || location.pathname.startsWith('/staff/dashboard');
+
   const toggleSidebar = () => {
     setSidebarExpanded(!sidebarExpanded);
   };
@@ -160,8 +163,8 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
       {/* Main content */}
       <div className="flex-1 flex flex-col" style={{ backgroundColor: '#f8fafc' }}>
         {/* Main content area */}
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className={`${isFullWidth ? 'p-0' : 'p-6'}`}>
+          <div className={`${isFullWidth ? 'w-full' : 'max-w-7xl mx-auto'}`}>
             {children}
           </div>
         </main>

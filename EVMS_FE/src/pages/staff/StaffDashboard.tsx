@@ -33,10 +33,10 @@ const StaffDashboard: React.FC = () => {
     <div className="space-y-3">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-3">
-        <h1 className="text-lg font-bold text-gray-900">
+        <h1 className="text-lg font-bold" style={{ color: '#014091' }}>
           Chào mừng trở lại!
         </h1>
-        <p className="text-xs text-gray-600">
+        <p className="text-xs" style={{ color: '#5f6777' }}>
           Tổng quan hoạt động hôm nay
         </p>
       </div>
@@ -47,8 +47,8 @@ const StaffDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Tổng phụ tùng</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.inventory.totalParts}</p>
+              <p className="text-sm font-medium" style={{ color: '#5f6777' }}>Tổng phụ tùng</p>
+              <p className="text-2xl font-bold" style={{ color: '#014091' }}>{stats.inventory.totalParts}</p>
             </div>
             <div className="p-3 rounded-full" style={{ backgroundColor: '#8dcdfa' }}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
@@ -57,8 +57,8 @@ const StaffDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-red-600 font-medium">{stats.inventory.lowStock} sắp hết</span>
-            <span className="text-gray-500 ml-2">• {stats.inventory.recentlyAdded} mới thêm</span>
+            <span className="font-medium" style={{ color: '#fd8c40' }}>{stats.inventory.lowStock} sắp hết</span>
+            <span className="ml-2" style={{ color: '#5f6777' }}>• {stats.inventory.recentlyAdded} mới thêm</span>
           </div>
         </div>
 
@@ -66,8 +66,8 @@ const StaffDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Khách hàng</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.customers.totalCustomers}</p>
+              <p className="text-sm font-medium" style={{ color: '#5f6777' }}>Khách hàng</p>
+              <p className="text-2xl font-bold" style={{ color: '#014091' }}>{stats.customers.totalCustomers}</p>
             </div>
             <div className="p-3 rounded-full" style={{ backgroundColor: '#8abdfe' }}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
@@ -76,9 +76,9 @@ const StaffDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600 font-medium">{stats.customers.activeToday} hoạt động hôm nay</span>
+            <span className="font-medium" style={{ color: '#0991f3' }}>{stats.customers.activeToday} hoạt động hôm nay</span>
             {stats.customers.unreadMessages > 0 && (
-              <span className="text-red-600 ml-2">• {stats.customers.unreadMessages} tin nhắn mới</span>
+              <span className="ml-2" style={{ color: '#fd8c40' }}>• {stats.customers.unreadMessages} tin nhắn mới</span>
             )}
           </div>
         </div>
@@ -87,8 +87,8 @@ const StaffDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Lịch hẹn hôm nay</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.appointments.today}</p>
+              <p className="text-sm font-medium" style={{ color: '#5f6777' }}>Lịch hẹn hôm nay</p>
+              <p className="text-2xl font-bold" style={{ color: '#014091' }}>{stats.appointments.today}</p>
             </div>
             <div className="p-3 rounded-full" style={{ backgroundColor: '#0991f3' }}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'white' }}>
@@ -97,8 +97,8 @@ const StaffDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600 font-medium">{stats.appointments.confirmed} đã xác nhận</span>
-            <span className="text-gray-500 ml-2">• {stats.appointments.cancelled} đã hủy</span>
+            <span className="font-medium" style={{ color: '#16a34a' }}>{stats.appointments.confirmed} đã xác nhận</span>
+            <span className="ml-2" style={{ color: '#5f6777' }}>• {stats.appointments.cancelled} đã hủy</span>
           </div>
         </div>
 
@@ -106,8 +106,8 @@ const StaffDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Sắp tới</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.appointments.upcoming}</p>
+              <p className="text-sm font-medium" style={{ color: '#5f6777' }}>Sắp tới</p>
+              <p className="text-2xl font-bold" style={{ color: '#014091' }}>{stats.appointments.upcoming}</p>
             </div>
             <div className="p-3 rounded-full" style={{ backgroundColor: '#f6ae2d' }}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
@@ -116,15 +116,15 @@ const StaffDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-orange-600 font-medium">Lịch hẹn sắp tới</span>
-            <span className="text-gray-500 ml-2">• Cần xác nhận</span>
+            <span className="font-medium" style={{ color: '#fd8c40' }}>Lịch hẹn sắp tới</span>
+            <span className="ml-2" style={{ color: '#5f6777' }}>• Cần xác nhận</span>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-sm p-3">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">Thao tác nhanh</h2>
+        <h2 className="text-base font-semibold mb-2" style={{ color: '#014091' }}>Thao tác nhanh</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <Link
             to="/staff/customers"
@@ -135,7 +135,7 @@ const StaffDashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700">Quản lý khách hàng</span>
+            <span className="text-sm font-medium" style={{ color: '#5f6777' }}>Quản lý khách hàng</span>
           </Link>
 
           <Link
@@ -148,7 +148,7 @@ const StaffDashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700">Quản lý dịch vụ</span>
+            <span className="text-sm font-medium" style={{ color: '#5f6777' }}>Quản lý dịch vụ</span>
           </Link>
 
           <Link
@@ -160,7 +160,7 @@ const StaffDashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700">Lịch hẹn</span>
+            <span className="text-sm font-medium" style={{ color: '#5f6777' }}>Lịch hẹn</span>
           </Link>
 
           <Link
@@ -172,14 +172,14 @@ const StaffDashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700">Hồ sơ cá nhân</span>
+            <span className="text-sm font-medium" style={{ color: '#5f6777' }}>Hồ sơ cá nhân</span>
           </Link>
         </div>
       </div>
 
       {/* Recent Activities */}
       <div className="bg-white rounded-lg shadow-sm p-3">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">Hoạt động gần đây</h2>
+        <h2 className="text-base font-semibold mb-2" style={{ color: '#014091' }}>Hoạt động gần đây</h2>
         <div className="space-y-1">
           {recentActivities.map((activity) => (
             <div key={activity.id} className="flex items-center p-1.5 border border-gray-100 rounded-lg">
@@ -205,8 +205,8 @@ const StaffDashboard: React.FC = () => {
                 )}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                <p className="text-xs text-gray-500">{activity.time}</p>
+                <p className="text-sm font-medium" style={{ color: '#014091' }}>{activity.message}</p>
+                <p className="text-xs" style={{ color: '#5f6777' }}>{activity.time}</p>
               </div>
             </div>
           ))}
