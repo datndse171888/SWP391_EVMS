@@ -5,7 +5,7 @@ import ServiceCard from './CardService';
 import { Car, Wrench, Zap, Shield, Clock, Bike } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
 
-export const CarService: React.FC = () => {
+export const BikeService: React.FC = () => {
     const [packages, setPackages] = useState<Package[]>([]);
     const [services, setServices] = useState<IndividualService[]>([]);
     const [loading, setLoading] = useState(true);
@@ -17,30 +17,30 @@ export const CarService: React.FC = () => {
     const samplePackages: Package[] = [
         {
             id: 1,
-            service_type_id: "car",
+            service_type_id: "bike",
             name: "Bảo dưỡng cơ bản",
-            price: 49.99,
-            description: "Bảo dưỡng cần thiết cho xe ô tô của bạn",
-            features: ["Kiểm tra dầu động cơ", "Kiểm tra phanh", "Bôi trơn", "Kiểm tra an toàn", "Vệ sinh cơ bản"],
+            price: 500.000,
+            description: "Bảo dưỡng cần thiết cho xe đạp của bạn",
+            features: ["Điều chỉnh phanh", "Tinh chỉnh số", "Bôi trơn", "Kiểm tra an toàn", "Vệ sinh cơ bản"],
             display_order: 1,
             created_at: "2024-01-01T00:00:00Z"
         },
         {
             id: 2,
-            service_type_id: "car",
+            service_type_id: "bike",
             name: "Bảo dưỡng toàn diện",
-            price: 89.99,
-            description: "Gói bảo dưỡng xe ô tô toàn diện",
+            price: 899.000,
+            description: "Gói bảo dưỡng xe đạp toàn diện",
             features: ["Tinh chỉnh hoàn toàn", "Cân bằng bánh xe", "Thay cáp", "Kiểm tra an toàn", "Vệ sinh"],
             display_order: 2,
             created_at: "2024-01-01T00:00:00Z"
         },
         {
             id: 3,
-            service_type_id: "car",
+            service_type_id: "bike",
             name: "Bảo dưỡng cao cấp",
-            price: 149.99,
-            description: "Khôi phục và nâng cấp xe ô tô hoàn chỉnh",
+            price: 149.000,
+            description: "Khôi phục và nâng cấp xe đạp hoàn chỉnh",
             features: ["Tháo rời hoàn toàn", "Vệ sinh sâu", "Thay thế linh kiện", "Tối ưu hóa hiệu suất", "Bảo hành 6 tháng"],
             display_order: 3,
             created_at: "2024-01-01T00:00:00Z"
@@ -48,12 +48,12 @@ export const CarService: React.FC = () => {
     ];
 
     const sampleServices: IndividualService[] = [
-        { id: 1, service_type_id: "car", name: "Thay dầu động cơ", price: 45.99, description: "Thay dầu động cơ và lọc dầu chuyên nghiệp", duration: "45 phút", display_order: 1, created_at: "2024-01-01T00:00:00Z" },
-        { id: 2, service_type_id: "car", name: "Kiểm tra phanh", price: 35.99, description: "Kiểm tra và bảo dưỡng hệ thống phanh", duration: "60 phút", display_order: 2, created_at: "2024-01-01T00:00:00Z" },
-        { id: 3, service_type_id: "car", name: "Thay lọc gió", price: 25.99, description: "Thay thế lọc gió động cơ và cabin", duration: "30 phút", display_order: 3, created_at: "2024-01-01T00:00:00Z" },
-        { id: 4, service_type_id: "car", name: "Cân bằng lốp", price: 40.99, description: "Cân bằng và căn chỉnh bánh xe", duration: "45 phút", display_order: 4, created_at: "2024-01-01T00:00:00Z" },
-        { id: 5, service_type_id: "car", name: "Kiểm tra ắc quy", price: 20.99, description: "Kiểm tra và bảo dưỡng ắc quy", duration: "30 phút", display_order: 5, created_at: "2024-01-01T00:00:00Z" },
-        { id: 6, service_type_id: "car", name: "Rửa xe detailing", price: 55.99, description: "Vệ sinh toàn diện nội thất và ngoại thất", duration: "90 phút", display_order: 6, created_at: "2024-01-01T00:00:00Z" }
+        { id: 1, service_type_id: "bike", name: "Điều chỉnh phanh", price: 15.990, description: "Hiệu chuẩn phanh chuyên nghiệp", duration: "30 phút", display_order: 1, created_at: "2024-01-01T00:00:00Z" },
+        { id: 2, service_type_id: "bike", name: "Tinh chỉnh số", price: 20.990, description: "Tối ưu hóa chuyển số mượt mà", duration: "30 phút", display_order: 2, created_at: "2024-01-01T00:00:00Z" },
+        { id: 3, service_type_id: "bike", name: "Sửa xăm", price: 12.990, description: "Khắc phục xăm nhanh chóng", duration: "30 phút", display_order: 3, created_at: "2024-01-01T00:00:00Z" },
+        { id: 4, service_type_id: "bike", name: "Thay xích", price: 35.990, description: "Lắp đặt xích mới", duration: "30 phút", display_order: 4, created_at: "2024-01-01T00:00:00Z" },
+        { id: 5, service_type_id: "bike", name: "Cân bằng bánh xe", price: 25.990, description: "Dịch vụ căn chỉnh bánh xe", duration: "30 phút", display_order: 5, created_at: "2024-01-01T00:00:00Z" },
+        { id: 6, service_type_id: "bike", name: "Vệ sinh toàn bộ", price: 18.990, description: "Vệ sinh sâu cho xe đạp", duration: "30 phút", display_order: 6, created_at: "2024-01-01T00:00:00Z" }
     ];
 
     // Temporarily use sample data
@@ -91,24 +91,24 @@ export const CarService: React.FC = () => {
                 <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8" style={{ backgroundImage: `url(${Clean})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="max-w-4xl mx-auto text-center">
                         <div className="flex justify-center mb-6 mt-5">
-                            <Car className="h-16 w-16 text-blue-500" />
+                            <Bike className="h-16 w-16 text-blue-500" />
                         </div>
                         <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-orange-500 block">
-                                Dịch vụ bảo dưỡng xe ô tô
+                                Dịch vụ bảo dưỡng xe đạp điện
                             </span>
                         </h1>
                         <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                            Giữ cho chiếc xe ô tô của bạn luôn trong tình trạng tốt nhất với các gói dịch vụ và bảo dưỡng cá nhân của chúng tôi.
+                            Giữ cho chiếc xe đạp điện của bạn luôn trong tình trạng tốt nhất với các gói dịch vụ và bảo dưỡng cá nhân của chúng tôi.
                         </p>
                     </div>
                 </section>
-
 
                 {/* Search Bar */}
                 <section className="pt-8 px-4 sm:px-6 lg:px-8 bg-white">
                     <div className="max-w-4xl mx-auto">
                         <div className="flex flex-col md:flex-row gap-4 ">
+                            {/* Search Bar */}
                             <div className="relative flex-1">
                                 <input
                                     type="text"
@@ -145,7 +145,6 @@ export const CarService: React.FC = () => {
                         </div>
                     </div>
                 </section>
-
 
                 {/* Packages and Services Sections */}
                 <section className='py-20 bg-white packages-section'>

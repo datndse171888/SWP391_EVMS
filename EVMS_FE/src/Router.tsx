@@ -20,13 +20,14 @@ import { Parts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import { CarServicePage } from './pages/Service/CarServicePage'
 import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
 import ProfileView from './pages/user/UserProfile'
 import StaffDashboard from './pages/staff/StaffDashboard';
-
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarServicePage';
+import { MotoService } from './pages/Service/MotoService';
 
 // Placeholder components for different dashboards
 const TechnicianDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Technician Dashboard</h1></div>;
@@ -43,7 +44,10 @@ export const Router: React.FC = () => {
           <Route index element={<Home />} />
           <Route path="/introduction" element={<Introduction />} />
           <Route path="/service" element={<Service />} />
-          <Route path="/carService" element={<CarServicePage />} />
+          <Route path="/carService" element={<CarService />} />
+          <Route path="/bikeService" element={<BikeService />} />
+          <Route path="/motoService" element={<MotoService />} />
+
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -52,7 +56,7 @@ export const Router: React.FC = () => {
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
         <Route path="/profile" element={<ProfileView />} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin" element={
           <AdminRoute>

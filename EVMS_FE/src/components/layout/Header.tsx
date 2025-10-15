@@ -146,10 +146,10 @@ const Header: React.FC = () => {
                       <Link to="/carService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng ô tô điện
                       </Link>
-                      <Link to="/services/motorcycle" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link to="/motoService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng xe máy điện
                       </Link>
-                      <Link to="/services/bicycle" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link to="/bikeService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng xe đạp điện
                       </Link>
                     </div>

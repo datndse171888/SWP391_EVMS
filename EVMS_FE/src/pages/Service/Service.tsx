@@ -15,7 +15,7 @@ export const CarServicePage: React.FC = () => {
                 <section className=" py-20 pt-20 pb-16 px-4 sm:px-6 lg:px-8" style={{ backgroundImage: `url(${Clean})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-6x md:text-6xl font-bold text-blue-900 mb-6 mt-10 drop-shadow-lg ">
-                                Dịch vụ
+                            Dịch vụ
                         </h1>
                         <p className="text-xl text-blue-300 mb-8 max-w-3xl mx-auto">
                             Dịch vụ chăm sóc ô tô hiện đại với chẩn đoán tiên tiến, kỹ thuật viên chuyên nghiệp,
@@ -36,12 +36,12 @@ export const CarServicePage: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <Link to="/car-service" className="group">
+                            <Link to="/carService" className="group">
                                 <div className="bg-orange-50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 group-hover:transform group-hover:scale-105">
                                     <div className="text-blue-500 mb-6">
                                         <Car size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ ô tô điện</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ bảo dưỡng xe ô tô</h3>
                                     <p className="text-blue-800 mb-6">
                                         Dịch vụ chăm sóc ô tô toàn diện từ bảo trì định kỳ đến sửa chữa phức tạp
                                     </p>
@@ -51,14 +51,14 @@ export const CarServicePage: React.FC = () => {
                                 </div>
                             </Link>
 
-                            <Link to="/moto-service" className="group">
+                            <Link to="/motoService" className="group">
                                 <div className="bg-orange-50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:border-orange-500/50 transition-all duration-300 group-hover:transform group-hover:scale-105">
                                     <div className="text-orange-500 mb-6">
                                         <Motorcycle size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe máy điện</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ bảo dưỡng xe máy</h3>
                                     <p className="text-blue-800 mb-6">
-                                        Dịch vụ bảo trì và sữa chữa xe máy và tối ưu hóa hiệu suất
+                                        Dịch vụ bảo trì và sửa chữa xe máy và tối ưu hóa hiệu suất
                                     </p>
                                     <div className="flex items-center text-orange-500 font-semibold">
                                         Tìm hiểu thêm <ArrowRight className="ml-2 h-4 w-4" />
@@ -66,12 +66,12 @@ export const CarServicePage: React.FC = () => {
                                 </div>
                             </Link>
 
-                            <Link to="/bike-service" className="group">
+                            <Link to="/bikeService" className="group">
                                 <div className="bg-orange-50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300 group-hover:transform group-hover:scale-105">
                                     <div className="text-yellow-500 mb-6">
                                         <Bike size={48} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ xe đạp điện</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900 mb-4">Dịch vụ bảo dưỡng xe đạp </h3>
                                     <p className="text-blue-800 mb-6">
                                         Dịch vụ bảo trì và sửa chữa xe đạp chuyên nghiệp
                                     </p>
@@ -87,7 +87,7 @@ export const CarServicePage: React.FC = () => {
 
 
                 {/* Why Maintenance Section */}
-                <section id="maintenance" className="py-20 bg-gradient-to-t from-orange-100 to-gray-50">
+                <section id="maintenance" className="py-20 bg-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-16">
                             <h2 className="text-5xl font-bold text-blue-900 mb-4">Tại sao bảo trì phương tiện là cần thiết</h2>
