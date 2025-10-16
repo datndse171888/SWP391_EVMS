@@ -47,8 +47,8 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     vehicleType: it.vehicleType,
     pricing: Array.isArray(it.pricing)
       ? it.pricing
-          .filter((p: any) => p && typeof p.price === 'number' && ['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category)))
-          .map((p: any) => ({ category: String(p.category) as 'CAR'|'BICYCLE'|'MOTOBIKE', price: p.price }))
+        .filter((p: any) => p && typeof p.price === 'number' && ['CAR', 'BICYCLE', 'MOTOBIKE'].includes(String(p.category)))
+        .map((p: any) => ({ category: String(p.category) as 'CAR' | 'BICYCLE' | 'MOTOBIKE', price: p.price }))
       : undefined
   }))
 
@@ -69,5 +69,51 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     }
   }
 }
+
+
+
+interface ServiceResponse {
+  message: string
+  service?: Service
+}
+
+export async function createService(params: Service): Promise<ServiceResponse> {
+  const response = await fetch('http://localhost:4000/api/services', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(params)
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Không thể tạo dịch vụ')
+  }
+
+  return result
+}
+
+
+export async function updateService(id: string | number, params: Partial<Service>): Promise<ServiceResponse> {
+  const response = await fetch(`http://localhost:4000/api/services/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(params)
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Không thể cập nhật dịch vụ')
+  }
+
+  return result
+}
+
+
 
 

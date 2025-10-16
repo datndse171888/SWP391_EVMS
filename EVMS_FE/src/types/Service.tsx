@@ -3,7 +3,7 @@ export interface Service {
     name: string;
     description: string;
     price: number;
-    duration: string;
+    duration: number;
     image: string;
     vehicleType?: 'electric_bike' | 'electric_motorcycle' | 'electric_car';
     pricing?: { category: 'CAR' | 'BICYCLE' | 'MOTOBIKE'; price: number }[];
