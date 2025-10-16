@@ -1,27 +1,36 @@
 import React from 'react'
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
-import { Login } from './pages/authentication/Login'
+import { Login } from './pages/auth/Login'
 import Home from './pages/Home'
-import { Layout } from './components/common/layout/Layout'
+import { Layout } from './components/layout/Layout'
 import {
   AdminRoute,
   StaffRoute,
   TechnicianRoute,
   CustomerRoute
 } from './components/auth/ProtectedRoute'
-import {
-  AdminLayout,
-  StaffLayout,
-  TechnicianLayout
-} from './components/layout'
+import { AdminLayout } from './components/layout/AdminLayout'
+import { StaffLayout } from './components/layout/StaffLayout'
+import { TechnicianLayout } from './components/layout/TechnicianLayout'
 import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
-import Introduction from './pages/public/Introduction'
-
+import { Services } from './pages/admin/Services'
+import { Parts } from './pages/admin/Parts'
+import Introduction from './pages/Introduction'
+import { Register } from './pages/auth/Register'
+import { Test } from './Test'
+import Service from './pages/Service/Service'
+import { ResetPassword } from './pages/auth/ResetPassword'
+import { ForgotPassword } from './pages/auth/ForgotPassword'
+import ProfileView from './pages/user/UserProfile'
+import StaffDashboard from './pages/staff/StaffDashboard';
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarServicePage';
+import { MotoService } from './pages/Service/MotoService';
+import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 
 // Placeholder components for different dashboards
-const StaffDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Staff Dashboard</h1></div>;
 const TechnicianDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Technician Dashboard</h1></div>;
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
 const Unauthorized = () => <div className="p-6"><h1 className="text-2xl font-bold text-red-600">Unauthorized Access</h1></div>;
@@ -35,15 +44,39 @@ export const Router: React.FC = () => {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="/introduction" element={<Introduction />} />
+          <Route path="/service" element={<Service />} />
+          <Route path="/carService" element={<CarService />} />
+          <Route path="/bikeService" element={<BikeService />} />
+          <Route path="/motoService" element={<MotoService />} />
+
         </Route>
+        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/test" element={<Test />} />
+        <Route path="/profile" element={<ProfileView />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
           <AdminRoute>
             <AdminLayout>
               <Dashboard />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/parts" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Parts />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/services" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Services />
             </AdminLayout>
           </AdminRoute>
         } />
@@ -68,6 +101,7 @@ export const Router: React.FC = () => {
             <StaffLayout>
               <Routes>
                 <Route path="dashboard" element={<StaffDashboard />} />
+                <Route path="customers" element={<ChatWithCustomer />} />
                 <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
               </Routes>
             </StaffLayout>

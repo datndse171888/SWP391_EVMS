@@ -24,18 +24,25 @@ const StatCard: React.FC<{
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
-        <div className={`w-14 h-14 rounded-2xl ${accentColor} flex items-center justify-center shadow-md`}>
-          <span className="text-white text-2xl">{icon}</span>
+        <div className="flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-2xl ${accentColor} flex items-center justify-center shadow-md border-2 border-white`}>
+            <span className="text-white text-2xl">{icon}</span>
+          </div>
+          <div>
+            <div className="text-gray-600 text-sm font-medium">{title}</div>
+            <a href="#" className="text-azure-0 text-xs font-semibold hover:underline">{linkText}</a>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold text-gray-800">{value}</div>
-          <div className={`text-sm font-semibold ${changeType === 'positive' ? 'text-emerald-600' : 'text-red-500'}`}>
+          <div className={`text-xs font-semibold ${changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
             {change}
           </div>
         </div>
       </div>
-      <div className="text-gray-600 text-sm font-medium mb-2">{title}</div>
-      <a href="#" className="text-blue-500 text-sm font-medium hover:underline">{linkText}</a>
+      <div className="w-full h-1 rounded bg-gray-100 overflow-hidden">
+        <div className={`${accentColor} h-full`} style={{ width: '60%' }}></div>
+      </div>
     </div>
   )
 }
@@ -66,7 +73,7 @@ const UsersTable: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-azure-0"></div>
         <span className="ml-3 text-gray-600">Đang tải...</span>
       </div>
     )
@@ -92,7 +99,7 @@ const UsersTable: React.FC = () => {
               <tr key={user._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors duration-200">
                 <td className="py-4 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-md">
+                    <div className="w-12 h-12 rounded-full bg-blue-0 flex items-center justify-center shadow-md">
                       <span className="text-white font-bold text-lg">
                         {user.fullName ? user.fullName.charAt(0).toUpperCase() : user.userName.charAt(0).toUpperCase()}
                       </span>
@@ -123,7 +130,7 @@ const UsersTable: React.FC = () => {
                   </span>
                 </td>
                 <td className="py-4 px-4">
-                  <a href="/admin/users" className="text-blue-500 hover:text-blue-700 text-sm font-medium">
+                  <a href="/admin/users" className="text-azure-0 hover:text-azure-7 text-sm font-medium">
                     Xem tất cả
                   </a>
                 </td>
@@ -141,21 +148,19 @@ export const Dashboard: React.FC = () => {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Chào mừng bạn đến với hệ thống quản lý sự kiện EVMS</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-blue-0 mb-2">Dashboard</h1>
+            <p className="text-gray-600">Chào mừng bạn đến với hệ thống quản lý sự kiện EVMS</p>
+          </div>
+          <div className="hidden md:flex items-center gap-3">
+            <button className="px-4 py-2 rounded-lg bg-blue-0 text-white hover:opacity-90 transition">Tạo</button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          title="Tổng sự kiện"
-          value="24"
-          change="+12%"
-          changeType="positive"
-          icon="📅"
-          linkText="Xem tất cả sự kiện"
-          accentColor="bg-gradient-to-br from-blue-400 to-blue-500"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Người dùng"
           value="1,234"
@@ -163,7 +168,7 @@ export const Dashboard: React.FC = () => {
           changeType="positive"
           icon="👥"
           linkText="Quản lý người dùng"
-          accentColor="bg-gradient-to-br from-green-400 to-green-500"
+          accentColor="bg-blue-0"
         />
         <StatCard
           title="Kỹ thuật viên"
@@ -172,7 +177,7 @@ export const Dashboard: React.FC = () => {
           changeType="positive"
           icon="🔧"
           linkText="Quản lý kỹ thuật viên"
-          accentColor="bg-gradient-to-br from-purple-400 to-purple-500"
+          accentColor="bg-azure-0"
         />
         <StatCard
           title="Doanh thu"
@@ -181,7 +186,7 @@ export const Dashboard: React.FC = () => {
           changeType="negative"
           icon="💰"
           linkText="Xem báo cáo"
-          accentColor="bg-gradient-to-br from-orange-400 to-orange-500"
+          accentColor="bg-orange-0"
         />
       </div>
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminOnly, staffOnly, technicianOnly, customerOnly } from '../middleware/index.js';
+import { Part } from '../models/Part.js';
 
 export const demoRouter = Router();
 
@@ -85,4 +86,30 @@ demoRouter.get('/my-appointments', authMiddleware, customerOnly, (req, res) => {
       { id: 2, service: 'Bảo dưỡng xe máy điện', date: '2024-01-20', status: 'pending' }
     ]
   });
+});
+
+// Seed: tạo 1 Part mẫu (admin)
+demoRouter.post('/seed-part', authMiddleware, adminOnly, async (_req, res) => {
+  try {
+    const seed = {
+      name: 'Oil Filter Standard',
+      description: 'Oil filter tiêu chuẩn cho xe phổ thông',
+      manufacturer: 'OEM',
+      partNumber: 'OF-STD-001',
+      price: 120000,
+      status: 'active' as const,
+      warrantyPeriod: 12,
+      warrantyCondition: 'tháng',
+    };
+
+    const existing = await Part.findOne({ name: seed.name, partNumber: seed.partNumber });
+    if (existing) {
+      return res.json({ message: 'Đã tồn tại part mẫu', partId: existing._id, part: existing });
+    }
+
+    const created = await Part.create(seed);
+    return res.status(201).json({ message: 'Tạo part mẫu thành công', partId: created._id, part: created });
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi khi seed Part' });
+  }
 });

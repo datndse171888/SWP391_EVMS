@@ -1,7 +1,6 @@
 import React, { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { COLOR } from '../../constants/color/Color';
 
 interface TechnicianLayoutProps {
   children: ReactNode;
@@ -34,7 +33,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
                 Technician Dashboard
               </h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
                 Xin chào, {user?.fullName || user?.userName}
@@ -42,7 +41,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
               <button
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-white rounded-md hover:bg-red-600 transition-colors"
-                style={{ backgroundColor: COLOR.red[0] }}
+                style={{ backgroundColor: '#ef4444' }}
               >
                 Đăng xuất
               </button>
@@ -60,13 +59,12 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive(item.path)
-                      ? 'text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.path)
+                    ? 'text-white'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
                   style={{
-                    backgroundColor: isActive(item.path) ? COLOR.blue[0] : 'transparent'
+                    backgroundColor: isActive(item.path) ? '#014091' : 'transparent'
                   }}
                 >
                   <span className="mr-3 text-lg">{item.icon}</span>
@@ -78,7 +76,7 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

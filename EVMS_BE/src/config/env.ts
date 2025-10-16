@@ -12,4 +12,8 @@ export const env = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  // Email configuration for forgot password
+  emailUser: process.env.EMAIL_USER || '',
+  emailPassword: process.env.EMAIL_PASSWORD || '',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 };
