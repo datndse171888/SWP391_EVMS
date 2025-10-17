@@ -9,14 +9,13 @@ export interface Service {
     pricing?: { category: 'CAR' | 'BICYCLE' | 'MOTOBIKE'; price: number }[];
 }
 
-
+// dùng để làm giao diện không lấy từ database
 export interface Reason {
     id: number;
     icon: React.ElementType;
     title: string;
     description: string;
     color: string;
-    
 }
 
 export interface Package {
@@ -36,7 +35,7 @@ export interface IndividualService {
   name: string;
   price: number;
   description: string;
-  duration: string;
+  duration: number;
   display_order: number;
   created_at: string;
 }

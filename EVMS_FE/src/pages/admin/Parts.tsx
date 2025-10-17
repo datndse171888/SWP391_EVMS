@@ -51,6 +51,15 @@ export const Parts: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800">Kho phụ tùng</h1>
             <p className="text-gray-600 mt-1">Xem tất cả phụ tùng trong hệ thống</p>
           </div>
+            <button
+            // onClick={() => (handleCreate())}
+            className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Thêm phụ tùng
+          </button>
         </div>
       </header>
 
@@ -72,6 +81,18 @@ export const Parts: React.FC = () => {
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
+            </div>
+             <div className="sm:w-48">
+              <select
+                // value={selectedVehicleType}
+                // onChange={(e) => setSelectedVehicleType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent bg-white"
+              >
+                <option value="">Tất cả loại xe</option>
+                <option value="electric_bike">Xe đạp điện</option>
+                <option value="electric_motorcycle">Xe máy điện</option>
+                <option value="electric_car">Xe ô tô điện</option>
+              </select>
             </div>
             <button
               type="submit"

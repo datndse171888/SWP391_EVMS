@@ -11,12 +11,13 @@ interface ServiceModalProps {
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onSave, service, mode }: ServiceModalProps) => {
-    const [formData, setFormData] = useState({
+
+    const [formData, setFormData] = useState<Service>({
         id: service?.id || 0,
         name: '',
         description: '',
-        price: '',
-        duration: '',
+        price: 0,
+        duration: 0,
         image: '',
         vehicleType: service?.vehicleType || undefined,
     });
@@ -27,8 +28,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                 id: service.id,
                 name: service.name,
                 description: service.description,
-                price: service.price.toString(),
-                duration: service.duration.toString(),
+                price: service.price,
+                duration: service.duration,
                 image: service.image,
                 vehicleType: service.vehicleType,
             });
@@ -37,8 +38,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                 id: 0,
                 name: '',
                 description: '',
-                price: '',
-                duration: '',
+                price: 0,
+                duration: 0,
                 image: '',
                 vehicleType: undefined,
             });
@@ -51,8 +52,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
             id: formData.id,
             name: formData.name,
             description: formData.description,
-            price: parseFloat(formData.price),
-            duration: parseInt(formData.duration),
+            price: formData.price,
+            duration: formData.duration,
             image: formData.image,
             vehicleType: formData.vehicleType,
         });
@@ -114,7 +115,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                                 step="0.01"
                                 min="0"
                                 value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                                 placeholder="0.00"
                             />
@@ -129,7 +130,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                                 required
                                 min="1"
                                 value={formData.duration}
-                                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                                 placeholder="30"
                             />

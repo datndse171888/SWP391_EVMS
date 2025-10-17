@@ -1,4 +1,5 @@
 import type { Service } from '../types/Service'
+import { api } from '../utils/Axios'
 
 interface FetchServicesParams {
   page: number
@@ -42,7 +43,7 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     description: it.description,
     price: it.price,
     // BE duration is number (minutes), FE expects string
-    duration: typeof it.duration === 'number' ? `${it.duration} phút` : (it.duration || ''),
+    duration: typeof it.duration === 'number' ? `${it.duration}` : (it.duration || ''),
     image: it.image,
     vehicleType: it.vehicleType,
     pricing: Array.isArray(it.pricing)
@@ -70,50 +71,18 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
   }
 }
 
+// Service API methods
+export const ServiceApi = {
+  createService: (params: Service) => {
+    return api.post('/services', params);
+  },
 
+  updateService: (id: number, params: Partial<Service>) => {
+    return api.put(`/services/${id}`, params);
+  },
 
-interface ServiceResponse {
-  message: string
-  service?: Service
-}
-
-export async function createService(params: Service): Promise<ServiceResponse> {
-  const response = await fetch('http://localhost:4000/api/services', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(params)
-  })
-
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Không thể tạo dịch vụ')
+  deleteService: (id: number) => {
+    return api.delete(`/services/${id}`);
   }
-
-  return result
 }
-
-
-export async function updateService(id: string | number, params: Partial<Service>): Promise<ServiceResponse> {
-  const response = await fetch(`http://localhost:4000/api/services/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(params)
-  })
-
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.message || 'Không thể cập nhật dịch vụ')
-  }
-
-  return result
-}
-
-
-
 

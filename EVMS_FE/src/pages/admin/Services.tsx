@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Service } from '../../types/Service'
-import { createService, fetchServices, updateService } from '../../api/ServiceApi'
+import { fetchServices } from '../../api/ServiceApi'
+import { ServiceApi } from '../../api/ServiceApi'
 import { ServiceModal } from '../../components/ServiceModal'
 
 interface ServicesResponsePagination {
@@ -51,6 +52,7 @@ export const Services: React.FC = () => {
     loadData()
   }, [loadData])
 
+  console.log(services)
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
@@ -85,9 +87,9 @@ export const Services: React.FC = () => {
     if (modalMode === 'create') {
       try {
         // Call API to create service
-        const response = await createService(serviceData as Service);
+        const response = await ServiceApi.createService(serviceData as Service);
 
-        if (!response.message) {
+        if (!response.status) {
           throw new Error('Failed to create service');
         }
 
@@ -100,9 +102,9 @@ export const Services: React.FC = () => {
     } else {
       try {
         // Call API to update service
-        const response = await updateService(selectedService?.id!, serviceData as Service);
+        const response = await ServiceApi.updateService(serviceData.id!, serviceData);
 
-        if (!response.message) {
+        if (!response.status) {
           throw new Error('Failed to update service');
         }
 
@@ -226,9 +228,9 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Dịch vụ</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Thời lượng</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">CAR</th>
+                      {/* <th className="text-left py-4 px-6 text-gray-600 font-semibold">CAR</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">BICYCLE</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th> */}
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Action</th>
 
@@ -264,18 +266,7 @@ export const Services: React.FC = () => {
                           {typeof svc.price === 'number' ? currencyFormatter.format(svc.price) : '—'}
                         </td>
                         <td className="py-4 px-6">{svc.duration || '—'}</td>
-                        {(() => {
-                          const car = svc.pricing?.find(p => p.category === 'CAR')?.price
-                          const bicycle = svc.pricing?.find(p => p.category === 'BICYCLE')?.price
-                          const motobike = svc.pricing?.find(p => p.category === 'MOTOBIKE')?.price
-                          return (
-                            <>
-                              <td className="py-4 px-6">{typeof car === 'number' ? currencyFormatter.format(car) : '—'}</td>
-                              <td className="py-4 px-6">{typeof bicycle === 'number' ? currencyFormatter.format(bicycle) : '—'}</td>
-                              <td className="py-4 px-6">{typeof motobike === 'number' ? currencyFormatter.format(motobike) : '—'}</td>
-                            </>
-                          )
-                        })()}
+
                         <td className="py-4 px-6">
                           {svc.vehicleType === 'electric_bike' && 'Xe đạp điện'}
                           {svc.vehicleType === 'electric_motorcycle' && 'Xe máy điện'}
@@ -285,12 +276,15 @@ export const Services: React.FC = () => {
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleEdit(svc)}
+                              onClick={() => {
+                                console.log('Edit service', svc);
+                                handleEdit(svc)
+                              }}
                               className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                               title="Chỉnh sửa"
                             >
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                               </svg>
                             </button>
                             <button
