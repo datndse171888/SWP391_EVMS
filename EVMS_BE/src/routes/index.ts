@@ -7,6 +7,7 @@ import { servicePackageRouter } from './servicePackage.js';
 import { conversationRouter } from './conversation.js';
 import { messageRouter } from './message.js';
 import { partRouter } from './part.js';
+import { vehicleConditionReportRouter } from './vehicleConditionReport.js';
 
 import { userRouter } from './user.js';
 import { vehicleRouter } from './vehicle.js';
@@ -24,3 +25,4 @@ router.use('/service-packages', servicePackageRouter);
 router.use('/conversations', conversationRouter);
 router.use('/messages', messageRouter);
 router.use('/parts', partRouter);
+router.use('/reports', vehicleConditionReportRouter);

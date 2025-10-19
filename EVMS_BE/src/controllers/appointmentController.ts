@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
+import { VehicleConditionReport } from '../models/VehicleConditionReport.js';
 
 export async function createAppointment(req: Request, res: Response) {
   try {
@@ -665,6 +666,37 @@ export async function updateAppointmentStatus(req: Request, res: Response) {
         success: false,
         message: `Không thể chuyển từ trạng thái '${appointment.status}' sang '${status}'. Chuyển đổi hợp lệ: ${validTransitions[appointment.status].join(', ') || 'không có'}`
       });
+    }
+
+    // Business rule: Check for required vehicle condition reports
+    if (status === 'in_progress') {
+      const beforeServiceReport = await VehicleConditionReport.findOne({
+        appointmentID: appointmentId,
+        stage: 'before-service'
+      });
+
+      if (!beforeServiceReport) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể bắt đầu sửa chữa. Vui lòng tạo báo cáo tình trạng xe trước khi sửa chữa trước.',
+          requiredAction: 'create_before_service_report'
+        });
+      }
+    }
+
+    if (status === 'completed') {
+      const afterServiceReport = await VehicleConditionReport.findOne({
+        appointmentID: appointmentId,
+        stage: 'after-service'
+      });
+
+      if (!afterServiceReport) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể hoàn thành sửa chữa. Vui lòng tạo báo cáo tình trạng xe sau khi sửa chữa trước.',
+          requiredAction: 'create_after_service_report'
+        });
+      }
     }
 
     // Special validations for technician role
