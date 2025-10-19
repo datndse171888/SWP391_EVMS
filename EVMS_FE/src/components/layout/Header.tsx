@@ -83,8 +83,11 @@ const Header: React.FC = () => {
     <header 
       className="fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300"
       style={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderBottom: `1px solid #aaafbb`,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderBottom: `1px solid rgba(170, 175, 187, 0.3)`,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
         transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)'
       }}
     >
@@ -120,16 +123,16 @@ const Header: React.FC = () => {
               <div key={item.name} className="relative group">
                 <Link
                   to={item.path}
-                  className={`text-sm font-semibold uppercase tracking-wider transition-all duration-200 flex items-center space-x-1 ${
+                  className={`text-base font-semibold uppercase tracking-wider transition-all duration-200 flex items-center space-x-1 ${
                     isActive(item.path)
                       ? 'text-white'
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
+                    color: isActive(item.path) ? '#f6ae2d' : '#1f2227',
                     fontFamily: '"Open Sans", sans-serif',
-                    fontSize: '14px',
-                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
+                    fontSize: '16px',
+                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.5)',
                     fontWeight: isActive(item.path) ? 700 : 600
                   }}
                 >
@@ -255,16 +258,16 @@ const Header: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  className={`block px-4 py-3 text-base font-semibold uppercase tracking-wider transition-all duration-200 ${
+                  className={`block px-4 py-3 text-lg font-semibold uppercase tracking-wider transition-all duration-200 ${
                     isActive(item.path)
                       ? 'text-white'
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
+                    color: isActive(item.path) ? '#f6ae2d' : '#1f2227',
                     fontFamily: '"Open Sans", sans-serif',
-                    fontSize: '14px',
-                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
+                    fontSize: '18px',
+                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.5)',
                     fontWeight: isActive(item.path) ? 700 : 600
                   }}
                   onClick={() => setIsMenuOpen(false)}

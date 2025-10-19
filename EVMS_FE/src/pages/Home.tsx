@@ -1,9 +1,51 @@
 import React, { useState } from 'react';
-import homeImage from '../assets/images/home.jpg';
+import homeImage from '../assets/images/home1.jpg';
 import cleanImage from '../assets/images/clean.png';
 import motobyImage from '../assets/images/motoby.jpg';
 import scheduleImage from '../assets/images/schedule.png';
 import chartImage from '../assets/images/chart.jpg';
+
+// Add custom animations
+const customStyles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes bounceSlow {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
+  }
+  
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+    opacity: 0;
+  }
+  
+  .animate-bounce-slow {
+    animation: bounceSlow 2s infinite;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = customStyles;
+  document.head.appendChild(styleSheet);
+}
 
 // Debug: Log image paths
 console.log('Image paths:', {
@@ -88,48 +130,71 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section 
-        className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-screen flex items-center"
+        className="relative pt-32 pb-24 px-0 overflow-hidden min-h-screen flex items-center"
         style={{
           backgroundImage: `url(${homeImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed'
         }}
       >
         
-        <div className="relative max-w-7xl mx-auto w-full">
-          <div className="max-w-2xl">
+        <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl -ml-4 mt-0">
             {/* Slogan */}
             <h1 
-              className="text-5xl lg:text-6xl font-bold mb-8 leading-tight"
+              className="text-5xl lg:text-6xl font-bold mb-8 leading-tight text-left animate-fade-in-up"
               style={{ 
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                color: 'white',
-                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5)'
+                color: '#014091',
+                textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.6)',
+                animationDelay: '0.2s'
               }}
             >
-              Chuyên nghiệp 
+              <span className="whitespace-nowrap">Chuyên nghiệp nhanh chóng</span>
               <br />
-              nhanh chóng
-              <br />
-              tin cậy bền lâu
+              <span className="whitespace-nowrap">tin cậy bền lâu</span>
             </h1>
             
             {/* Description */}
             <p 
-              className="text-xl mb-10 leading-relaxed max-w-lg"
+              className="text-xl mb-6 leading-relaxed max-w-lg text-left animate-fade-in-up"
               style={{
-                color: 'white',
-                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)'
+                color: '#014091',
+                textShadow: '0 1px 3px rgba(255, 255, 255, 0.6), 0 0 6px rgba(255, 255, 255, 0.4)',
+                animationDelay: '0.4s'
               }}
             >
               Đồng hành cùng quý khách trong mọi chuyến đi
             </p>
             
+            {/* Features */}
+            <div className="mb-8 space-y-3">
+              <div className="flex items-center space-x-3 animate-fade-in-up hover:scale-105 transition-transform duration-300" style={{ animationDelay: '0.6s' }}>
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span className="text-lg font-semibold" style={{ color: '#014091', textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)' }}>
+                  Bảo dưỡng chuyên nghiệp
+                </span>
+              </div>
+              <div className="flex items-center space-x-3 animate-fade-in-up hover:scale-105 transition-transform duration-300" style={{ animationDelay: '0.8s' }}>
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span className="text-lg font-semibold" style={{ color: '#014091', textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)' }}>
+                  Linh kiện chính hãng
+                </span>
+              </div>
+              <div className="flex items-center space-x-3 animate-fade-in-up hover:scale-105 transition-transform duration-300" style={{ animationDelay: '1.0s' }}>
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span className="text-lg font-semibold" style={{ color: '#014091', textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)' }}>
+                  Giá cả hợp lý
+                </span>
+              </div>
+            </div>
+            
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-start animate-fade-in-up" style={{ animationDelay: '1.2s' }}>
               <button
-                className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"
+                className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-yellow-500 animate-bounce-slow"
                 style={{
                   backgroundColor: '#f6ae2d',
                   color: '#014091',
@@ -139,7 +204,7 @@ const Home: React.FC = () => {
                 Đặt Lịch
               </button>
               <button
-                className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl border-2 border-white flex items-center justify-center space-x-2"
+                className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:shadow-xl border-2 border-white flex items-center justify-center space-x-2 hover:scale-105 hover:bg-gray-600"
                 style={{
                   backgroundColor: 'rgba(0, 0, 0, 0.3)',
                   fontFamily: 'Inter, sans-serif'
@@ -150,6 +215,33 @@ const Home: React.FC = () => {
                 </svg>
                 <span>Xem Quy Trình</span>
               </button>
+            </div>
+            
+            {/* Trust Indicators */}
+            <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '1.4s' }}>
+              <div className="flex flex-wrap items-center gap-6 text-sm" style={{ color: '#014091' }}>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                  <span className="font-semibold">5.0/5.0</span>
+                  <span>Đánh giá</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span className="font-semibold">5000+</span>
+                  <span>Xe đã sửa</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span className="font-semibold">Chính hãng</span>
+                  <span>Linh kiện</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
