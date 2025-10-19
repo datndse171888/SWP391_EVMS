@@ -1,9 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
+
 export interface IVehicle extends Document {
   userID: mongoose.Types.ObjectId; // ref User who owns the vehicle
   VIN: string;
   vehicleType: string;
+  vehicleCategory: VehicleCategory;
   plateNumber: string;
   brand: string;
   year: number;
@@ -38,8 +41,14 @@ const VehicleSchema = new Schema<IVehicle>(
       type: String, 
       required: true, 
       trim: true,
-      enum: ['car', 'motorcycle', 'truck', 'bus', 'other'],
-      message: 'Loại xe phải là: car, motorcycle, truck, bus, hoặc other'
+      enum: ['electric_car', 'electric_motorcycle', 'electric_bike'],
+      message: 'Loại xe phải là: electric_car, electric_motorcycle, hoặc electric_bike'
+    },
+    vehicleCategory: {
+      type: String,
+      required: true,
+      enum: ['CAR', 'BICYCLE', 'MOTOBIKE'],
+      message: 'Danh mục xe phải là: CAR, BICYCLE, hoặc MOTOBIKE'
     },
     plateNumber: { 
       type: String, 

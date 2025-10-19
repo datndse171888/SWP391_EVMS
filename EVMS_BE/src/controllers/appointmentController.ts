@@ -582,6 +582,173 @@ export async function assignTechnician(req: Request, res: Response) {
   }
 }
 
+// Update Appointment Status API
+export async function updateAppointmentStatus(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Check permissions - only admin, staff, and technician can update status
+    const role = req.user.role;
+    if (!['admin', 'staff', 'technician'].includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin, staff và technician mới có thể thay đổi trạng thái lịch hẹn'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+    const { status, reason, notes } = req.body as {
+      status: string;
+      reason?: string;
+      notes?: string;
+    };
+
+    // Validate required fields
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trạng thái là bắt buộc'
+      });
+    }
+
+    // Validate status values
+    const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Trạng thái không hợp lệ. Phải là một trong: ${validStatuses.join(', ')}`
+      });
+    }
+
+    // Find appointment
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    // Check if appointment can be updated
+    if (appointment.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể thay đổi trạng thái lịch hẹn đã hoàn thành'
+      });
+    }
+
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể thay đổi trạng thái lịch hẹn đã hủy'
+      });
+    }
+
+    // Define valid status transitions
+    const validTransitions: Record<string, string[]> = {
+      'pending': ['confirmed', 'cancelled'],
+      'confirmed': ['in_progress', 'cancelled', 'no_show'],
+      'in_progress': ['completed', 'cancelled'],
+      'completed': [], // Cannot change from completed
+      'cancelled': [], // Cannot change from cancelled
+      'no_show': [] // Cannot change from no_show
+    };
+
+    // Check if transition is valid
+    if (!validTransitions[appointment.status].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Không thể chuyển từ trạng thái '${appointment.status}' sang '${status}'. Chuyển đổi hợp lệ: ${validTransitions[appointment.status].join(', ') || 'không có'}`
+      });
+    }
+
+    // Special validations for technician role
+    if (role === 'technician') {
+      // Check if technician is assigned to this appointment
+      const isAssigned = appointment.technicianLeaderID?.toString() === req.user.id ||
+                        appointment.technicianSupport1ID?.toString() === req.user.id ||
+                        appointment.technicianSupport2ID?.toString() === req.user.id;
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn chỉ có thể thay đổi trạng thái lịch hẹn được phân công'
+        });
+      }
+
+      // Technician can only change to in_progress or completed
+      if (!['in_progress', 'completed'].includes(status)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Technician chỉ có thể chuyển sang trạng thái in_progress hoặc completed'
+        });
+      }
+    }
+
+    // Update appointment status
+    const updateData: any = { status };
+    if (reason) updateData.reason = reason;
+    if (notes) updateData.notes = notes;
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      updateData,
+      { new: true }
+    ).populate([
+      { path: 'userID', select: 'userName email fullName phoneNumber' },
+      { path: 'serviceID', select: 'name price duration description' },
+      { path: 'servicePackageID', select: 'name price duration description' },
+      {
+        path: 'technicianLeaderID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      },
+      {
+        path: 'technicianSupport1ID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      },
+      {
+        path: 'technicianSupport2ID',
+        select: 'userID introduction experience role',
+        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+      }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật trạng thái lịch hẹn thành công',
+      data: {
+        appointment: updatedAppointment,
+        statusChange: {
+          from: appointment.status,
+          to: status,
+          changedAt: new Date(),
+          changedBy: {
+            id: req.user.id,
+            role: req.user.role,
+            name: req.user.fullName || req.user.userName
+          },
+          reason: reason || null,
+          notes: notes || null
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Update appointment status error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi cập nhật trạng thái lịch hẹn'
+    });
+  }
+}
+
 // Get Available Technicians API (helper for assignment)
 export async function getAvailableTechnicians(req: Request, res: Response) {
   try {

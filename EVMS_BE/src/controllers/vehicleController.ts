@@ -8,6 +8,7 @@ export async function createVehicle(req: Request, res: Response) {
     const { 
       VIN, 
       vehicleType, 
+      vehicleCategory,
       plateNumber, 
       brand, 
       year, 
@@ -17,10 +18,10 @@ export async function createVehicle(req: Request, res: Response) {
     } = req.body;
 
     // Validation bắt buộc
-    if (!VIN || !vehicleType || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
+    if (!VIN || !vehicleType || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
       return res.status(400).json({ 
         success: false,
-        message: 'Thiếu thông tin bắt buộc: VIN, vehicleType, plateNumber, brand, year, mileage, batteryCapacity' 
+        message: 'Thiếu thông tin bắt buộc: VIN, vehicleType, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity' 
       });
     }
 
@@ -90,11 +91,20 @@ export async function createVehicle(req: Request, res: Response) {
     }
 
     // Validation vehicleType
-    const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bus', 'other'];
+    const validVehicleTypes = ['electric_car', 'electric_motorcycle', 'electric_bike'];
     if (!validVehicleTypes.includes(vehicleType)) {
       return res.status(400).json({ 
         success: false,
-        message: 'Loại xe không hợp lệ. Phải là: car, motorcycle, truck, bus, hoặc other' 
+        message: 'Loại xe không hợp lệ. Phải là: electric_car, electric_motorcycle, hoặc electric_bike' 
+      });
+    }
+
+    // Validation vehicleCategory
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
       });
     }
 
@@ -112,6 +122,7 @@ export async function createVehicle(req: Request, res: Response) {
       userID,
       VIN: VIN.toUpperCase(),
       vehicleType,
+      vehicleCategory,
       plateNumber: plateNumber.toUpperCase(),
       brand: brand.trim(),
       year,
@@ -331,14 +342,25 @@ export async function updateVehicle(req: Request, res: Response) {
     }
 
     if (updateData.vehicleType !== undefined) {
-      const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bus', 'other'];
+      const validVehicleTypes = ['electric_car', 'electric_motorcycle', 'electric_bike'];
       if (!validVehicleTypes.includes(updateData.vehicleType)) {
         return res.status(400).json({ 
           success: false,
-          message: 'Loại xe không hợp lệ. Phải là: car, motorcycle, truck, bus, hoặc other' 
+          message: 'Loại xe không hợp lệ. Phải là: electric_car, electric_motorcycle, hoặc electric_bike'
         });
       }
       updateFields.vehicleType = updateData.vehicleType;
+    }
+
+    if (updateData.vehicleCategory !== undefined) {
+      const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+      if (!validVehicleCategories.includes(updateData.vehicleCategory)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE'
+        });
+      }
+      updateFields.vehicleCategory = updateData.vehicleCategory;
     }
 
     if (updateData.brand !== undefined) {
