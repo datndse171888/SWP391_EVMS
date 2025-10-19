@@ -1,4 +1,5 @@
 import type { Service } from '../types/Service'
+import { api } from '../utils/Axios'
 
 interface FetchServicesParams {
   page: number
@@ -42,13 +43,13 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     description: it.description,
     price: it.price,
     // BE duration is number (minutes), FE expects string
-    duration: typeof it.duration === 'number' ? `${it.duration} phút` : (it.duration || ''),
+    duration: typeof it.duration === 'number' ? `${it.duration}` : (it.duration || ''),
     image: it.image,
     vehicleType: it.vehicleType,
     pricing: Array.isArray(it.pricing)
       ? it.pricing
-          .filter((p: any) => p && typeof p.price === 'number' && ['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category)))
-          .map((p: any) => ({ category: String(p.category) as 'CAR'|'BICYCLE'|'MOTOBIKE', price: p.price }))
+        .filter((p: any) => p && typeof p.price === 'number' && ['CAR', 'BICYCLE', 'MOTOBIKE'].includes(String(p.category)))
+        .map((p: any) => ({ category: String(p.category) as 'CAR' | 'BICYCLE' | 'MOTOBIKE', price: p.price }))
       : undefined
   }))
 
@@ -70,4 +71,18 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
   }
 }
 
+// Service API methods
+export const ServiceApi = {
+  createService: (params: Service) => {
+    return api.post('/services', params);
+  },
+
+  updateService: (id: number, params: Partial<Service>) => {
+    return api.put(`/services/${id}`, params);
+  },
+
+  deleteService: (id: number) => {
+    return api.delete(`/services/${id}`);
+  }
+}
 
