@@ -64,4 +64,14 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
   }
 }
 
-
+export const PartApi = {
+  createPart: (params: Part) => {
+    return api.post('/parts', params)
+  },
+  updatePart: (id: string, params: Part) => {
+    return api.put(`/parts/${id}`, params)
+  },
+  deletePart: (id: string) => {
+    return api.delete(`/parts/${id}`)
+  }
+}
