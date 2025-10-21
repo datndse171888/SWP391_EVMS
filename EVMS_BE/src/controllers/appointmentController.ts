@@ -60,13 +60,14 @@ function parseListParams(req: Request) {
   const from = req.query.from ? new Date(String(req.query.from)) : undefined;
   const to = req.query.to ? new Date(String(req.query.to)) : undefined;
 
+  // Updated time range filters
+  const updatedFrom = req.query.updatedFrom ? new Date(String(req.query.updatedFrom)) : undefined;
+  const updatedTo = req.query.updatedTo ? new Date(String(req.query.updatedTo)) : undefined;
+
   const serviceId = (req.query.serviceId as string | undefined)?.trim();
   const packageId = (req.query.packageId as string | undefined)?.trim();
   const technicianId = (req.query.technicianId as string | undefined)?.trim();
   const userId = (req.query.userId as string | undefined)?.trim();
-
-  const fieldsParam = (req.query.fields as string | undefined)?.trim();
-  const includeParam = (req.query.include as string | undefined)?.trim();
 
   return {
     page,
@@ -75,12 +76,12 @@ function parseListParams(req: Request) {
     status,
     from,
     to,
+    updatedFrom,
+    updatedTo,
     serviceId,
     packageId,
     technicianId,
     userId,
-    fieldsParam,
-    includeParam,
   };
 }
 
@@ -138,6 +139,11 @@ function buildBaseFilter(params: ReturnType<typeof parseListParams>) {
     if (params.from) filter.bookingDate.$gte = params.from;
     if (params.to) filter.bookingDate.$lte = params.to;
   }
+  if (params.updatedFrom || params.updatedTo) {
+    filter.updatedAt = {} as any;
+    if (params.updatedFrom) filter.updatedAt.$gte = params.updatedFrom;
+    if (params.updatedTo) filter.updatedAt.$lte = params.updatedTo;
+  }
   if (params.serviceId) filter.serviceID = params.serviceId;
   if (params.packageId) filter.servicePackageID = params.packageId;
   if (params.technicianId) {
@@ -165,19 +171,32 @@ export async function listAppointments(req: Request, res: Response) {
       filter.userID = params.userId;
     }
 
-    const select = buildSelect(params.fieldsParam);
-    const populates = buildPopulate(params.includeParam);
-
     const skip = (params.page - 1) * params.limit;
     const [total, docs] = await Promise.all([
       Appointment.countDocuments(filter),
       (() => {
-        let query = Appointment.find(filter)
+        return Appointment.find(filter)
           .sort(params.sort)
           .skip(skip)
-          .limit(params.limit);
-        if (select) query = query.select(select);
-        return query.populate(populates);
+          .limit(params.limit)
+          .populate({ path: 'userID', select: '_id userName fullName email phoneNumber photoURL gender role' })
+          .populate({ path: 'serviceID', select: '_id name price duration description' })
+          .populate({ path: 'servicePackageID', select: '_id name price description' })
+          .populate({ 
+            path: 'technicianLeaderID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          })
+          .populate({ 
+            path: 'technicianSupport1ID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          })
+          .populate({ 
+            path: 'technicianSupport2ID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          });
       })(),
     ]);
 
@@ -189,6 +208,8 @@ export async function listAppointments(req: Request, res: Response) {
         status: params.status,
         from: params.from,
         to: params.to,
+        updatedFrom: params.updatedFrom,
+        updatedTo: params.updatedTo,
         serviceId: params.serviceId,
         packageId: params.packageId,
         technicianId: params.technicianId,
@@ -207,19 +228,32 @@ export async function listMyAppointments(req: Request, res: Response) {
     const filter = buildBaseFilter(params);
     filter.userID = req.user.id;
 
-    const select = buildSelect(params.fieldsParam);
-    const populates = buildPopulate(params.includeParam);
-
     const skip = (params.page - 1) * params.limit;
     const [total, docs] = await Promise.all([
       Appointment.countDocuments(filter),
       (() => {
-        let query = Appointment.find(filter)
+        return Appointment.find(filter)
           .sort(params.sort)
           .skip(skip)
-          .limit(params.limit);
-        if (select) query = query.select(select);
-        return query.populate(populates);
+          .limit(params.limit)
+          .populate({ path: 'userID', select: '_id userName fullName email phoneNumber photoURL gender role' })
+          .populate({ path: 'serviceID', select: '_id name price duration description' })
+          .populate({ path: 'servicePackageID', select: '_id name price description' })
+          .populate({ 
+            path: 'technicianLeaderID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          })
+          .populate({ 
+            path: 'technicianSupport1ID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          })
+          .populate({ 
+            path: 'technicianSupport2ID', 
+            select: '_id introduction experience role',
+            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
+          });
       })(),
     ]);
 
@@ -231,6 +265,8 @@ export async function listMyAppointments(req: Request, res: Response) {
         status: params.status,
         from: params.from,
         to: params.to,
+        updatedFrom: params.updatedFrom,
+        updatedTo: params.updatedTo,
         serviceId: params.serviceId,
         packageId: params.packageId,
         technicianId: params.technicianId,
