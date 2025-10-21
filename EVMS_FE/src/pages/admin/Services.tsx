@@ -232,7 +232,7 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">BICYCLE</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th> */}
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Action</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hành động</th>
 
                     </tr>
                   </thead>
