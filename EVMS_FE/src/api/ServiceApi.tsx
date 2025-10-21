@@ -30,11 +30,8 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     ...(params.search ? { q: params.search } : {})
   })
 
-  const response = await fetch(`http://localhost:4000/api/services?${query.toString()}`)
-  if (!response.ok) {
-    throw new Error('Không thể tải danh sách dịch vụ')
-  }
-  const raw = await response.json() as { items: any[]; page: number; limit: number; total: number }
+  const response = await api.get(`/services?${query.toString()}`)
+  const raw = response.data as { items: any[]; page: number; limit: number; total: number }
 
   const mapped: Service[] = (raw.items || []).map((it, idx) => ({
     // id in FE type is number; map from index to avoid type mismatch

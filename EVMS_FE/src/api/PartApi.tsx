@@ -1,4 +1,5 @@
 import type { Part } from '../types/Part'
+import { api } from '../utils/Axios'
 
 interface FetchPartsParams {
   page: number
@@ -28,11 +29,8 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
     ...(params.search ? { q: params.search } : {})
   })
 
-  const response = await fetch(`http://localhost:4000/api/parts?${query.toString()}`)
-  if (!response.ok) {
-    throw new Error('Không thể tải danh sách phụ tùng')
-  }
-  const raw = await response.json() as { items: any[]; page: number; limit: number; total: number }
+  const response = await api.get(`/parts?${query.toString()}`)
+  const raw = response.data as { items: any[]; page: number; limit: number; total: number }
 
   const mapped: Part[] = (raw.items || []).map((it) => ({
     id: it._id,
