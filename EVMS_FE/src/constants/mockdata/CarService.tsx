@@ -1,7 +1,7 @@
 import { Wrench } from 'lucide-react';
-import type { CarService } from '../../types/Car';
+import type { VehicleService } from '../../types/Vehicle';
 
-export const carService : CarService[] = [
+export const carService : VehicleService[] = [
     {
         icon: Wrench,
         title: 'Maintenance Services',

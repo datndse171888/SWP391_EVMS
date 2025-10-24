@@ -9,13 +9,13 @@ export interface Car {
     features: string[];
 }
 
-export interface CarService {
+export interface VehicleService {
     icon: React.ElementType;
     title: string;
     description: string;
     features: string[];
-     image: string;
+    image: string;
 }
 
-
+export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
 

@@ -1,11 +1,11 @@
-import type { AccountLogin, ForgotPasswordRequest, ResetPasswordRequest } from "../types/Account";
+import type { AccountLogin, ForgotPasswordRequest, LoginResponse, ResetPasswordRequest } from "../types/Account";
 import type { AccountRegister } from "../types/Account";
 import { api } from "../utils/Axios";
 
 // Auth API methods
 export const authApi = {
   login: (credentials: AccountLogin) => {
-    return api.post('/auth/login', credentials);
+    return api.post<LoginResponse>('/auth/login', credentials);
   },
 
   loginWithGoogle: (data: { email: string; userName: string; photoURL?: string }) => {
