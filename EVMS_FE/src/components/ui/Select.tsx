@@ -8,6 +8,10 @@ interface SelectProps {
     height?: number;
     label: string;
     option: { value: string; label: string }[];
+    disableDefault?: boolean;
+    hiddenDefault?: boolean;
+    disabled?: boolean;
+    required?: boolean;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -18,7 +22,11 @@ export const Select: React.FC<SelectProps> = ({
     width,
     height,
     label,
-    option
+    option,
+    disableDefault = false,
+    hiddenDefault = false,
+    disabled = false,
+    required = false,
 }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -53,7 +61,16 @@ export const Select: React.FC<SelectProps> = ({
                     text-gray-8
                     placeholder:text-gray-4
                 `}
+                disabled={disabled}
+                required={required}
             >
+                <option 
+                    value="" 
+                    disabled={disableDefault} 
+                    hidden={hiddenDefault}
+                >
+                    {label}
+                </option>
                 {option.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                         {opt.label}

@@ -1,21 +1,21 @@
 import React, { useState } from 'react'
+import Vehicle from './Vehicle';
 
 
-const BookingService: React.FC = () => {
+const Booking: React.FC = () => {
 
     const [step, setStep] = useState<number>(1);
+    const [formData, setFormData] = useState<any>({});
 
     switch (step) {
         case 1:
             return (
-                <div>
-                    <div>BookingService Step 1</div>
-                    <button
-                        type='submit'
-                        onClick={e => setStep(2)}>
-                        Next
-                    </button>
-                </div>
+                <Vehicle
+                    formData={setFormData}
+                    onNext={() => {
+                        setStep(2)
+                        console.log('Form Data:', formData);
+                    }} />
             )
         case 2:
             return (
@@ -26,6 +26,7 @@ const BookingService: React.FC = () => {
                         Previous
                     </button>
                     <div>BookingService Step 2</div>
+                    <div>{formData.vehicleId}</div>
                     <button
                         type='submit'
                         onClick={e => setStep(3)}>
@@ -47,4 +48,4 @@ const BookingService: React.FC = () => {
     }
 }
 
-export default BookingService
+export default Booking

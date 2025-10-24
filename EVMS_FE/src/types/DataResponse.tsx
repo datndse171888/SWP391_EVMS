@@ -4,3 +4,9 @@ export interface DataResponse<T> {
     limit: number;
     total: number;
 }
+
+export interface CheckingResponse<T> {
+    success: boolean;
+    message: string;
+    data: T;
+}

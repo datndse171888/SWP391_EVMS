@@ -2,8 +2,8 @@ export type Role = 'admin' | 'staff' | 'technician' | 'customer';
 export type Gender = 'male' | 'female';
 
 export interface AccountLogin {
-    email: string;
-    password: string;
+  email: string;
+  password: string;
 }
 
 export interface LoginResponse {
@@ -24,23 +24,23 @@ export interface UserResponse {
 };
 
 export interface AccountRegister {
-    email: string;
-    userName: string;
-    fullName: string;
-    password: string;
-    phoneNumber: string;
-    gender: string;
-    photoURL: string;
-    role: Role;
+  email: string;
+  userName: string;
+  fullName: string;
+  password: string;
+  phoneNumber: string;
+  gender: string;
+  photoURL: string;
+  role: Role;
 }
 
 export interface ResetPasswordRequest {
-    token: string;
-    newPassword: string;
+  token: string;
+  newPassword: string;
 }
 
 export interface ForgotPasswordRequest {
-    email: string;
+  email: string;
 }
 
 export interface Profile {
@@ -51,7 +51,7 @@ export interface Profile {
   phoneNumber: string;
   photoURL: string;
   gender: string;
-  
+
 };
 
 export interface Appointment {
@@ -66,3 +66,10 @@ export interface Appointment {
   updated_at: string;
 };
 
+export interface UserIDObject {
+  _id: string;
+  userName: string;
+  email: string;
+  fullName: string;
+  phoneNumber: number;
+}

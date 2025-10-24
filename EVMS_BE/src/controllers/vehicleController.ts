@@ -5,29 +5,28 @@ import { User } from '../models/User.js';
 
 export async function createVehicle(req: Request, res: Response) {
   try {
-    const { 
-      VIN, 
-      vehicleType, 
+    const {
+      VIN,
       vehicleCategory,
-      plateNumber, 
-      brand, 
-      year, 
-      mileage, 
-      batteryCapacity, 
-      status = 'active' 
+      plateNumber,
+      brand,
+      year,
+      mileage,
+      batteryCapacity,
+      status = 'active'
     } = req.body;
 
     // Validation bắt buộc
-    if (!VIN || !vehicleType || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
-      return res.status(400).json({ 
+    if (!VIN || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
+      return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin bắt buộc: VIN, vehicleType, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity' 
+        message: 'Thiếu thông tin bắt buộc: VIN, vehicleType, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
       });
     }
 
     // Kiểm tra userID từ token hoặc body
     let userID: mongoose.Types.ObjectId;
-    
+
     if (req.user?.id) {
       // Lấy từ token (user đang đăng nhập)
       userID = new mongoose.Types.ObjectId(req.user.id);
@@ -35,85 +34,76 @@ export async function createVehicle(req: Request, res: Response) {
       // Lấy từ body (admin tạo cho user khác)
       userID = new mongoose.Types.ObjectId(req.body.userID);
     } else {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin userID' 
+        message: 'Thiếu thông tin userID'
       });
     }
 
     // Kiểm tra user tồn tại
     const user = await User.findById(userID);
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy người dùng' 
+        message: 'Không tìm thấy người dùng'
       });
     }
 
     // Kiểm tra VIN đã tồn tại
     const existingVIN = await Vehicle.findOne({ VIN: VIN.toUpperCase() });
     if (existingVIN) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'VIN đã tồn tại trong hệ thống' 
+        message: 'VIN đã tồn tại trong hệ thống'
       });
     }
 
     // Kiểm tra biển số đã tồn tại
     const existingPlate = await Vehicle.findOne({ plateNumber: plateNumber.toUpperCase() });
     if (existingPlate) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Biển số xe đã tồn tại trong hệ thống' 
+        message: 'Biển số xe đã tồn tại trong hệ thống'
       });
     }
 
     // Validation kiểu dữ liệu
     if (typeof year !== 'number' || year < 1900 || year > new Date().getFullYear() + 1) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Năm sản xuất không hợp lệ' 
+        message: 'Năm sản xuất không hợp lệ'
       });
     }
 
     if (typeof mileage !== 'number' || mileage < 0 || mileage > 9999999) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Số km không hợp lệ' 
+        message: 'Số km không hợp lệ'
       });
     }
 
     if (typeof batteryCapacity !== 'number' || batteryCapacity < 0 || batteryCapacity > 1000) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Dung lượng pin không hợp lệ' 
-      });
-    }
-
-    // Validation vehicleType
-    const validVehicleTypes = ['electric_car', 'electric_motorcycle', 'electric_bike'];
-    if (!validVehicleTypes.includes(vehicleType)) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Loại xe không hợp lệ. Phải là: electric_car, electric_motorcycle, hoặc electric_bike' 
+        message: 'Dung lượng pin không hợp lệ'
       });
     }
 
     // Validation vehicleCategory
     const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
     if (!validVehicleCategories.includes(vehicleCategory)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE'
       });
     }
 
     // Validation status
     const validStatuses = ['active', 'inactive', 'maintenance', 'retired'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Trạng thái không hợp lệ. Phải là: active, inactive, maintenance, hoặc retired' 
+        message: 'Trạng thái không hợp lệ. Phải là: active, inactive, maintenance, hoặc retired'
       });
     }
 
@@ -121,7 +111,6 @@ export async function createVehicle(req: Request, res: Response) {
     const vehicle = await Vehicle.create({
       userID,
       VIN: VIN.toUpperCase(),
-      vehicleType,
       vehicleCategory,
       plateNumber: plateNumber.toUpperCase(),
       brand: brand.trim(),
@@ -139,36 +128,34 @@ export async function createVehicle(req: Request, res: Response) {
     return res.status(201).json({
       success: true,
       message: 'Tạo thông tin xe thành công',
-      data: {
-        vehicle: populatedVehicle
-      }
+      data: populatedVehicle
     });
 
   } catch (error) {
     console.error('Lỗi khi tạo thông tin xe:', error);
-    
+
     // Duplicate key error
     if ((error as any)?.code === 11000) {
       const field = (error as any)?.keyPattern?.VIN ? 'VIN' : 'plateNumber';
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: `${field} đã tồn tại trong hệ thống` 
+        message: `${field} đã tồn tại trong hệ thống`
       });
     }
-    
+
     // Validation error
     if ((error as any)?.name === 'ValidationError') {
       const errors = Object.values((error as any).errors).map((err: any) => err.message);
-      return res.status(422).json({ 
+      return res.status(422).json({
         success: false,
         message: 'Dữ liệu không hợp lệ',
         errors: errors
       });
     }
-    
-    return res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Lỗi máy chủ khi tạo thông tin xe' 
+      message: 'Lỗi máy chủ khi tạo thông tin xe'
     });
   }
 }
@@ -255,9 +242,9 @@ export async function getUserVehicles(req: Request, res: Response) {
   try {
     // Kiểm tra user đã đăng nhập chưa
     if (!req.user?.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Yêu cầu đăng nhập' 
+        message: 'Yêu cầu đăng nhập'
       });
     }
 
@@ -272,17 +259,14 @@ export async function getUserVehicles(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       message: 'Lấy danh sách xe của user thành công',
-      data: {
-        vehicles,
-        count: vehicles.length
-      }
+      data: vehicles
     });
 
   } catch (error) {
     console.error('Lỗi khi lấy danh sách xe của user:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Lỗi máy chủ khi lấy danh sách xe của user' 
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy danh sách xe của user'
     });
   }
 }
@@ -294,26 +278,26 @@ export async function updateVehicle(req: Request, res: Response) {
 
     // Validation vehicleID
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'ID xe không hợp lệ' 
+        message: 'ID xe không hợp lệ'
       });
     }
 
     // Tìm xe trong database
     const vehicle = await Vehicle.findById(id);
     if (!vehicle) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy xe' 
+        message: 'Không tìm thấy xe'
       });
     }
 
     // Kiểm tra quyền sở hữu
     if (!req.user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Yêu cầu đăng nhập' 
+        message: 'Yêu cầu đăng nhập'
       });
     }
 
@@ -322,9 +306,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     // Chỉ owner hoặc admin mới được cập nhật
     if (!currentUserID.equals(vehicleOwnerID) && req.user.role !== 'admin') {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Bạn không có quyền cập nhật xe này' 
+        message: 'Bạn không có quyền cập nhật xe này'
       });
     }
 
@@ -333,54 +317,54 @@ export async function updateVehicle(req: Request, res: Response) {
 
     if (updateData.VIN !== undefined) {
       if (typeof updateData.VIN !== 'string' || updateData.VIN.trim() === '') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'VIN không hợp lệ' 
+          message: 'VIN không hợp lệ'
         });
       }
-      
+
       // Kiểm tra VIN không trùng với xe khác
-      const existingVIN = await Vehicle.findOne({ 
-        VIN: updateData.VIN.toUpperCase(), 
-        _id: { $ne: id } 
+      const existingVIN = await Vehicle.findOne({
+        VIN: updateData.VIN.toUpperCase(),
+        _id: { $ne: id }
       });
       if (existingVIN) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'VIN đã tồn tại trong hệ thống' 
+          message: 'VIN đã tồn tại trong hệ thống'
         });
       }
-      
+
       updateFields.VIN = updateData.VIN.toUpperCase();
     }
 
     if (updateData.plateNumber !== undefined) {
       if (typeof updateData.plateNumber !== 'string' || updateData.plateNumber.trim() === '') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Biển số xe không hợp lệ' 
+          message: 'Biển số xe không hợp lệ'
         });
       }
-      
+
       // Kiểm tra biển số không trùng với xe khác
-      const existingPlate = await Vehicle.findOne({ 
-        plateNumber: updateData.plateNumber.toUpperCase(), 
-        _id: { $ne: id } 
+      const existingPlate = await Vehicle.findOne({
+        plateNumber: updateData.plateNumber.toUpperCase(),
+        _id: { $ne: id }
       });
       if (existingPlate) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Biển số xe đã tồn tại trong hệ thống' 
+          message: 'Biển số xe đã tồn tại trong hệ thống'
         });
       }
-      
+
       updateFields.plateNumber = updateData.plateNumber.toUpperCase();
     }
 
     if (updateData.vehicleType !== undefined) {
       const validVehicleTypes = ['electric_car', 'electric_motorcycle', 'electric_bike'];
       if (!validVehicleTypes.includes(updateData.vehicleType)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           message: 'Loại xe không hợp lệ. Phải là: electric_car, electric_motorcycle, hoặc electric_bike'
         });
@@ -391,7 +375,7 @@ export async function updateVehicle(req: Request, res: Response) {
     if (updateData.vehicleCategory !== undefined) {
       const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
       if (!validVehicleCategories.includes(updateData.vehicleCategory)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE'
         });
@@ -401,9 +385,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     if (updateData.brand !== undefined) {
       if (typeof updateData.brand !== 'string' || updateData.brand.trim() === '') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Thương hiệu không hợp lệ' 
+          message: 'Thương hiệu không hợp lệ'
         });
       }
       updateFields.brand = updateData.brand.trim();
@@ -411,9 +395,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     if (updateData.year !== undefined) {
       if (typeof updateData.year !== 'number' || updateData.year < 1900 || updateData.year > new Date().getFullYear() + 1) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Năm sản xuất không hợp lệ' 
+          message: 'Năm sản xuất không hợp lệ'
         });
       }
       updateFields.year = updateData.year;
@@ -421,9 +405,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     if (updateData.mileage !== undefined) {
       if (typeof updateData.mileage !== 'number' || updateData.mileage < 0 || updateData.mileage > 9999999) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Số km không hợp lệ' 
+          message: 'Số km không hợp lệ'
         });
       }
       updateFields.mileage = updateData.mileage;
@@ -431,9 +415,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     if (updateData.batteryCapacity !== undefined) {
       if (typeof updateData.batteryCapacity !== 'number' || updateData.batteryCapacity < 0 || updateData.batteryCapacity > 1000) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Dung lượng pin không hợp lệ' 
+          message: 'Dung lượng pin không hợp lệ'
         });
       }
       updateFields.batteryCapacity = updateData.batteryCapacity;
@@ -442,9 +426,9 @@ export async function updateVehicle(req: Request, res: Response) {
     if (updateData.status !== undefined) {
       const validStatuses = ['active', 'inactive', 'maintenance', 'retired'];
       if (!validStatuses.includes(updateData.status)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Trạng thái không hợp lệ. Phải là: active, inactive, maintenance, hoặc retired' 
+          message: 'Trạng thái không hợp lệ. Phải là: active, inactive, maintenance, hoặc retired'
         });
       }
       updateFields.status = updateData.status;
@@ -452,9 +436,9 @@ export async function updateVehicle(req: Request, res: Response) {
 
     // Kiểm tra có dữ liệu để cập nhật không
     if (Object.keys(updateFields).length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Không có dữ liệu để cập nhật' 
+        message: 'Không có dữ liệu để cập nhật'
       });
     }
 
@@ -466,9 +450,9 @@ export async function updateVehicle(req: Request, res: Response) {
     ).populate('userID', 'userName email fullName phoneNumber');
 
     if (!updatedVehicle) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy xe sau khi cập nhật' 
+        message: 'Không tìm thấy xe sau khi cập nhật'
       });
     }
 
@@ -495,29 +479,29 @@ export async function updateVehicle(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Lỗi khi cập nhật thông tin xe:', error);
-    
+
     // Duplicate key error
     if ((error as any)?.code === 11000) {
       const field = (error as any)?.keyPattern?.VIN ? 'VIN' : 'plateNumber';
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: `${field} đã tồn tại trong hệ thống` 
+        message: `${field} đã tồn tại trong hệ thống`
       });
     }
-    
+
     // Validation error
     if ((error as any)?.name === 'ValidationError') {
       const errors = Object.values((error as any).errors).map((err: any) => err.message);
-      return res.status(422).json({ 
+      return res.status(422).json({
         success: false,
         message: 'Dữ liệu không hợp lệ',
         errors: errors
       });
     }
-    
-    return res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Lỗi máy chủ khi cập nhật thông tin xe' 
+      message: 'Lỗi máy chủ khi cập nhật thông tin xe'
     });
   }
 }

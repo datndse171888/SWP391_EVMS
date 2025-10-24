@@ -1,3 +1,9 @@
+import type { UserIDObject } from './Account';
+
+export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
+export type VehicleType = 'electric_car' | 'electric_bike' | 'electric_motorcycle';
+export type VehicleStatus = 'active' | 'inactive' | 'maintenance' | 'retired';
+
 export interface Car {
     id: string;
     make: string;
@@ -17,5 +23,30 @@ export interface VehicleService {
     image: string;
 }
 
-export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
+export interface VehicleResponse {
+    _id: string;
+    userID: UserIDObject;
+    VIN: string;
+    vehicleType: VehicleCategory;
+    plateNumber: string;
+    brand: string;
+    year: number;
+    mileage: number;
+    batteryCapacity: number;
+    status: VehicleStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface VehicleRequest {
+  VIN: string;
+  vehicleType: VehicleType;
+  vehicleCategory: VehicleCategory;
+  plateNumber: string;
+  brand: string;
+  year: number;
+  mileage: number;
+  batteryCapacity: number;
+  status: VehicleStatus
+}
 

@@ -81,7 +81,7 @@ const Header: React.FC = () => {
 
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300"
+      className="top-0 left-0 right-0 z-50 transform transition-transform duration-300"
       style={{ 
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
         backdropFilter: 'blur(10px)',
