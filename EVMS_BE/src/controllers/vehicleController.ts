@@ -251,6 +251,42 @@ export async function getVehicleByID(req: Request, res: Response) {
   }
 }
 
+export async function getUserVehicles(req: Request, res: Response) {
+  try {
+    // Kiểm tra user đã đăng nhập chưa
+    if (!req.user?.id) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Yêu cầu đăng nhập' 
+      });
+    }
+
+    const userID = new mongoose.Types.ObjectId(req.user.id);
+
+    // Lấy tất cả xe của user hiện tại
+    const vehicles = await Vehicle.find({ userID })
+      .populate('userID', 'userName email fullName phoneNumber')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách xe của user thành công',
+      data: {
+        vehicles,
+        count: vehicles.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách xe của user:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ khi lấy danh sách xe của user' 
+    });
+  }
+}
+
 export async function updateVehicle(req: Request, res: Response) {
   try {
     const { id } = req.params;
