@@ -1,3 +1,5 @@
+import type { VehicleCategory } from "./Vehicle";
+
 export interface Service {
     id: number;
     name: string;
@@ -38,5 +40,19 @@ export interface IndividualService {
   duration: number;
   display_order: number;
   created_at: string;
+}
+
+export interface ServiceResponse {
+  _id: string;
+  name: string;
+  duration: number;
+  description: string;
+  image: string;
+  pricing: pricing[] | number;
+}
+
+export interface pricing {
+  category: VehicleCategory;
+  price: number;
 }
 

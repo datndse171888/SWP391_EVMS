@@ -1,4 +1,6 @@
-import type { Service } from '../types/Service'
+import type { DataResponse } from '../types/DataResponse'
+import type { Service, ServiceResponse } from '../types/Service'
+import type { VehicleCategory } from '../types/Vehicle'
 import { api } from '../utils/Axios'
 
 interface FetchServicesParams {
@@ -80,6 +82,14 @@ export const ServiceApi = {
 
   deleteService: (id: number) => {
     return api.delete(`/services/${id}`);
+  },
+
+  getAllServices: () => {
+    return api.get<DataResponse<ServiceResponse>>('/services');
+  },
+
+  getServiceByVehicleCategory: (vehicleCategory: VehicleCategory) => {
+    return api.get<DataResponse<ServiceResponse>>(`/services?vehicleCategory=${vehicleCategory}`);
   }
 }
 
