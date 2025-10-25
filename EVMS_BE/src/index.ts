@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { router } from './routes/index.js';
+import uploadRoutes from './routes/upload.js';
 async function startServer(): Promise<void> {
   try {
     await connectDB();
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use('/api', router);
+app.use('/api/uploads', uploadRoutes);
 app.get('/', (_req, res) => res.send('EVMS BE running'));
 startServer();
 

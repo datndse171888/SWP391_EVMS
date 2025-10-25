@@ -35,6 +35,15 @@ export const authApi = {
     return api.put('/auth/profile', userData);
   },
 
+  updateUser: (userId: string, userData: {
+    fullName?: string;
+    phoneNumber?: string;
+    photoUrl?: string;
+    email?: string;
+  }) => {
+    return api.put(`/users/${userId}`, userData);
+  },
+
   changePassword: (data: {
     currentPassword: string;
     newPassword: string;

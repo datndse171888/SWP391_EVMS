@@ -6,6 +6,53 @@ import { Technician } from '../models/Technician.js';
 import { TechnicianCertificate } from '../models/TechnicianCertificate.js';
 import { Certificate } from '../models/Certificate.js';
 
+export async function updateUser(req: Request, res: Response) {
+  try {
+    const { userId } = req.params as { userId: string };
+    const updateData = req.body as Partial<{
+      fullName: string;
+      phoneNumber: string;
+      photoUrl: string;
+      email: string;
+    }>;
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Chỉ cho phép user cập nhật thông tin của chính mình
+    if (req.user.id !== userId) {
+      return res.status(403).json({ message: 'Không được phép cập nhật thông tin người khác' });
+    }
+
+    // Tìm user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Cập nhật các field được phép
+    if (updateData.fullName !== undefined) user.fullName = updateData.fullName;
+    if (updateData.phoneNumber !== undefined) user.phoneNumber = updateData.phoneNumber;
+    if (updateData.photoUrl !== undefined) user.photoUrl = updateData.photoUrl;
+    if (updateData.email !== undefined) user.email = updateData.email;
+
+    await user.save();
+
+    // Trả về user đã cập nhật (không bao gồm password)
+    const sanitized = await User.findById(userId).select('-passwordHash').lean();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật thông tin thành công',
+      data: { user: sanitized }
+    });
+  } catch (error) {
+    console.error('Lỗi cập nhật thông tin người dùng:', error);
+    return res.status(500).json({ message: 'Lỗi server' });
+  }
+}
+
 export async function updateUserStatus(req: Request, res: Response) {
   try {
     const { userId } = req.params as { userId: string };

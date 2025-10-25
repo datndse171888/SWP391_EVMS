@@ -1,27 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth, type User } from "../../contexts/AuthContext";
 import axios from "axios";
 import { Eye, EyeOff, Edit } from "lucide-react";
-
-interface User {
-  _id?: string;
-  username?: string;
-  email?: string;
-  password?: string;
-  photoUrl?: string;
-  fullName?: string;
-  phoneNumber?: string;
-  role?: "admin" | "staff" | "technician" | "customer";
-  gender?: string;
-  yearOfBirth?: number;
-  isVerified?: boolean;
-  isDisabled?: boolean;
-}
+import { authApi } from "../../api/AuthApi";
 
 
 export default function StaffProfile() {
+  console.log("🎯 StaffProfile component rendered");
+  console.log("🔑 localStorage token:", localStorage.getItem("accessToken"));
+  
   const [user, setUser] = useState<User | null>(null);
-  const [editData, setEditData] = useState<User>({});
+  const [editData, setEditData] = useState<Partial<User>>({});
   const [editMode, setEditMode] = useState(false);
   const [fieldError, setFieldError] = useState<{
     fullName?: string;
@@ -36,19 +25,43 @@ export default function StaffProfile() {
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showPwdNew, setShowPwdNew] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user: authUser } = useAuth();
 
+  // API function to update user account
+  const updateAccountApi = async (userId: string, data: Partial<User>) => {
+    try {
+      console.log("🔄 Calling updateUser API with:", { userId, data });
+      const response = await authApi.updateUser(userId, {
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber,
+        photoUrl: data.photoURL,
+        email: data.email,
+      });
+      console.log("✅ Update user API response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Update account error:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
+    console.log("🔍 useEffect - authUser:", authUser);
     if (authUser) {
+      console.log("✅ Setting user from authUser:", authUser);
       setUser(authUser as User);
       setEditData(authUser as User);
+    } else {
+      console.log("❌ No authUser available");
     }
   }, [authUser]);
 
 
   const validateProfile = async () => {
-    if (!user?._id) return false;
+    if (!user?.id) return false;
     if (!editData.fullName) {
       setFieldError({ fullName: "Họ và tên không được để trống" });
       return false;
@@ -57,12 +70,12 @@ export default function StaffProfile() {
   };
 
   const handleUpdate = async () => {
-    if (!user?._id) return;
+    if (!user?.id) return;
     if (!(await validateProfile())) return;
     
     try {
       // Update user profile logic here
-      setUser(editData);
+      setUser(editData as User);
       setEditMode(false);
       setFieldError({});
       // toast.success("Cập nhật thông tin thành công!");
@@ -97,61 +110,123 @@ export default function StaffProfile() {
   };
 
   const handleAvatarClick = () => {
+    console.log("📷 Avatar clicked, opening file dialog...");
+    console.log("🔍 File input ref:", fileInputRef.current);
     if (fileInputRef.current) {
       fileInputRef.current.click();
+      console.log("✅ File dialog opened");
+    } else {
+      console.log("❌ File input ref not found");
     }
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    console.log("🔄 handleAvatarChange called - EVENT TRIGGERED!");
+    console.log("📋 Event object:", e);
+    console.log("📋 Event target:", e.target);
+    console.log("📋 Event target files:", e.target.files);
+    const file = e.target.files?.[0];
+    console.log("📁 Selected file:", file);
+    console.log("👤 Current user state:", user);
+    console.log("🔑 Auth user from context:", authUser);
+    console.log("🆔 User ID from user state:", user?.id);
+    console.log("🆔 User ID from authUser:", authUser?.id);
+    console.log("🔍 AuthUser type:", typeof authUser);
+    console.log("🔍 AuthUser value:", authUser);
+    
+    if (!file) {
+      console.log("❌ No file selected");
+      return;
+    }
+    
+    // Use authUser.id if user.id is not available
+    const userId = user?.id || (authUser && authUser.id);
+    console.log("🆔 Final User ID to use:", userId);
+    
+    if (!userId) {
+      console.log("❌ No user ID available from both sources");
+      alert("Không tìm thấy thông tin người dùng!");
+      return;
+    }
 
-    const file = files[0];
-
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/jpg"];
+    console.log("✅ File validation starting...");
+    // Validate file
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      alert("Chỉ chấp nhận file hình ảnh (JPG, PNG, GIF)");
+      console.log("❌ Invalid file type:", file.type);
+      alert('Chỉ chấp nhận file JPG, PNG, WEBP');
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Kích thước file không được vượt quá 5MB");
+    if (file.size > 2 * 1024 * 1024) {
+      console.log("❌ File too large:", file.size);
+      alert('File không được quá 2MB');
       return;
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
+    console.log("✅ File validation passed");
+    // Create preview
+    setAvatarPreview(URL.createObjectURL(file));
+    console.log("🖼️ Preview created");
 
+    // Upload to server
+    setIsUploadingAvatar(true);
+      console.log("🚀 Starting upload...");
+      try {
+        // Upload to server using axios (consistent with project)
+        const formData = new FormData();
+        formData.append("image", file);
+        console.log("📦 FormData created");
+        
+        const token = localStorage.getItem("accessToken");
+        console.log("🔑 Token:", token ? "Present" : "Missing");
+        console.log("🔑 Token value:", token);
+        console.log("🌐 Making request to: http://localhost:4000/api/uploads/upload");
+        
+        if (!token) {
+          console.log("❌ No token found in localStorage!");
+          alert("Vui lòng đăng nhập lại!");
+          return;
+        }
+      
       const response = await axios.post(
-        "http://localhost:5000/api/uploads/upload",
+        "http://localhost:4000/api/uploads/upload",
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
+          timeout: 30000, // 30 seconds timeout
         }
       );
-
+      
+      console.log("📡 Upload response:", response.data);
+      
       if (response.data && response.data.imageUrl) {
-        // Update avatar URL in database
-        if (user?._id) {
-          // Update user avatar logic here
-          const updated = { ...user, photoUrl: response.data.imageUrl };
-          setUser(updated);
-          setEditData(updated);
-        }
-
+        console.log("✅ Upload successful, updating user profile...");
+        // Update user's photoUrl
+        await updateAccountApi(userId, { photoURL: response.data.imageUrl });
+        console.log("✅ User profile updated");
+        
+        // Update local user state
+        setUser((prev) => (prev ? { ...prev, photoURL: response.data.imageUrl } : null));
+        setEditData((prev) => ({ ...prev, photoURL: response.data.imageUrl }));
+        console.log("✅ Local state updated");
+        
         alert("Cập nhật ảnh đại diện thành công!");
       } else {
+        console.log("❌ No imageUrl in response");
         alert("Không nhận được URL ảnh từ server!");
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.");
+    } catch (error: unknown) {
+      console.error("❌ Upload error:", error);
+      console.error("❌ Error details:", (error as { response?: { data?: unknown } })?.response?.data);
+      alert("Không thể cập nhật ảnh đại diện!");
+      setAvatarPreview(null);
+    } finally {
+      setIsUploadingAvatar(false);
+      console.log("🏁 Upload process finished");
     }
   };
 
@@ -187,7 +262,11 @@ export default function StaffProfile() {
                   >
                     <div className="w-20 h-20 rounded-full overflow-hidden">
                       <img
-                        src={user?.photoUrl || "https://i.pravatar.cc/150?img=3"}
+                        src={
+                          avatarPreview ||
+                          user?.photoURL ||
+                          "https://i.pravatar.cc/150?img=3"
+                        }
                         alt="avatar"
                         className="w-full h-full object-cover"
                       />
@@ -219,8 +298,16 @@ export default function StaffProfile() {
                     ref={fileInputRef}
                     className="hidden"
                     accept="image/*"
-                    onChange={handleAvatarChange}
+                    onChange={(e) => {
+                      console.log("🔥 INPUT ONCHANGE TRIGGERED!");
+                      handleAvatarChange(e);
+                    }}
                   />
+                  {isUploadingAvatar && (
+                    <div className="text-sm text-blue-500 animate-pulse">
+                      Đang tải ảnh lên...
+                    </div>
+                  )}
                   <div className="font-bold text-lg text-gray-800 mb-1">
                     {user?.fullName || "---"}
                   </div>
@@ -244,7 +331,7 @@ export default function StaffProfile() {
                         <button
                           onClick={() => {
                             setEditMode(false);
-                            setEditData(user || {});
+                            setEditData(user || {} as Partial<User>);
                           }}
                           className="text-gray-600 text-sm font-medium"
                         >

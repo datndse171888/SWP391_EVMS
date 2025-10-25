@@ -1,5 +1,13 @@
-import { v2 as cloudinary } from 'cloudinary';
-import { env } from './env.js';
+import { createRequire } from 'module';
+import { env } from "./env.js";
+
+const require = createRequire(import.meta.url);
+const cloudinary = require("cloudinary");
+
+console.log("🔧 Configuring Cloudinary...");
+console.log("☁️ Cloud name:", env.cloudinaryCloudName);
+console.log("🔑 API key:", env.cloudinaryApiKey ? "Present" : "Missing");
+console.log("🔐 API secret:", env.cloudinaryApiSecret ? "Present" : "Missing");
 
 cloudinary.config({
   cloud_name: env.cloudinaryCloudName,
@@ -7,4 +15,6 @@ cloudinary.config({
   api_secret: env.cloudinaryApiSecret,
 });
 
-export { cloudinary };
+console.log("✅ Cloudinary configured successfully");
+
+export default cloudinary;
