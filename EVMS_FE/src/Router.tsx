@@ -20,17 +20,18 @@ import { Parts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import Service from './pages/service/Service'
+import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
 import ProfileView from './pages/user/UserProfile'
 import StaffDashboard from './pages/staff/StaffDashboard';
-import { BikeService } from './pages/service/BikeService';
-import { CarService } from './pages/service/CarServicePage';
-import { MotoService } from './pages/service/MotoService';
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarServicePage';
+import { MotoService } from './pages/Service/MotoService';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
+import StaffProfile from './pages/staff/StaffProfile';
 import Booking from './pages/booking/Booking'
 
 // Placeholder components for different dashboards
@@ -107,6 +108,7 @@ export const Router: React.FC = () => {
                 <Route path="customers" element={<ChatWithCustomer />} />
                 <Route path="appointments" element={<ManageAppointment />} />
                 <Route path="parts" element={<ManagePart />} />
+                <Route path="profile" element={<StaffProfile />} />
                 <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
               </Routes>
             </StaffLayout>

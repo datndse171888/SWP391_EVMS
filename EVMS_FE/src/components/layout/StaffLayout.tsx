@@ -49,15 +49,6 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         </svg>
       )
     },
-    { 
-      name: 'Hồ sơ cá nhân', 
-      path: '/staff/profile', 
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
   ];
 
   const isActive = (path: string) => {
@@ -127,9 +118,13 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         <div className="pb-4">
           <div className="flex flex-col items-center space-y-3">
             {/* Avatar */}
-            <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+            <Link
+              to="/staff/profile"
+              className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:from-blue-600 hover:to-blue-800 transition-all duration-200 cursor-pointer"
+              title={sidebarExpanded ? '' : 'Hồ sơ cá nhân'}
+            >
               {user?.fullName?.charAt(0) || user?.userName?.charAt(0) || 'S'}
-            </div>
+            </Link>
             
             {/* Logout Button */}
             <button
@@ -151,7 +146,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#f8fafc' }}>
+      <main className="flex-1 h-screen" style={{ backgroundColor: '#f8fafc' }}>
         <div className={`${isFullWidth ? 'p-0' : 'p-6'}`}>
           <div className={`${isFullWidth ? 'w-full' : 'max-w-7xl mx-auto'}`}>
             {children}
