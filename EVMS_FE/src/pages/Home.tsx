@@ -130,13 +130,14 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section 
-        className="relative pt-32 pb-24 px-0 overflow-hidden min-h-screen flex items-center"
+        className="relative pt-24 pb-24 px-0 overflow-hidden min-h-screen flex items-center"
         style={{
           backgroundImage: `url(${homeImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          backgroundAttachment: 'fixed'
+          backgroundAttachment: 'fixed',
+          zIndex: 1
         }}
       >
         

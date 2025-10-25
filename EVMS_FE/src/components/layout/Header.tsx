@@ -81,14 +81,15 @@ const Header: React.FC = () => {
 
   return (
     <header 
-      className="top-0 left-0 right-0 z-50 transform transition-transform duration-300"
+      className="fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300"
       style={{ 
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         borderBottom: `1px solid rgba(170, 175, 187, 0.3)`,
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-        transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)'
+        transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)',
+        zIndex: 9999
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,7 +145,7 @@ const Header: React.FC = () => {
                   )}
                 </Link>
                 {item.hasDropdown && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ zIndex: 10000 }}>
                     <div className="py-2">
                       <Link to="/carService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng ô tô điện
@@ -188,7 +189,7 @@ const Header: React.FC = () => {
 
                 {/* Dropdown Menu */}
                 {isAvatarDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200" style={{ zIndex: 10000 }}>
                     <div className="py-2">
                       {/* Dashboard - Only for admin, staff, technician */}
                       {user.role !== 'customer' && (
