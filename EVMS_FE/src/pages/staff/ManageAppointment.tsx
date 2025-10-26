@@ -1,5 +1,22 @@
 import React, { useState } from 'react';
 
+// Add custom CSS for line-clamp
+const customStyles = `
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = customStyles;
+  document.head.appendChild(styleSheet);
+}
+
 interface Appointment {
   id: string;
   customerName: string;
@@ -14,7 +31,7 @@ interface Appointment {
 }
 
 const ManageAppointment: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<'pending' | 'confirmed' | 'history'>('pending');
+  const [selectedTab, setSelectedTab] = useState<'pending' | 'all' | 'confirmed' | 'completed'>('pending');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
@@ -23,6 +40,10 @@ const ManageAppointment: React.FC = () => {
   const [filterTimeSlot, setFilterTimeSlot] = useState('');
   const [filterServiceType, setFilterServiceType] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(9);
 
   // Mock data - thay thế bằng API call thực tế
   const mockAppointments: Appointment[] = [
@@ -85,6 +106,114 @@ const ManageAppointment: React.FC = () => {
       status: 'confirmed',
       notes: 'Phanh không ăn, cần kiểm tra gấp',
       createdAt: '2024-01-09'
+    },
+    {
+      id: '6',
+      customerName: 'Võ Thị Phương',
+      customerPhone: '0934567890',
+      vehicleType: 'Xe máy Honda Air Blade',
+      serviceType: 'Bảo dưỡng định kỳ',
+      appointmentDate: '2024-01-20',
+      appointmentTime: '11:00',
+      status: 'pending',
+      notes: 'Thay dầu máy và kiểm tra lốp xe',
+      createdAt: '2024-01-13'
+    },
+    {
+      id: '7',
+      customerName: 'Đặng Văn Giang',
+      customerPhone: '0945678901',
+      vehicleType: 'Ô tô Hyundai Accent',
+      serviceType: 'Sửa chữa động cơ',
+      appointmentDate: '2024-01-22',
+      appointmentTime: '13:30',
+      status: 'confirmed',
+      notes: 'Động cơ bị rung lắc khi chạy tốc độ cao',
+      createdAt: '2024-01-14'
+    },
+    {
+      id: '8',
+      customerName: 'Bùi Thị Hoa',
+      customerPhone: '0956789012',
+      vehicleType: 'Xe máy Piaggio Vespa',
+      serviceType: 'Kiểm tra hệ thống điện',
+      appointmentDate: '2024-01-19',
+      appointmentTime: '16:00',
+      status: 'completed',
+      notes: 'Đã sửa xong hệ thống đèn và còi',
+      createdAt: '2024-01-15'
+    },
+    {
+      id: '9',
+      customerName: 'Ngô Văn Khoa',
+      customerPhone: '0967890123',
+      vehicleType: 'Ô tô Ford Ranger',
+      serviceType: 'Thay nhớt và lọc gió',
+      appointmentDate: '2024-01-21',
+      appointmentTime: '09:30',
+      status: 'pending',
+      notes: 'Bảo dưỡng định kỳ 20,000km',
+      createdAt: '2024-01-16'
+    },
+    {
+      id: '10',
+      customerName: 'Lý Thị Lan',
+      customerPhone: '0978901234',
+      vehicleType: 'Xe máy Kawasaki Ninja',
+      serviceType: 'Sửa chữa hệ thống phanh',
+      appointmentDate: '2024-01-23',
+      appointmentTime: '14:30',
+      status: 'confirmed',
+      notes: 'Phanh trước bị kẹt, cần thay thế',
+      createdAt: '2024-01-17'
+    },
+    {
+      id: '11',
+      customerName: 'Phan Văn Minh',
+      customerPhone: '0989012345',
+      vehicleType: 'Ô tô Mazda CX-5',
+      serviceType: 'Bảo dưỡng định kỳ',
+      appointmentDate: '2024-01-24',
+      appointmentTime: '10:00',
+      status: 'completed',
+      notes: 'Hoàn thành bảo dưỡng 30,000km',
+      createdAt: '2024-01-18'
+    },
+    {
+      id: '12',
+      customerName: 'Trịnh Thị Nga',
+      customerPhone: '0990123456',
+      vehicleType: 'Xe máy SYM Attila',
+      serviceType: 'Kiểm tra hệ thống điện',
+      appointmentDate: '2024-01-25',
+      appointmentTime: '15:30',
+      status: 'pending',
+      notes: 'Ắc quy yếu, cần kiểm tra hệ thống sạc',
+      createdAt: '2024-01-19'
+    },
+    {
+      id: '13',
+      customerName: 'Hồ Văn Oanh',
+      customerPhone: '0901234567',
+      vehicleType: 'Ô tô Kia Seltos',
+      serviceType: 'Sửa chữa động cơ',
+      appointmentDate: '2024-01-26',
+      appointmentTime: '08:00',
+      status: 'confirmed',
+      notes: 'Động cơ có tiếng kêu bất thường khi khởi động lạnh',
+      createdAt: '2024-01-20'
+    },
+    {
+      id: '14',
+      customerName: 'Đinh Thị Phượng',
+      customerPhone: '0912345678',
+      vehicleType: 'Xe máy Yamaha Grande',
+      serviceType: 'Thay nhớt và lọc gió',
+      appointmentDate: '2024-01-27',
+      appointmentTime: '12:00',
+      status: 'completed',
+      notes: 'Đã thay dầu máy và lọc gió mới',
+      createdAt: '2024-01-21'
     }
   ];
 
@@ -119,7 +248,35 @@ const ManageAppointment: React.FC = () => {
 
   const pendingAppointments = filterAppointments(mockAppointments.filter(apt => apt.status === 'pending'));
   const confirmedAppointments = filterAppointments(mockAppointments.filter(apt => apt.status === 'confirmed'));
-  const historyAppointments = filterAppointments(mockAppointments.filter(apt => apt.status === 'completed' || apt.status === 'rejected'));
+  const completedAppointments = filterAppointments(mockAppointments.filter(apt => apt.status === 'completed'));
+  const allAppointments = filterAppointments(mockAppointments);
+
+  // Get current data based on selected tab
+  const getCurrentData = () => {
+    switch (selectedTab) {
+      case 'pending':
+        return pendingAppointments;
+      case 'all':
+        return allAppointments;
+      case 'confirmed':
+        return confirmedAppointments;
+      case 'completed':
+        return completedAppointments;
+      default:
+        return pendingAppointments;
+    }
+  };
+
+  const currentData = getCurrentData();
+  const totalPages = Math.ceil(currentData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = currentData.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterTimeSlot, filterServiceType, selectedDate, selectedTab]);
 
   const handleConfirmAppointment = (appointmentId: string) => {
     console.log('Confirm appointment:', appointmentId);
@@ -149,6 +306,135 @@ const ManageAppointment: React.FC = () => {
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
         {config.text}
       </span>
+    );
+  };
+
+  // Pagination component
+  const renderPagination = () => {
+    if (currentData.length === 0) return null;
+
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="flex items-center justify-between mt-1 p-1 bg-white rounded-lg border border-gray-200">
+        <div className="flex items-center space-x-3">
+          <span className="text-sm text-gray-600">Hiển thị:</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value={9}>9</option>
+            <option value={18}>18</option>
+            <option value={27}>27</option>
+            <option value={36}>36</option>
+          </select>
+          <span className="text-sm text-gray-600">
+            {startIndex + 1}-{Math.min(endIndex, currentData.length)} trong {currentData.length} lịch hẹn
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-1">
+          {/* First page button << */}
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="w-8 h-8 flex items-center justify-center text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Previous button < */}
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="w-8 h-8 flex items-center justify-center text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* First page */}
+          {startPage > 1 && (
+            <>
+              <button
+                onClick={() => setCurrentPage(1)}
+                className="w-8 h-8 flex items-center justify-center text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+              >
+                1
+              </button>
+              {startPage > 2 && <span className="px-2 text-gray-700">...</span>}
+            </>
+          )}
+
+          {/* Page numbers */}
+          {pageNumbers.map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium ${
+                currentPage === page
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          {/* Last page */}
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && <span className="px-2 text-gray-700">...</span>}
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                className="w-8 h-8 flex items-center justify-center text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+
+          {/* Next button > */}
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="w-8 h-8 flex items-center justify-center text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Last page button >> */}
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="w-8 h-8 flex items-center justify-center text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -288,57 +574,57 @@ const ManageAppointment: React.FC = () => {
     const randomColor = cardColors[Math.floor(Math.random() * cardColors.length)];
     
     return (
-      <div key={appointment.id} className={`${randomColor} rounded-lg p-4 hover:shadow-md transition-all duration-300`}>
+      <div key={appointment.id} className={`${randomColor} rounded-lg p-3 hover:shadow-md transition-all duration-300 h-45 flex flex-col`}>
         {/* Header với avatar và bookmark */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-2 flex-shrink-0">
           <div className="flex items-center space-x-2">
             {/* Avatar khách hàng */}
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 font-bold text-sm shadow-sm">
+            <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-gray-800 font-bold text-xs shadow-sm">
               {appointment.customerName.charAt(0)}
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm">{appointment.customerName}</h3>
-              <p className="text-xs text-gray-600">{appointment.customerPhone}</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-gray-900 text-xs truncate">{appointment.customerName}</h3>
+              <p className="text-xs text-gray-600 truncate">{appointment.customerPhone}</p>
             </div>
           </div>
           {/* Bookmark icon */}
-          <button className="text-gray-400 hover:text-gray-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </button>
         </div>
 
         {/* Description */}
-        <p className="text-xs text-gray-700 mb-3 leading-relaxed">
+        <p className="text-xs text-gray-700 mb-2 leading-relaxed truncate flex-shrink-0">
           {appointment.notes || `Dịch vụ ${appointment.serviceType} cho ${appointment.vehicleType}`}
         </p>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          <span className="px-2 py-1 bg-white bg-opacity-60 text-gray-700 rounded-full text-xs font-medium">
+        <div className="flex flex-wrap gap-1 mb-2 flex-shrink-0">
+          <span className="px-1.5 py-0.5 bg-white bg-opacity-60 text-gray-700 rounded-full text-xs font-medium truncate max-w-[120px]">
             {appointment.serviceType}
           </span>
-          <span className="px-2 py-1 bg-white bg-opacity-60 text-gray-700 rounded-full text-xs font-medium">
+          <span className="px-1.5 py-0.5 bg-white bg-opacity-60 text-gray-700 rounded-full text-xs font-medium truncate max-w-[120px]">
             {appointment.vehicleType}
           </span>
         </div>
 
         {/* Time info */}
-        <div className="mb-3">
+        <div className="mb-2 flex-shrink-0">
           <div className="flex items-center text-xs text-gray-600">
             <svg className="w-3 h-3 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>{appointment.appointmentDate} - {appointment.appointmentTime}</span>
+            <span className="truncate">{appointment.appointmentDate} - {appointment.appointmentTime}</span>
           </div>
         </div>
 
-        {/* Footer với buttons */}
-        <div className="flex justify-between items-center">
+        {/* Footer với buttons - fixed at bottom */}
+        <div className="flex justify-between items-center mt-auto">
           <button
             onClick={() => handleViewDetail(appointment)}
-            className="px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 transition-colors"
+            className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 transition-colors"
           >
             Chi tiết
           </button>
@@ -347,13 +633,13 @@ const ManageAppointment: React.FC = () => {
             <div className="flex space-x-1">
               <button
                 onClick={() => handleConfirmAppointment(appointment.id)}
-                className="px-3 py-1.5 bg-gray-800 text-white rounded text-xs font-medium hover:bg-gray-900 transition-colors"
+                className="px-2 py-1 bg-gray-800 text-white rounded text-xs font-medium hover:bg-gray-900 transition-colors"
               >
                 Xác nhận
               </button>
               <button
                 onClick={() => handleRejectAppointment(appointment.id)}
-                className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors"
+                className="px-2 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors"
               >
                 Từ chối
               </button>
@@ -361,7 +647,7 @@ const ManageAppointment: React.FC = () => {
           ) : (
             <button
               onClick={() => handleViewDetail(appointment)}
-              className="px-3 py-1.5 bg-gray-800 text-white rounded text-xs font-medium hover:bg-gray-900 transition-colors"
+              className="px-2 py-1 bg-gray-800 text-white rounded text-xs font-medium hover:bg-gray-900 transition-colors"
             >
               Xem chi tiết
             </button>
@@ -372,19 +658,19 @@ const ManageAppointment: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-8">
       
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-1">
-        {/* Main Content Area */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow-sm p-2">
+          {/* Main Content Area */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col">
             {/* Header with Search */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
               {/* Title - Left aligned */}
               <h2 className="text-base font-semibold" style={{ color: '#014091' }}>
-                Lịch hẹn hôm nay ({pendingAppointments.length + confirmedAppointments.length + historyAppointments.length})
+                Lịch hẹn hôm nay ({allAppointments.length})
               </h2>
               
               {/* Search Bar - Right aligned */}
@@ -403,8 +689,8 @@ const ManageAppointment: React.FC = () => {
             </div>
 
             {/* Tabs */}
-            <div className="mb-4">
-              <nav className="flex space-x-4 border-b border-gray-200">
+            <div className="mb-2 flex-shrink-0">
+              <nav className="flex space-x-4 border-b">
                 <button
                   onClick={() => setSelectedTab('pending')}
                   className={`py-1 px-1 border-b-2 font-medium text-xs ${
@@ -414,6 +700,16 @@ const ManageAppointment: React.FC = () => {
                   }`}
                 >
                   Chờ xác nhận ({pendingAppointments.length})
+                </button>
+                <button
+                  onClick={() => setSelectedTab('all')}
+                  className={`py-1 px-1 border-b-2 font-medium text-xs ${
+                    selectedTab === 'all'
+                      ? 'border-orange-500 text-orange-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Tất cả ({allAppointments.length})
                 </button>
                 <button
                   onClick={() => setSelectedTab('confirmed')}
@@ -426,42 +722,56 @@ const ManageAppointment: React.FC = () => {
                   Đã xác nhận ({confirmedAppointments.length})
                 </button>
                 <button
-                  onClick={() => setSelectedTab('history')}
+                  onClick={() => setSelectedTab('completed')}
                   className={`py-1 px-1 border-b-2 font-medium text-xs ${
-                    selectedTab === 'history'
+                    selectedTab === 'completed'
                       ? 'border-orange-500 text-orange-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Lịch sử ({historyAppointments.length})
+                  Hoàn thành ({completedAppointments.length})
                 </button>
               </nav>
             </div>
 
             {/* Content Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {selectedTab === 'pending' && pendingAppointments.map(renderAppointmentCard)}
-              {selectedTab === 'confirmed' && confirmedAppointments.map(renderAppointmentCard)}
-              {selectedTab === 'history' && historyAppointments.map(renderAppointmentCard)}
+            <div 
+              className={`grid gap-3 ${
+                paginatedData.length > 9 ? 'overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''
+              }`}
+              style={{
+                height: paginatedData.length > 9 ? '500px' : 'auto',
+                scrollbarWidth: paginatedData.length > 9 ? 'thin' : 'auto',
+                scrollbarColor: paginatedData.length > 9 ? '#d1d5db #f3f4f6' : 'auto',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridAutoRows: 'minmax(180px, auto)'
+              }}
+            >
+              {paginatedData.map(renderAppointmentCard)}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex-shrink-0 mt-2">
+              {renderPagination()}
             </div>
 
             {/* Empty State */}
-            {((selectedTab === 'pending' && pendingAppointments.length === 0) ||
-              (selectedTab === 'confirmed' && confirmedAppointments.length === 0) ||
-              (selectedTab === 'history' && historyAppointments.length === 0)) && (
+            {currentData.length === 0 && (
               <div className="text-center py-8">
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 <h3 className="mt-2 text-sm font-medium text-gray-900">
                   {selectedTab === 'pending' && 'Không có lịch hẹn chờ xác nhận'}
+                  {selectedTab === 'all' && 'Không có lịch hẹn nào'}
                   {selectedTab === 'confirmed' && 'Không có lịch hẹn đã xác nhận'}
-                  {selectedTab === 'history' && 'Không có lịch sử'}
+                  {selectedTab === 'completed' && 'Không có lịch hẹn hoàn thành'}
                 </h3>
                 <p className="mt-1 text-xs text-gray-500">
                   {selectedTab === 'pending' && 'Tất cả lịch hẹn đã được xử lý.'}
+                  {selectedTab === 'all' && 'Chưa có lịch hẹn nào được tạo.'}
                   {selectedTab === 'confirmed' && 'Chưa có lịch hẹn nào được xác nhận.'}
-                  {selectedTab === 'history' && 'Chưa có lịch hẹn nào được hoàn thành.'}
+                  {selectedTab === 'completed' && 'Chưa có lịch hẹn nào được hoàn thành.'}
                 </p>
               </div>
             )}
@@ -491,28 +801,6 @@ const ManageAppointment: React.FC = () => {
               <Calendar />
             </div>
 
-            {/* Status Filter */}
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <h3 className="text-base font-bold text-gray-800 mb-3">Trạng thái</h3>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-3 w-4 h-4 bg-gray-100 border border-gray-300 rounded-full appearance-none checked:bg-orange-200 focus:ring-orange-500 focus:ring-2" />
-                  <span className="text-sm text-gray-700">Tất cả ({pendingAppointments.length + confirmedAppointments.length + historyAppointments.length})</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-3 w-4 h-4 bg-gray-100 border border-gray-300 rounded-full appearance-none checked:bg-orange-200 focus:ring-orange-500 focus:ring-2" />
-                  <span className="text-sm text-gray-700">Chờ xác nhận ({pendingAppointments.length})</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-3 w-4 h-4 bg-gray-100 border border-gray-300 rounded-full appearance-none checked:bg-orange-200 focus:ring-orange-500 focus:ring-2" />
-                  <span className="text-sm text-gray-700">Đã xác nhận ({confirmedAppointments.length})</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-3 w-4 h-4 bg-gray-100 border border-gray-300 rounded-full appearance-none checked:bg-orange-200 focus:ring-orange-500 focus:ring-2" />
-                  <span className="text-sm text-gray-700">Hoàn thành ({historyAppointments.length})</span>
-                </label>
-              </div>
-            </div>
 
             {/* Service Type Filter */}
             <div className="mb-4 pb-4 border-b border-gray-200">

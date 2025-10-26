@@ -6,8 +6,6 @@ import { authApi } from "../../api/AuthApi";
 
 
 export default function StaffProfile() {
-  console.log("🎯 StaffProfile component rendered");
-  console.log("🔑 localStorage token:", localStorage.getItem("accessToken"));
   
   const [user, setUser] = useState<User | null>(null);
   const [editData, setEditData] = useState<Partial<User>>({});
@@ -32,30 +30,19 @@ export default function StaffProfile() {
 
   // API function to update user account
   const updateAccountApi = async (userId: string, data: Partial<User>) => {
-    try {
-      console.log("🔄 Calling updateUser API with:", { userId, data });
-      const response = await authApi.updateUser(userId, {
-        fullName: data.fullName,
-        phoneNumber: data.phoneNumber,
-        photoUrl: data.photoURL,
-        email: data.email,
-      });
-      console.log("✅ Update user API response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Update account error:", error);
-      throw error;
-    }
+    const response = await authApi.updateUser(userId, {
+      fullName: data.fullName,
+      phoneNumber: data.phoneNumber,
+      photoUrl: data.photoURL,
+      email: data.email,
+    });
+    return response.data;
   };
 
   useEffect(() => {
-    console.log("🔍 useEffect - authUser:", authUser);
     if (authUser) {
-      console.log("✅ Setting user from authUser:", authUser);
       setUser(authUser as User);
       setEditData(authUser as User);
-    } else {
-      console.log("❌ No authUser available");
     }
   }, [authUser]);
 
@@ -110,85 +97,55 @@ export default function StaffProfile() {
   };
 
   const handleAvatarClick = () => {
-    console.log("📷 Avatar clicked, opening file dialog...");
-    console.log("🔍 File input ref:", fileInputRef.current);
     if (fileInputRef.current) {
       fileInputRef.current.click();
-      console.log("✅ File dialog opened");
-    } else {
-      console.log("❌ File input ref not found");
     }
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🔄 handleAvatarChange called - EVENT TRIGGERED!");
-    console.log("📋 Event object:", e);
-    console.log("📋 Event target:", e.target);
-    console.log("📋 Event target files:", e.target.files);
     const file = e.target.files?.[0];
-    console.log("📁 Selected file:", file);
-    console.log("👤 Current user state:", user);
-    console.log("🔑 Auth user from context:", authUser);
-    console.log("🆔 User ID from user state:", user?.id);
-    console.log("🆔 User ID from authUser:", authUser?.id);
-    console.log("🔍 AuthUser type:", typeof authUser);
-    console.log("🔍 AuthUser value:", authUser);
     
     if (!file) {
-      console.log("❌ No file selected");
       return;
     }
     
     // Use authUser.id if user.id is not available
     const userId = user?.id || (authUser && authUser.id);
-    console.log("🆔 Final User ID to use:", userId);
     
     if (!userId) {
-      console.log("❌ No user ID available from both sources");
       alert("Không tìm thấy thông tin người dùng!");
       return;
     }
 
-    console.log("✅ File validation starting...");
     // Validate file
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      console.log("❌ Invalid file type:", file.type);
       alert('Chỉ chấp nhận file JPG, PNG, WEBP');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      console.log("❌ File too large:", file.size);
       alert('File không được quá 2MB');
       return;
     }
 
-    console.log("✅ File validation passed");
     // Create preview
     setAvatarPreview(URL.createObjectURL(file));
-    console.log("🖼️ Preview created");
 
     // Upload to server
     setIsUploadingAvatar(true);
-      console.log("🚀 Starting upload...");
-      try {
-        // Upload to server using axios (consistent with project)
-        const formData = new FormData();
-        formData.append("image", file);
-        console.log("📦 FormData created");
-        
-        const token = localStorage.getItem("accessToken");
-        console.log("🔑 Token:", token ? "Present" : "Missing");
-        console.log("🔑 Token value:", token);
-        console.log("🌐 Making request to: http://localhost:4000/api/uploads/upload");
-        
-        if (!token) {
-          console.log("❌ No token found in localStorage!");
-          alert("Vui lòng đăng nhập lại!");
-          return;
-        }
+    try {
+      // Upload to server using axios (consistent with project)
+      const formData = new FormData();
+      formData.append("image", file);
       
+      const token = localStorage.getItem("accessToken");
+      
+      if (!token) {
+        alert("Vui lòng đăng nhập lại!");
+        return;
+      }
+    
       const response = await axios.post(
         "http://localhost:4000/api/uploads/upload",
         formData,
@@ -201,32 +158,23 @@ export default function StaffProfile() {
         }
       );
       
-      console.log("📡 Upload response:", response.data);
-      
       if (response.data && response.data.imageUrl) {
-        console.log("✅ Upload successful, updating user profile...");
         // Update user's photoUrl
         await updateAccountApi(userId, { photoURL: response.data.imageUrl });
-        console.log("✅ User profile updated");
         
         // Update local user state
         setUser((prev) => (prev ? { ...prev, photoURL: response.data.imageUrl } : null));
         setEditData((prev) => ({ ...prev, photoURL: response.data.imageUrl }));
-        console.log("✅ Local state updated");
         
         alert("Cập nhật ảnh đại diện thành công!");
       } else {
-        console.log("❌ No imageUrl in response");
         alert("Không nhận được URL ảnh từ server!");
       }
-    } catch (error: unknown) {
-      console.error("❌ Upload error:", error);
-      console.error("❌ Error details:", (error as { response?: { data?: unknown } })?.response?.data);
+    } catch {
       alert("Không thể cập nhật ảnh đại diện!");
       setAvatarPreview(null);
     } finally {
       setIsUploadingAvatar(false);
-      console.log("🏁 Upload process finished");
     }
   };
 
@@ -298,10 +246,7 @@ export default function StaffProfile() {
                     ref={fileInputRef}
                     className="hidden"
                     accept="image/*"
-                    onChange={(e) => {
-                      console.log("🔥 INPUT ONCHANGE TRIGGERED!");
-                      handleAvatarChange(e);
-                    }}
+                    onChange={handleAvatarChange}
                   />
                   {isUploadingAvatar && (
                     <div className="text-sm text-blue-500 animate-pulse">

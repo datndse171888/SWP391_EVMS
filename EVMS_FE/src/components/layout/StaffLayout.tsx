@@ -147,7 +147,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
 
       {/* Main content */}
       <main className="flex-1 h-screen" style={{ backgroundColor: '#f8fafc' }}>
-        <div className={`${isFullWidth ? 'p-0' : 'p-6'}`}>
+        <div className={`${isFullWidth ? 'p-0' : 'p-2'}`}>
           <div className={`${isFullWidth ? 'w-full' : 'max-w-7xl mx-auto'}`}>
             {children}
           </div>
