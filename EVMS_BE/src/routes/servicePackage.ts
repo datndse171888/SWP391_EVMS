@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createServicePackage, getServicePackages, getServicePackageById, updateServicePackage, deleteServicePackage } from '../controllers/servicePackageController.js';
+import { createServicePackage, getServicePackages, getServicePackageById, updateServicePackage, deleteServicePackage, getServicePackagesByVehicleCategory } from '../controllers/servicePackageController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
@@ -7,6 +7,7 @@ export const servicePackageRouter = Router();
 
 // Public
 servicePackageRouter.get('/', getServicePackages);
+servicePackageRouter.get('/category/:vehicleCategory', getServicePackagesByVehicleCategory);
 servicePackageRouter.get('/:id', getServicePackageById);
 
 // Admin/staff manage

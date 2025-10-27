@@ -78,6 +78,49 @@ export async function updateService(req: Request, res: Response) {
   }
 }
 
+export async function getServicesByVehicleCategory(req: Request, res: Response) {
+  try {
+    const { vehicleCategory } = req.params;
+    const status = (req.query.status as string) || 'active';
+
+    // Validation vehicleCategory
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ 
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+      });
+    }
+
+    // Tìm services có pricing cho vehicleCategory này
+    const filter: any = { 
+      'pricing.category': vehicleCategory,
+      status 
+    };
+
+    const services = await Service.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Lọc và format pricing để chỉ hiển thị price cho vehicleCategory này
+    const formattedServices = services.map(service => ({
+      ...service,
+      pricing: service.pricing.find((p: any) => p.category === vehicleCategory)?.price || 0
+    }));
+
+    return res.json({ 
+      message: `Lấy danh sách dịch vụ cho ${vehicleCategory} thành công`,
+      data: {
+        services: formattedServices,
+        count: formattedServices.length,
+        vehicleCategory
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy dịch vụ theo danh mục xe:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 export async function deleteService(req: Request, res: Response) {
   try {
     const deleted = await Service.findByIdAndDelete(req.params.id);

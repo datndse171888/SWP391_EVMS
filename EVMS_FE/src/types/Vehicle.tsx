@@ -1,7 +1,6 @@
 import type { UserIDObject } from './Account';
 
 export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
-export type VehicleType = 'electric_car' | 'electric_bike' | 'electric_motorcycle';
 export type VehicleStatus = 'active' | 'inactive' | 'maintenance' | 'retired';
 
 export interface Car {
@@ -40,7 +39,6 @@ export interface VehicleResponse {
 
 export interface VehicleRequest {
   VIN: string;
-  vehicleType: VehicleType;
   vehicleCategory: VehicleCategory;
   plateNumber: string;
   brand: string;
