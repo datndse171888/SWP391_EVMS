@@ -663,8 +663,8 @@ const ManageAppointment: React.FC = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-1">
-          {/* Main Content Area */}
-          <div className="lg:col-span-3">
+        {/* Main Content Area */}
+        <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col">
             {/* Header with Search */}
             <div className="flex items-center justify-between mb-3 flex-shrink-0">

@@ -398,14 +398,14 @@ const ManagePart: React.FC = () => {
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-500">Giá:</span>
             <span className="text-sm font-bold" style={{ color: '#f6ae2d' }}>
-              {part.price.toLocaleString('vi-VN')}đ
-            </span>
-          </div>
+                {part.price.toLocaleString('vi-VN')}đ
+              </span>
+            </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">Tồn kho:</span>
             <span className="text-xs font-medium text-gray-700">
               {part.stockQuantity || 0} sp
-            </span>
+              </span>
           </div>
         </div>
 
@@ -550,11 +550,11 @@ const ManagePart: React.FC = () => {
           <nav className="flex space-x-4 border-b border-gray-200">
             <button
               onClick={() => setSelectedTab('inventory')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              selectedTab === 'inventory'
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                selectedTab === 'inventory'
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
               Tất cả linh kiện ({filteredParts.length})
             </button>
@@ -570,11 +570,11 @@ const ManagePart: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedTab('usage')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              selectedTab === 'usage'
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                selectedTab === 'usage'
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
               Lịch sử sử dụng ({mockPartUsage.length})
             </button>
@@ -629,7 +629,7 @@ const ManagePart: React.FC = () => {
           </div>
         </div>
 
-         {/* Content Grid */}
+        {/* Content Grid */}
          <div 
            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 ${
              itemsPerPage > 8 ? 'overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''
@@ -642,12 +642,12 @@ const ManagePart: React.FC = () => {
          >
            {selectedTab === 'inventory' && (paginatedData as Part[]).map(renderPartCard)}
            {selectedTab === 'low-stock' && (paginatedData as Part[]).map(renderPartCard)}
-           {selectedTab === 'usage' && (
-             <div className="col-span-full">
-               <p className="text-center text-gray-500 py-8">Lịch sử sử dụng linh kiện sẽ được hiển thị ở đây</p>
-             </div>
-           )}
-         </div>
+          {selectedTab === 'usage' && (
+            <div className="col-span-full">
+              <p className="text-center text-gray-500 py-8">Lịch sử sử dụng linh kiện sẽ được hiển thị ở đây</p>
+            </div>
+          )}
+        </div>
 
         {/* Pagination */}
         {renderPagination()}
