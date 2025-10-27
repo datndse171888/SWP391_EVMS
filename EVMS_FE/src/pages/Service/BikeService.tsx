@@ -48,12 +48,12 @@ export const BikeService: React.FC = () => {
     ];
 
     const sampleServices: IndividualService[] = [
-        { id: 1, service_type_id: "bike", name: "Điều chỉnh phanh", price: 15.990, description: "Hiệu chuẩn phanh chuyên nghiệp", duration: "30 phút", display_order: 1, created_at: "2024-01-01T00:00:00Z" },
-        { id: 2, service_type_id: "bike", name: "Tinh chỉnh số", price: 20.990, description: "Tối ưu hóa chuyển số mượt mà", duration: "30 phút", display_order: 2, created_at: "2024-01-01T00:00:00Z" },
-        { id: 3, service_type_id: "bike", name: "Sửa xăm", price: 12.990, description: "Khắc phục xăm nhanh chóng", duration: "30 phút", display_order: 3, created_at: "2024-01-01T00:00:00Z" },
-        { id: 4, service_type_id: "bike", name: "Thay xích", price: 35.990, description: "Lắp đặt xích mới", duration: "30 phút", display_order: 4, created_at: "2024-01-01T00:00:00Z" },
-        { id: 5, service_type_id: "bike", name: "Cân bằng bánh xe", price: 25.990, description: "Dịch vụ căn chỉnh bánh xe", duration: "30 phút", display_order: 5, created_at: "2024-01-01T00:00:00Z" },
-        { id: 6, service_type_id: "bike", name: "Vệ sinh toàn bộ", price: 18.990, description: "Vệ sinh sâu cho xe đạp", duration: "30 phút", display_order: 6, created_at: "2024-01-01T00:00:00Z" }
+        { id: 1, service_type_id: "bike", name: "Điều chỉnh phanh", price: 15.990, description: "Hiệu chuẩn phanh chuyên nghiệp", duration: 30 , display_order: 1, created_at: "2024-01-01T00:00:00Z" },
+        { id: 2, service_type_id: "bike", name: "Tinh chỉnh số", price: 20.990, description: "Tối ưu hóa chuyển số mượt mà", duration: 30 , display_order: 2, created_at: "2024-01-01T00:00:00Z" },
+        { id: 3, service_type_id: "bike", name: "Sửa xăm", price: 12.990, description: "Khắc phục xăm nhanh chóng", duration: 30 , display_order: 3, created_at: "2024-01-01T00:00:00Z" },
+        { id: 4, service_type_id: "bike", name: "Thay xích", price: 35.990, description: "Lắp đặt xích mới", duration: 30 , display_order: 4, created_at: "2024-01-01T00:00:00Z" },
+        { id: 5, service_type_id: "bike", name: "Cân bằng bánh xe", price: 25.990, description: "Dịch vụ căn chỉnh bánh xe", duration: 30 , display_order: 5, created_at: "2024-01-01T00:00:00Z" },
+        { id: 6, service_type_id: "bike", name: "Vệ sinh toàn bộ", price: 18.990, description: "Vệ sinh sâu cho xe đạp", duration: 30 , display_order: 6, created_at: "2024-01-01T00:00:00Z" }
     ];
 
     // Temporarily use sample data

@@ -72,6 +72,9 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
 
 // Service API methods
 export const ServiceApi = {
+  allServices: (params: Service) => {
+    return api.get('/services', { params });
+  },
   createService: (params: Service) => {
     return api.post('/services', params);
   },
