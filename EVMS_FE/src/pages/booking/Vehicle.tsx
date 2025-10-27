@@ -1,23 +1,29 @@
 import React, { useEffect, useState } from 'react'
-import type { VehicleRequest, VehicleResponse, VehicleType } from '../../types/Vehicle';
+import type { VehicleCategory, VehicleRequest, VehicleResponse } from '../../types/Vehicle';
 import { VehicleApi } from '../../api/VehicleApi';
 import type { CheckingResponse } from '../../types/DataResponse';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Loading } from '../../components/Loading';
 import { Select } from '../../components/ui/Select';
+import type { CreateAppointmentRequest } from '../../types/Appoitment';
 
 interface VehicleProps {
-  formData: (_id: string) => void;
+  formData: CreateAppointmentRequest;
+  setFormData: React.Dispatch<React.SetStateAction<CreateAppointmentRequest>>;
+  setVehicleCategory: React.Dispatch<React.SetStateAction<VehicleCategory>>;
   onNext: () => void;
-  // onPrevious?: () => void;
+  onPrevious?: () => void;
 }
 
 const Vehicle: React.FC<VehicleProps> = ({
   formData,
+  setFormData,
+  setVehicleCategory,
   onNext,
-  // onPrevious 
+  onPrevious
 }) => {
+
 
   // ================================
   // UseStates & Variables
@@ -27,7 +33,6 @@ const Vehicle: React.FC<VehicleProps> = ({
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null); // Selected vehicle
   const [newVehicleData, setNewVehicleData] = useState<VehicleRequest>({ // New vehicle form data
     VIN: '',
-    vehicleType: 'electric_car',
     vehicleCategory: 'CAR',
     plateNumber: '',
     brand: '',
@@ -36,10 +41,6 @@ const Vehicle: React.FC<VehicleProps> = ({
     batteryCapacity: 0,
     status: 'active'
   });
-
-  // ================================
-  // useState & Variables
-  // ================================
 
   const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
   const [isCreating, setIsCreating] = useState<boolean>(false); // Creating new vehicle state
@@ -88,10 +89,14 @@ const Vehicle: React.FC<VehicleProps> = ({
     if (vehicleId === 'new') {
       setSelectedVehicle(null);
       setShowNewVehicleForm(true);
+      // Clear vehicleID trong formData
+      setFormData(prev => ({ ...prev, vehicleID: '' }));
     } else {
       const vehicle = vehicles.find(v => v._id === vehicleId);
       setSelectedVehicle(vehicle || null);
       setShowNewVehicleForm(false);
+      // Set vehicleID trong formData
+      setFormData(prev => ({ ...prev, vehicleID: vehicleId }));
     }
   };
 
@@ -106,7 +111,7 @@ const Vehicle: React.FC<VehicleProps> = ({
     return newVehicleData.VIN.trim() !== '' &&
       newVehicleData.plateNumber.trim() !== '' &&
       newVehicleData.brand.trim() !== '' &&
-      newVehicleData.year > 1900 &&
+      newVehicleData.year > 1950 &&
       newVehicleData.mileage >= 0 &&
       newVehicleData.batteryCapacity > 0;
   };
@@ -125,6 +130,7 @@ const Vehicle: React.FC<VehicleProps> = ({
       if (data.success && data.data) {
         // Add new vehicle to list
         setVehicles(prev => [...prev, data.data]);
+        setSelectedVehicle(data.data);
         return data.data._id;
       }
       return null;
@@ -139,17 +145,27 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   const handleNext = async () => {
     let vehicleId: string | null = null;
+    let vehicleCategory: VehicleCategory = 'CAR';
 
     if (selectedVehicle) {
       // Use existing vehicle
       vehicleId = selectedVehicle._id;
+      vehicleCategory = selectedVehicle.vehicleType;
     } else if (showNewVehicleForm && isNewVehicleValid()) {
       // Create new vehicle
       vehicleId = await createNewVehicle();
+      vehicleCategory = newVehicleData.vehicleCategory;
     }
 
     if (vehicleId) {
-      formData(vehicleId);
+      // Update formData with both vehicleID and vehicleCategory
+      setFormData(prev => ({
+        ...prev,
+        vehicleID: vehicleId
+      }));
+      if (vehicleCategory) {
+        setVehicleCategory(vehicleCategory);
+      }
       onNext();
     } else {
       alert('Vui lòng chọn xe hoặc điền đầy đủ thông tin xe mới');
@@ -170,7 +186,7 @@ const Vehicle: React.FC<VehicleProps> = ({
   // ================================
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+    <>
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-blue-900 mb-4">Thông tin xe</h2>
@@ -192,12 +208,13 @@ const Vehicle: React.FC<VehicleProps> = ({
               label="Xe của bạn"
               value={getDisplayValue()}
               onChange={(e) => handleVehicleSelect(e.target.value)}
+              defaultValue={{ value: 'new', label: '+ Thêm xe mới' }}
               option={[
                 ...vehicles.map((vehicle) => ({
                   value: vehicle._id,
                   label: `${vehicle.brand} - ${vehicle.plateNumber} (${vehicle.year})`
                 })),
-                { value: 'new', label: '+ Thêm xe mới' }
+
               ]}
             />
           </div>
@@ -228,12 +245,12 @@ const Vehicle: React.FC<VehicleProps> = ({
             {/* Vehicle Type */}
             <div>
               <Select
-              name="vehicleType"
-              label="Loại xe"
-              value={selectedVehicle?.vehicleType || newVehicleData.vehicleType}
-              onChange={(e) => !selectedVehicle && handleNewVehicleChange('vehicleType', e.target.value as VehicleType)}
-              disabled={!!selectedVehicle}
-              option={vehicleCategoryOptions}
+                name="vehicleType"
+                label="Loại xe"
+                value={selectedVehicle?.vehicleType || newVehicleData.vehicleCategory}
+                onChange={(e) => !selectedVehicle && handleNewVehicleChange('vehicleCategory', e.target.value as VehicleCategory)}
+                disabled={!!selectedVehicle}
+                option={vehicleCategoryOptions}
               />
             </div>
 
@@ -327,10 +344,23 @@ const Vehicle: React.FC<VehicleProps> = ({
             )}
           </div>
 
-          {/* New Vehicle Validation Message */}
-          {showNewVehicleForm && !selectedVehicle && (
+          {/* Vehicle Category Display */}
+          {(selectedVehicle || showNewVehicleForm) && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-700">
+                <span className="font-medium">Danh mục xe:</span> {
+                  selectedVehicle?.vehicleType === 'CAR' ? 'Ô tô điện' :
+                    selectedVehicle?.vehicleType === 'MOTOBIKE' ? 'Xe máy điện' :
+                      'Xe đạp điện'
+                }
+              </p>
+            </div>
+          )}
+
+          {/* New Vehicle Validation Message */}
+          {showNewVehicleForm && !selectedVehicle && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-700">
                 <span className="font-medium">Lưu ý:</span> Xe sẽ được tạo tự động khi bạn nhấn "Tiếp theo"
               </p>
               {!isNewVehicleValid() && (
@@ -362,10 +392,10 @@ const Vehicle: React.FC<VehicleProps> = ({
           onClick={handleNext}
           disabled={isCreating || (!selectedVehicle && (!showNewVehicleForm || !isNewVehicleValid()))}
         >
-          {isCreating ? 'Đang tạo xe...' : 'Tiếp theo'}
+          Tiếp theo
         </Button>
       </div>
-    </div>
+    </>
   );
 };
 
