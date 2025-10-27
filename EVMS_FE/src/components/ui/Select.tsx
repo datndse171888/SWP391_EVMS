@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+
 interface SelectProps {
     // Define props for Select component here
     id?: string;
@@ -12,6 +14,7 @@ interface SelectProps {
     hiddenDefault?: boolean;
     disabled?: boolean;
     required?: boolean;
+    defaultValue?: React.ElementType | { value: string; label: string };
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -27,6 +30,7 @@ export const Select: React.FC<SelectProps> = ({
     hiddenDefault = false,
     disabled = false,
     required = false,
+    defaultValue
 }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -64,13 +68,13 @@ export const Select: React.FC<SelectProps> = ({
                 disabled={disabled}
                 required={required}
             >
-                <option 
-                    value="" 
-                    disabled={disableDefault} 
+                {defaultValue && <option
+                    value=""
+                    disabled={disableDefault}
                     hidden={hiddenDefault}
                 >
                     {label}
-                </option>
+                </option>}
                 {option.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                         {opt.label}
