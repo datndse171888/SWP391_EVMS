@@ -20,7 +20,7 @@ export async function createVehicle(req: Request, res: Response) {
     if (!VIN || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
       return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin bắt buộc: VIN, vehicleType, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
+        message: 'Thiếu thông tin bắt buộc: VIN, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
       });
     }
 
@@ -167,7 +167,6 @@ export async function getAllVehicles(req: Request, res: Response) {
       limit = '10',
       search = '',
       status,
-      vehicleType,
       userID
     } = req.query as Record<string, string>;
 
@@ -178,9 +177,6 @@ export async function getAllVehicles(req: Request, res: Response) {
 
     if (status) {
       filter.status = status;
-    }
-    if (vehicleType) {
-      filter.vehicleType = vehicleType;
     }
     if (userID && mongoose.Types.ObjectId.isValid(userID)) {
       filter.userID = new mongoose.Types.ObjectId(userID);
@@ -361,16 +357,6 @@ export async function updateVehicle(req: Request, res: Response) {
       updateFields.plateNumber = updateData.plateNumber.toUpperCase();
     }
 
-    if (updateData.vehicleType !== undefined) {
-      const validVehicleTypes = ['electric_car', 'electric_motorcycle', 'electric_bike'];
-      if (!validVehicleTypes.includes(updateData.vehicleType)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Loại xe không hợp lệ. Phải là: electric_car, electric_motorcycle, hoặc electric_bike'
-        });
-      }
-      updateFields.vehicleType = updateData.vehicleType;
-    }
 
     if (updateData.vehicleCategory !== undefined) {
       const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
@@ -464,7 +450,7 @@ export async function updateVehicle(req: Request, res: Response) {
           id: updatedVehicle._id,
           userID: updatedVehicle.userID,
           VIN: updatedVehicle.VIN,
-          vehicleType: updatedVehicle.vehicleType,
+          vehicleCategory: updatedVehicle.vehicleCategory,
           plateNumber: updatedVehicle.plateNumber,
           brand: updatedVehicle.brand,
           year: updatedVehicle.year,

@@ -5,7 +5,6 @@ export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
 export interface IVehicle extends Document {
   userID: mongoose.Types.ObjectId; // ref User who owns the vehicle
   VIN: string;
-  vehicleType: string;
   vehicleCategory: VehicleCategory;
   plateNumber: string;
   brand: string;
@@ -36,13 +35,6 @@ const VehicleSchema = new Schema<IVehicle>(
         },
         message: 'VIN phải có 17 ký tự và chỉ chứa chữ cái và số (trừ I, O, Q)'
       }
-    },
-    vehicleType: { 
-      type: String, 
-      required: true, 
-      trim: true,
-      enum: ['electric_car', 'electric_motorcycle', 'electric_bike'],
-      message: 'Loại xe phải là: electric_car, electric_motorcycle, hoặc electric_bike'
     },
     vehicleCategory: {
       type: String,
