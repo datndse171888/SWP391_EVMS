@@ -14,7 +14,7 @@ interface SelectProps {
     hiddenDefault?: boolean;
     disabled?: boolean;
     required?: boolean;
-    defaultValue?: React.ElementType | { value: string; label: string };
+    defaultValue?: { value: string; label: string };
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -68,13 +68,13 @@ export const Select: React.FC<SelectProps> = ({
                 disabled={disabled}
                 required={required}
             >
-                {defaultValue && <option
-                    value=""
+                <option
+                    value={defaultValue?.value || ''}
                     disabled={disableDefault}
                     hidden={hiddenDefault}
                 >
-                    {label}
-                </option>}
+                    {defaultValue?.label || label}
+                </option>
                 {option.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                         {opt.label}

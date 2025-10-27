@@ -75,6 +75,7 @@ export const ServiceApi = {
   allServices: (params: Service) => {
     return api.get('/services', { params });
   },
+
   createService: (params: Service) => {
     return api.post('/services', params);
   },
@@ -93,6 +94,10 @@ export const ServiceApi = {
 
   getServiceByVehicleCategory: (vehicleCategory: VehicleCategory) => {
     return api.get<DataResponse<ServiceResponse>>(`/services?vehicleCategory=${vehicleCategory}`);
-  }
+  },
+
+  getServiceById: (serviceId: string) => {
+    return api.get<ServiceResponse>(`/services/${serviceId}`);
+  },
 }
 

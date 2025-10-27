@@ -8,5 +8,7 @@ export const ServicePackageApi = {
     return api.get<DataResponse<ServicePackageResponse>>(`/service-packages?vehicleCategory=${vehicleCategory}`);
   },
 
-
+  getServicePackageById: (servicePackageId: string) => {
+    return api.get<ServicePackageResponse>(`/service-packages/${servicePackageId}`);
+  }
 }

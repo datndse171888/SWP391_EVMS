@@ -9,5 +9,9 @@ export const VehicleApi = {
     
     createVehicle: (data: VehicleRequest) => {
         return api.post<CheckingResponse<VehicleResponse>>('/vehicles', data)
-    }
+    },
+
+    getVehicleById: (vehicleId: string) => {
+        return api.get<VehicleResponse>(`/vehicles/${vehicleId}`)
+    },
 }

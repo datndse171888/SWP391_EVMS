@@ -6,13 +6,13 @@ interface PackageCardProps {
   featured?: boolean;
 }
 
-export default function PackageCard({ package: pkg, featured = false }: PackageCardProps) {
+export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, featured = false }) => {
   return (
     <div className="bg-orange-400 rounded-2xl p-2 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 relative">
       {featured && (
-        <div 
+        <div
           className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
-          style={{ 
+          style={{
             backgroundColor: '#f6ae2d',
             color: '#014091'
           }}
@@ -20,14 +20,14 @@ export default function PackageCard({ package: pkg, featured = false }: PackageC
           LỰA CHỌN TỐT NHẤT
         </div>
       )}
-      
-      <div 
+
+      <div
         className={`rounded-xl p-8 h-full ${featured ? '' : 'bg-gray-100'}`}
         style={featured ? {
           background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
         } : {}}
       >
-        <h3 
+        <h3
           className={`text-3xl font-bold mb-4 text-center ${featured ? 'text-white' : ''}`}
           style={!featured ? { color: '#014091' } : {}}
         >
@@ -37,7 +37,7 @@ export default function PackageCard({ package: pkg, featured = false }: PackageC
           {pkg.description}
         </p>
         <div className="mb-6 text-center">
-          <span 
+          <span
             className={`text-5xl font-bold ${featured ? 'text-white' : ''}`}
             style={!featured ? { color: '#014091' } : {}}
           >
