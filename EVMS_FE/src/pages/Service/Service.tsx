@@ -3,7 +3,6 @@ import { Car, Zap, Shield, Clock } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
 import { Link } from 'react-router-dom';
 import { Bike, Recycle as Motorcycle, ArrowRight } from 'lucide-react';
-import { reasons } from '../../constants/mockdata/Service';
 
 
 export const CarServicePage: React.FC = () => {
@@ -94,24 +93,6 @@ export const CarServicePage: React.FC = () => {
                             <p className="text-xl text-blue-500 max-w-3xl mx-auto">
                                 Bảo trì định kỳ không chỉ được khuyến nghị mà còn là điều cần thiết cho sự an toàn, tài chính và tâm trí của bạn. Đây là lý do tại sao việc chăm sóc phương tiện chuyên nghiệp lại quan trọng.
                             </p>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {reasons.map((reason, index) => {
-                                const IconComponent = reason.icon;
-                                return (
-                                    <div
-                                        key={index}
-                                        className="bg-orange-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
-                                    >
-                                        <div className={`${reason.color} w-16 h-16 rounded-lg flex items-center justify-center mb-6`}>
-                                            <IconComponent className="h-8 w-8 text-white" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-blue-900 mb-4">{reason.title}</h3>
-                                        <p className="text-blue-800 leading-relaxed">{reason.description}</p>
-                                    </div>
-                                );
-                            })}
                         </div>
 
                         <div className="mt-16 bg-orange-100 rounded-2xl p-8 lg:p-12 shadow-lg">

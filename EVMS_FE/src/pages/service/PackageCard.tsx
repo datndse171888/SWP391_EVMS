@@ -1,8 +1,8 @@
 import { Check } from 'lucide-react';
-import type { Package } from '../../types/Service';
+import type { ServicePackageResponse } from '../../types/ServicePackage';
 
 interface PackageCardProps {
-  package: Package;
+  package: ServicePackageResponse;
   featured?: boolean;
 }
 
@@ -46,10 +46,10 @@ export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, featured
           <span className={`ml-2 ${featured ? 'text-white' : 'text-gray-500'}`}>/lần</span>
         </div>
         <ul className="space-y-4 mb-8">
-          {pkg.features.map((feature, index) => (
+          {pkg.services.map((feature, index) => (
             <li key={index} className="flex items-center">
               <Check className="w-5 h-5 text-green-500 mr-3" />
-              <span className={featured ? 'text-white' : 'text-gray-700'}>{feature}</span>
+              <span className={featured ? 'text-white' : 'text-gray-700'}>{feature.name}</span>
             </li>
           ))}
         </ul>
