@@ -33,10 +33,10 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
 
   const technicianMenuItems = [
     { name: 'Dashboard', path: '/technician/dashboard' },
+    { name: 'Schedule', path: '/technician/schedule' },
     { name: 'Service Orders', path: '/technician/service-orders' },
     { name: 'Maintenance', path: '/technician/maintenance' },
     { name: 'Team', path: '/technician/team' },
-    { name: 'Schedule', path: '/technician/schedule' },
   ];
 
   const isActive = (path: string) => {

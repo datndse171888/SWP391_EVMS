@@ -227,7 +227,7 @@ const TechnicianDashboard: React.FC = () => {
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-sm flex flex-col flex-shrink-0" style={{ height: '200px' }}>
+        <div className="bg-white rounded-lg shadow-sm flex flex-col flex-shrink-0" style={{ height: '240px' }}>
           <div className="p-2 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold" style={{ color: '#014091' }}>Recent Orders</h2>

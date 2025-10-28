@@ -34,6 +34,7 @@ import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
 import Booking from './pages/booking/Booking'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
+import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -121,6 +122,7 @@ export const Router: React.FC = () => {
             <TechnicianLayout>
               <Routes>
                 <Route path="dashboard" element={<TechnicianDashboard />} />
+                <Route path="schedule" element={<TechnicianSchedule />} />
                 <Route path="*" element={<Navigate to="/technician/dashboard" replace />} />
               </Routes>
             </TechnicianLayout>
