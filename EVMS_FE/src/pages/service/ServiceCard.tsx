@@ -1,11 +1,12 @@
 import { Clock } from 'lucide-react';
 import type { IndividualService } from '../../types/Service';
+import type React from 'react';
 
 interface ServiceCardProps {
   service: IndividualService;
 }
 
-export default function ServiceCard({ service }: ServiceCardProps) {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-shadow">
       <div className="flex justify-between items-start mb-3">

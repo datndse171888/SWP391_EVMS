@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { Package, IndividualService } from '../../types/Service';
-import PackageCard from './PackageSevice';
-import ServiceCard from './CardService';
 import { Car, Wrench, Zap, Shield, Clock, Bike } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
+import { PackageCard } from './PackageCard';
+import { ServiceCard } from './ServiceCard';
 
 export const BikeService: React.FC = () => {
     const [packages, setPackages] = useState<Package[]>([]);

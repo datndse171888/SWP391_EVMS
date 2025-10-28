@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { Package, IndividualService } from '../../types/Service';
-import PackageCard from './PackageSevice';
-import ServiceCard from './CardService';
-import { Car, Wrench, Zap, Shield, Clock, Bike } from 'lucide-react';
+import { Car } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
+import { PackageCard } from './PackageCard';
+import { ServiceCard } from './ServiceCard';
 
 export const CarService: React.FC = () => {
     const [packages, setPackages] = useState<Package[]>([]);
@@ -48,12 +48,12 @@ export const CarService: React.FC = () => {
     ];
 
     const sampleServices: IndividualService[] = [
-        { id: 1, service_type_id: "car", name: "Thay dầu động cơ", price: 45.99, description: "Thay dầu động cơ và lọc dầu chuyên nghiệp", duration: "45 phút", display_order: 1, created_at: "2024-01-01T00:00:00Z" },
-        { id: 2, service_type_id: "car", name: "Kiểm tra phanh", price: 35.99, description: "Kiểm tra và bảo dưỡng hệ thống phanh", duration: "60 phút", display_order: 2, created_at: "2024-01-01T00:00:00Z" },
-        { id: 3, service_type_id: "car", name: "Thay lọc gió", price: 25.99, description: "Thay thế lọc gió động cơ và cabin", duration: "30 phút", display_order: 3, created_at: "2024-01-01T00:00:00Z" },
-        { id: 4, service_type_id: "car", name: "Cân bằng lốp", price: 40.99, description: "Cân bằng và căn chỉnh bánh xe", duration: "45 phút", display_order: 4, created_at: "2024-01-01T00:00:00Z" },
-        { id: 5, service_type_id: "car", name: "Kiểm tra ắc quy", price: 20.99, description: "Kiểm tra và bảo dưỡng ắc quy", duration: "30 phút", display_order: 5, created_at: "2024-01-01T00:00:00Z" },
-        { id: 6, service_type_id: "car", name: "Rửa xe detailing", price: 55.99, description: "Vệ sinh toàn diện nội thất và ngoại thất", duration: "90 phút", display_order: 6, created_at: "2024-01-01T00:00:00Z" }
+        { id: 1, service_type_id: "car", name: "Thay dầu động cơ", price: 45.99, description: "Thay dầu động cơ và lọc dầu chuyên nghiệp", duration: 45, display_order: 1, created_at: "2024-01-01T00:00:00Z" },
+        { id: 2, service_type_id: "car", name: "Kiểm tra phanh", price: 35.99, description: "Kiểm tra và bảo dưỡng hệ thống phanh", duration: 60, display_order: 2, created_at: "2024-01-01T00:00:00Z" },
+        { id: 3, service_type_id: "car", name: "Thay lọc gió", price: 25.99, description: "Thay thế lọc gió động cơ và cabin", duration: 30, display_order: 3, created_at: "2024-01-01T00:00:00Z" },
+        { id: 4, service_type_id: "car", name: "Cân bằng lốp", price: 40.99, description: "Cân bằng và căn chỉnh bánh xe", duration: 45, display_order: 4, created_at: "2024-01-01T00:00:00Z" },
+        { id: 5, service_type_id: "car", name: "Kiểm tra ắc quy", price: 20.99, description: "Kiểm tra và bảo dưỡng ắc quy", duration: 30, display_order: 5, created_at: "2024-01-01T00:00:00Z" },
+        { id: 6, service_type_id: "car", name: "Rửa xe detailing", price: 55.99, description: "Vệ sinh toàn diện nội thất và ngoại thất", duration: 90, display_order: 6, created_at: "2024-01-01T00:00:00Z" }
     ];
 
     // Temporarily use sample data

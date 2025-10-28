@@ -4,6 +4,7 @@ import cleanImage from '../assets/images/clean.png';
 import motobyImage from '../assets/images/motoby.jpg';
 import scheduleImage from '../assets/images/schedule.png';
 import chartImage from '../assets/images/chart.jpg';
+import { useNavigate } from 'react-router-dom';
 
 // Add custom animations
 const customStyles = `
@@ -50,7 +51,7 @@ if (typeof document !== 'undefined') {
 // Debug: Log image paths
 console.log('Image paths:', {
   cleanImage,
-  motobyImage, 
+  motobyImage,
   scheduleImage,
   chartImage
 });
@@ -58,7 +59,8 @@ console.log('Image paths:', {
 const Home: React.FC = () => {
   // Factory images slider state
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+  const navigate = useNavigate();
+
   const factoryImages = [
     {
       url: 'https://assets-persist.lovart.ai/agent_images/e25a3bdd-6089-4f63-9949-675ca4316678.jpg',
@@ -129,7 +131,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section 
+      <section
         className="relative pt-24 pb-24 px-0 overflow-hidden min-h-screen flex items-center"
         style={{
           backgroundImage: `url(${homeImage})`,
@@ -140,13 +142,13 @@ const Home: React.FC = () => {
           zIndex: 1
         }}
       >
-        
+
         <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl -ml-4 mt-0">
             {/* Slogan */}
-            <h1 
+            <h1
               className="text-5xl lg:text-6xl font-bold mb-8 leading-tight text-left animate-fade-in-up"
-              style={{ 
+              style={{
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 color: '#014091',
                 textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.2)',
@@ -157,9 +159,9 @@ const Home: React.FC = () => {
               <br />
               <span className="whitespace-nowrap">tin cậy bền lâu</span>
             </h1>
-            
+
             {/* Description */}
-            <p 
+            <p
               className="text-xl mb-6 leading-relaxed max-w-lg text-left animate-fade-in-up"
               style={{
                 color: '#014091',
@@ -169,7 +171,7 @@ const Home: React.FC = () => {
             >
               Đồng hành cùng quý khách trong mọi chuyến đi
             </p>
-            
+
             {/* Features */}
             <div className="mb-8 space-y-3">
               <div className="flex items-center space-x-3 animate-fade-in-up hover:scale-105 transition-transform duration-300" style={{ animationDelay: '0.6s' }}>
@@ -191,7 +193,7 @@ const Home: React.FC = () => {
                 </span>
               </div>
             </div>
-            
+
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-start animate-fade-in-up" style={{ animationDelay: '1.2s' }}>
               <button
@@ -201,6 +203,7 @@ const Home: React.FC = () => {
                   color: '#014091',
                   fontFamily: 'Inter, sans-serif'
                 }}
+                onClick={() => navigate('/booking')}
               >
                 Đặt Lịch
               </button>
@@ -212,32 +215,32 @@ const Home: React.FC = () => {
                 }}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
+                  <path d="M8 5v14l11-7z" />
                 </svg>
                 <span>Xem Quy Trình</span>
               </button>
             </div>
-            
+
             {/* Trust Indicators */}
             <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '1.4s' }}>
               <div className="flex flex-wrap items-center gap-6 text-sm" style={{ color: '#014091' }}>
                 <div className="flex items-center space-x-2">
                   <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                   <span className="font-semibold">5.0/5.0</span>
                   <span>Đánh giá</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span className="font-semibold">5000+</span>
                   <span>Xe đã sửa</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span className="font-semibold">Chính hãng</span>
                   <span>Linh kiện</span>
@@ -254,13 +257,13 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div 
+                <div
                   className="text-4xl lg:text-5xl font-bold mb-2"
                   style={{ color: '#014091' }}
                 >
                   {stat.number}
                 </div>
-                <div 
+                <div
                   className="text-lg font-semibold"
                   style={{ color: '#5f6777' }}
                 >
@@ -278,30 +281,30 @@ const Home: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Image */}
             <div className="relative">
-              <div 
+              <div
                 className="relative overflow-hidden rounded-lg"
                 style={{ border: `2px solid #f6ae2d` }}
               >
-                <div 
+                <div
                   className="aspect-[4/3] bg-cover bg-center"
                   style={{
                     backgroundImage: 'url("https://assets-persist.lovart.ai/agent_images/92f797af-7a05-414f-8aea-bdc419840094.jpg")'
                   }}
                 ></div>
               </div>
-              
+
               {/* Experience Badge */}
-              <div 
+              <div
                 className="absolute -top-4 -left-4 bg-white rounded-lg shadow-lg p-4 border-2"
                 style={{ borderColor: '#f6ae2d' }}
               >
-                <div 
+                <div
                   className="text-3xl font-bold text-center"
                   style={{ color: '#f6ae2d' }}
                 >
                   5+
                 </div>
-                <div 
+                <div
                   className="text-xs font-bold uppercase tracking-wider text-center"
                   style={{ color: '#014091' }}
                 >
@@ -312,28 +315,28 @@ const Home: React.FC = () => {
 
             {/* Right Column - Content */}
             <div className="space-y-6">
-              <div 
+              <div
                 className="text-sm font-bold uppercase tracking-wider"
                 style={{ color: '#0991f3' }}
               >
                 CHÚNG TÔI LÀ AI
               </div>
-              
-              <h2 
+
+              <h2
                 className="text-4xl lg:text-5xl font-bold leading-tight"
                 style={{ color: '#014091' }}
               >
                 Chúng tôi là bạn đồng hành bảo đảm sức khỏe cho xe của bạn!
               </h2>
-              
+
               <p className="text-gray-600 text-lg leading-relaxed">
-              Với đội ngũ kỹ thuật viên giàu kinh nghiệm và trang thiết bị hiện đại, chúng tôi cam kết mang đến dịch vụ sửa chữa, bảo dưỡng xe hàng đầu. Từ xe máy truyền thống đến xe điện thông minh, chúng tôi luôn bắt kịp xu hướng công nghệ mới nhất.
+                Với đội ngũ kỹ thuật viên giàu kinh nghiệm và trang thiết bị hiện đại, chúng tôi cam kết mang đến dịch vụ sửa chữa, bảo dưỡng xe hàng đầu. Từ xe máy truyền thống đến xe điện thông minh, chúng tôi luôn bắt kịp xu hướng công nghệ mới nhất.
               </p>
-              
+
               <p className="text-gray-600 leading-relaxed">
-              Chúng tôi hiểu rằng xe không chỉ là phương tiện di chuyển, mà còn là người bạn đồng hành tin cậy trong cuộc sống hàng ngày của bạn. Với phương châm "Chuyên nghiệp - Nhanh chóng - Tin cậy bền lâu", chúng tôi không ngừng nâng cao chất lượng dịch vụ để xứng đáng với sự tin tưởng của khách hàng.
+                Chúng tôi hiểu rằng xe không chỉ là phương tiện di chuyển, mà còn là người bạn đồng hành tin cậy trong cuộc sống hàng ngày của bạn. Với phương châm "Chuyên nghiệp - Nhanh chóng - Tin cậy bền lâu", chúng tôi không ngừng nâng cao chất lượng dịch vụ để xứng đáng với sự tin tưởng của khách hàng.
               </p>
-              
+
               <button
                 className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"
                 style={{
@@ -354,13 +357,13 @@ const Home: React.FC = () => {
           {/* Header Section */}
           <div className="grid lg:grid-cols-2 mb-8">
             <div>
-              <div 
+              <div
                 className="text-sm font-bold uppercase tracking-wider mb-4"
                 style={{ color: '#0991f3' }}
               >
                 CHÚNG TÔI MANG ĐẾN
               </div>
-              <h2 
+              <h2
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-4"
                 style={{ color: '#014091' }}
               >
@@ -371,10 +374,10 @@ const Home: React.FC = () => {
             </div>
             <div className="flex flex-col justify-center">
               <p className="text-gray-600 text-lg leading-relaxed mb-3">
-              Với đội ngũ kỹ thuật viên chuyên nghiệp và trang thiết bị hiện đại, chúng tôi cung cấp dịch vụ sửa chữa, bảo dưỡng cho mọi loại xe từ truyền thống đến điện. Cam kết chất lượng cao, giá cả hợp lý và thời gian nhanh chóng.
+                Với đội ngũ kỹ thuật viên chuyên nghiệp và trang thiết bị hiện đại, chúng tôi cung cấp dịch vụ sửa chữa, bảo dưỡng cho mọi loại xe từ truyền thống đến điện. Cam kết chất lượng cao, giá cả hợp lý và thời gian nhanh chóng.
               </p>
-              <a 
-                href="#services" 
+              <a
+                href="#services"
                 className="inline-flex items-center text-lg font-semibold transition-all duration-200 hover:opacity-80"
                 style={{ color: '#0991f3' }}
               >
@@ -391,27 +394,27 @@ const Home: React.FC = () => {
             {/* AC Charger Services Card */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
               <div className="p-6">
-                <h3 
+                <h3
                   className="text-xl font-bold mb-3"
-                style={{ color: '#014091' }}
+                  style={{ color: '#014091' }}
                 >
                   Bảo Dưỡng Định Kỳ
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed mb-4 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                Thay dầu máy, lọc gió, bugi. Kiểm tra hệ thống phanh, lốp xe. Vệ sinh xe toàn diện để đảm bảo xe luôn hoạt động ổn định.
+                  Thay dầu máy, lọc gió, bugi. Kiểm tra hệ thống phanh, lốp xe. Vệ sinh xe toàn diện để đảm bảo xe luôn hoạt động ổn định.
                 </p>
-                <div 
+                <div
                   className="w-12 h-0.5 mb-4"
-                style={{ backgroundColor: '#f6ae2d' }}
+                  style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
-              <div 
+              <div
                 className="relative h-64 overflow-hidden"
                 style={{
                   background: `linear-gradient(135deg, #8dcdfa, #8abdfe)`
                 }}
               >
-                <img 
+                <img
                   src={scheduleImage}
                   alt="AC Charger Services"
                   className="w-full h-full object-cover"
@@ -422,7 +425,7 @@ const Home: React.FC = () => {
                   }}
                 />
                 <div className="absolute inset-0 bg-opacity-20"></div>
-                <button 
+                <button
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
                 >
@@ -434,27 +437,27 @@ const Home: React.FC = () => {
             {/* DC Charger Services Card */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
               <div className="p-6">
-                <h3 
+                <h3
                   className="text-xl font-bold mb-3"
-                style={{ color: '#014091' }}
+                  style={{ color: '#014091' }}
                 >
                   Vệ Sinh Xe Toàn Diện
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed mb-4 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                Rửa xe chuyên nghiệp, vệ sinh nội thất, đánh bóng sơn xe. Khử mùi, diệt khuẩn và bảo vệ bề mặt xe lâu dài.
+                  Rửa xe chuyên nghiệp, vệ sinh nội thất, đánh bóng sơn xe. Khử mùi, diệt khuẩn và bảo vệ bề mặt xe lâu dài.
                 </p>
-                <div 
+                <div
                   className="w-12 h-0.5 mb-4"
-                style={{ backgroundColor: '#f6ae2d' }}
+                  style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
-              <div 
+              <div
                 className="relative h-64 overflow-hidden"
                 style={{
                   background: `linear-gradient(135deg, #8abdfe, #0991f3)`
                 }}
               >
-                <img 
+                <img
                   src={cleanImage}
                   alt="DC Charger Services"
                   className="w-full h-full object-cover"
@@ -465,7 +468,7 @@ const Home: React.FC = () => {
                   }}
                 />
                 <div className="absolute inset-0 bg-opacity-20"></div>
-                <button 
+                <button
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
                 >
@@ -477,27 +480,27 @@ const Home: React.FC = () => {
             {/* Home Charger Card */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
               <div className="p-6">
-                <h3 
+                <h3
                   className="text-xl font-bold mb-3"
-                style={{ color: '#014091' }}
+                  style={{ color: '#014091' }}
                 >
                   Bảo Dưỡng Xe Máy Điện
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed mb-4 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                Kiểm tra pin, sạc điện, bảo dưỡng motor điện. Chẩn đoán hệ thống điều khiển và thay thế linh kiện xe điện chuyên dụng.
+                  Kiểm tra pin, sạc điện, bảo dưỡng motor điện. Chẩn đoán hệ thống điều khiển và thay thế linh kiện xe điện chuyên dụng.
                 </p>
-                <div 
+                <div
                   className="w-12 h-0.5 mb-4"
-                style={{ backgroundColor: '#f6ae2d' }}
+                  style={{ backgroundColor: '#f6ae2d' }}
                 ></div>
               </div>
-              <div 
+              <div
                 className="relative h-64 overflow-hidden"
                 style={{
                   background: `linear-gradient(135deg, #fad38e, #8abdfe)`
                 }}
               >
-                <img 
+                <img
                   src={motobyImage}
                   alt="Home Charger"
                   className="w-full h-full object-cover"
@@ -508,7 +511,7 @@ const Home: React.FC = () => {
                   }}
                 />
                 <div className="absolute inset-0 bg-opacity-20"></div>
-                <button 
+                <button
                   className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all duration-200 hover:bg-opacity-80"
                   style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
                 >
@@ -524,13 +527,13 @@ const Home: React.FC = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <div 
+            <div
               className="text-sm font-bold uppercase tracking-wider mb-4"
               style={{ color: '#0991f3' }}
             >
               GÓI DỊCH VỤ
             </div>
-            <h2 
+            <h2
               className="text-4xl lg:text-5xl font-bold mb-6"
               style={{ color: '#014091' }}
             >
@@ -545,9 +548,9 @@ const Home: React.FC = () => {
             {/* Basic Plan */}
             <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
               <div className="bg-gray-100 rounded-xl p-8 h-full">
-                <h3 
+                <h3
                   className="text-3xl font-bold mb-4 text-center"
-                style={{ color: '#014091' }}
+                  style={{ color: '#014091' }}
                 >
                   Cơ Bản
                 </h3>
@@ -555,9 +558,9 @@ const Home: React.FC = () => {
                   Dịch vụ bảo dưỡng cơ bản cho xe điện với các kiểm tra thiết yếu
                 </p>
                 <div className="mb-6 text-center">
-                  <span 
+                  <span
                     className="text-5xl font-bold"
-                  style={{ color: '#014091' }}
+                    style={{ color: '#014091' }}
                   >
                     200.000₫
                   </span>
@@ -613,17 +616,17 @@ const Home: React.FC = () => {
             {/* Standard Plan - Featured */}
             <div className="bg-white rounded-2xl p-2 shadow-xl transition-all duration-300 relative transform scale-105">
               {/* Best Choice Ribbon */}
-              <div 
+              <div
                 className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
-                style={{ 
+                style={{
                   backgroundColor: '#f6ae2d',
                   color: '#014091'
                 }}
               >
                 LỰA CHỌN TỐT NHẤT
               </div>
-              
-              <div 
+
+              <div
                 className="rounded-xl p-8 h-full"
                 style={{
                   background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
@@ -675,7 +678,7 @@ const Home: React.FC = () => {
                 </ul>
                 <button
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
-                    style={{
+                  style={{
                     color: '#014091',
                     backgroundColor: '#f6ae2d'
                   }}
@@ -686,29 +689,29 @@ const Home: React.FC = () => {
                   *Áp dụng cho tất cả loại xe điện
                 </p>
               </div>
-                  </div>
+            </div>
 
             {/* Premium Plan */}
             <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
               <div className="bg-gray-100 rounded-xl p-8 h-full">
-                  <h3 
+                <h3
                   className="text-3xl font-bold mb-4 text-center"
-                    style={{ color: '#014091' }}
-                  >
+                  style={{ color: '#014091' }}
+                >
                   Cao Cấp
-                  </h3>
+                </h3>
                 <p className="text-gray-500 mb-6 text-center">
                   Dịch vụ bảo dưỡng cao cấp với hỗ trợ 24/7 và bảo hành dài hạn
                 </p>
                 <div className="mb-6 text-center">
-                  <span 
+                  <span
                     className="text-5xl font-bold"
                     style={{ color: '#014091' }}
                   >
                     800.000₫
                   </span>
                   <span className="text-gray-500 ml-2">/lần</span>
-                  </div>
+                </div>
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -739,7 +742,7 @@ const Home: React.FC = () => {
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                     <span className="text-gray-700">Ưu tiên đặt lịch</span>
-                    </li>
+                  </li>
                 </ul>
                 <button
                   className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
@@ -754,7 +757,7 @@ const Home: React.FC = () => {
                   *Dành cho khách hàng doanh nghiệp
                 </p>
               </div>
-              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -766,19 +769,19 @@ const Home: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-12 mb-16">
             {/* Left Column - Heading */}
             <div>
-              <div 
+              <div
                 className="text-sm font-bold uppercase tracking-wider mb-4"
                 style={{ color: '#0991f3' }}
               >
                 KHO LINH KIỆN CỦA CHÚNG TÔI
               </div>
-              <h2 
+              <h2
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-4"
                 style={{ color: '#014091' }}
               >
                 Phụ tùng chính hãng với chất lượng đảm bảo
               </h2>
-              <div 
+              <div
                 className="w-16 h-1 mb-8"
                 style={{ backgroundColor: '#f6ae2d' }}
               ></div>
@@ -787,7 +790,7 @@ const Home: React.FC = () => {
             {/* Right Column - Description and Button */}
             <div className="flex flex-col justify-center">
               <p className="text-gray-600 text-lg leading-relaxed mb-8">
-              Với kho linh kiện đa dạng và phong phú, chúng tôi luôn sẵn sàng cung cấp phụ tùng chính hãng cho mọi dòng xe. Từ linh kiện cơ bản như dầu máy, lọc gió, bugi đến các bộ phận chuyên dụng cho xe điện như pin lithium, motor điện, controller. Tất cả đều được nhập khẩu từ các thương hiệu uy tín và có chế độ bảo hành rõ ràng.
+                Với kho linh kiện đa dạng và phong phú, chúng tôi luôn sẵn sàng cung cấp phụ tùng chính hãng cho mọi dòng xe. Từ linh kiện cơ bản như dầu máy, lọc gió, bugi đến các bộ phận chuyên dụng cho xe điện như pin lithium, motor điện, controller. Tất cả đều được nhập khẩu từ các thương hiệu uy tín và có chế độ bảo hành rõ ràng.
               </p>
               <button
                 className="px-8 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105 self-start"
@@ -804,28 +807,28 @@ const Home: React.FC = () => {
           {/* Bottom Half - Image Carousel */}
           <div className="relative">
             {/* Navigation Arrows */}
-            <button 
+            <button
               onClick={prevSlide}
               className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 text-black hover:text-gray-600 transition-all duration-200"
               style={{ marginLeft: '-60px' }}
             >
               <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
               </svg>
             </button>
-            <button 
+            <button
               onClick={nextSlide}
               className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 text-black hover:text-gray-600 transition-all duration-200"
               style={{ marginRight: '-60px' }}
             >
               <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
+                <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
               </svg>
             </button>
 
             {/* Image Slider */}
             <div className="overflow-hidden rounded-lg">
-              <div 
+              <div
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
@@ -834,7 +837,7 @@ const Home: React.FC = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
                       {factoryImages.slice(slideIndex * 4, (slideIndex + 1) * 4).map((img, imgIndex) => (
                         <div key={imgIndex} className="relative overflow-hidden rounded-lg w-full max-w-xs">
-                          <div 
+                          <div
                             className="aspect-square bg-cover bg-center"
                             style={{
                               backgroundImage: `url("${img.url}")`
@@ -855,10 +858,9 @@ const Home: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                    index === currentSlide ? '' : 'bg-gray-400'
-                  }`}
-                  style={{ 
+                  className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentSlide ? '' : 'bg-gray-400'
+                    }`}
+                  style={{
                     backgroundColor: index === currentSlide ? '#f6ae2d' : '#9CA3AF'
                   }}
                 ></button>
@@ -869,12 +871,12 @@ const Home: React.FC = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section 
+      <section
         className="py-20 px-4 sm:px-6 lg:px-8 bg-white"
       >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 
+            <h2
               className="text-4xl lg:text-5xl font-bold mb-6"
               style={{ color: '#014091' }}
             >
@@ -896,25 +898,25 @@ const Home: React.FC = () => {
                     <span key={i} className="text-yellow-400 text-xl">⭐</span>
                   ))}
                 </div>
-                <p 
+                <p
                   className="text-gray-700 mb-6 italic overflow-hidden"
-                  style={{ 
-                    display: '-webkit-box', 
-                    WebkitLineClamp: 2, 
-                    WebkitBoxOrient: 'vertical' 
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical'
                   }}
                 >
                   "{testimonial.content}"
                 </p>
                 <div className="flex items-center">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4"
                     style={{ backgroundColor: '#8dcdfa' }}
                   >
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <div 
+                    <div
                       className="font-bold"
                       style={{ color: '#014091' }}
                     >
@@ -932,7 +934,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Future Electric Section */}
-      <section 
+      <section
         className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden"
         style={{
           backgroundImage: `url(${chartImage})`,
@@ -943,34 +945,34 @@ const Home: React.FC = () => {
       >
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-opacity-50"></div>
-        
+
         <div className="relative max-w-7xl mx-auto">
           <div className="max-w-2xl text-left">
             {/* Main Slogan */}
-            <h2 
+            <h2
               className="text-5xl lg:text-6xl font-bold mb-6 leading-tight"
-              style={{ 
+              style={{
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 color: 'white',
                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)'
               }}
             >
-              Sẵn sàng bảo dưỡng 
+              Sẵn sàng bảo dưỡng
               <br />
               xe điện của bạn?
             </h2>
-            
+
             {/* Sub-headline */}
-            <h3 
+            <h3
               className="text-2xl font-bold mb-6"
-              style={{ 
+              style={{
                 color: 'white',
                 textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)'
               }}
             >
               Liên hệ ngay với chúng tôi để được tư vấn miễn phí và đặt lịch bảo dưỡng
-            </h3>      
-            
+            </h3>
+
             {/* CTA Button */}
             <button
               className="px-10 py-4 rounded-lg text-white font-bold text-xl uppercase tracking-wider transition-all duration-200 hover:shadow-xl hover:scale-105"

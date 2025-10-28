@@ -46,6 +46,8 @@ const Vehicle: React.FC<VehicleProps> = ({
   const [isCreating, setIsCreating] = useState<boolean>(false); // Creating new vehicle state
   const [showNewVehicleForm, setShowNewVehicleForm] = useState<boolean>(false); // Show new vehicle form
 
+  const [error, setError] = useState<string>('');
+
   const vehicleCategoryOptions = [
     { value: 'CAR', label: 'Ô tô điện' },
     { value: 'MOTOBIKE', label: 'Xe máy điện' },
@@ -74,6 +76,7 @@ const Vehicle: React.FC<VehicleProps> = ({
       }
     } catch (error) {
       console.error('Error fetching vehicles:', error);
+      setError('Đã có lỗi xảy ra khi tải danh sách xe');
       setShowNewVehicleForm(true);
     } finally {
       setIsLoading(false);
@@ -136,7 +139,7 @@ const Vehicle: React.FC<VehicleProps> = ({
       return null;
     } catch (error: any) {
       console.error('Error creating vehicle:', error);
-      alert(error.response?.data?.message || 'Không thể tạo xe mới');
+      setError('Đã có lỗi xảy ra khi tạo xe mới');
       return null;
     } finally {
       setIsCreating(false);
@@ -247,9 +250,10 @@ const Vehicle: React.FC<VehicleProps> = ({
               <Select
                 name="vehicleType"
                 label="Loại xe"
-                value={selectedVehicle?.vehicleType || newVehicleData.vehicleCategory}
+                value={newVehicleData.vehicleCategory}
                 onChange={(e) => !selectedVehicle && handleNewVehicleChange('vehicleCategory', e.target.value as VehicleCategory)}
                 disabled={!!selectedVehicle}
+                hiddenDefault={true}
                 option={vehicleCategoryOptions}
               />
             </div>
@@ -345,13 +349,10 @@ const Vehicle: React.FC<VehicleProps> = ({
           </div>
 
           {/* Vehicle Category Display */}
-          {(selectedVehicle || showNewVehicleForm) && (
+          {(error) && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <span className="font-medium">Danh mục xe:</span> {
-                  selectedVehicle?.vehicleType === 'CAR' ? 'Ô tô điện' :
-                    selectedVehicle?.vehicleType === 'MOTOBIKE' ? 'Xe máy điện' :
-                      'Xe đạp điện'
+              <p className="text-sm text-red-600">
+                <span className="font-medium">Lỗi:</span> {error
                 }
               </p>
             </div>

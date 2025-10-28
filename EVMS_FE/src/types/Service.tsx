@@ -7,18 +7,17 @@ export interface Service {
     price: number;
     duration: number;
     image: string;
-    vehicleType?: 'electric_bike' | 'electric_motorcycle' | 'electric_car';
     pricing?: { category: 'CAR' | 'BICYCLE' | 'MOTOBIKE'; price: number }[];
 }
 
-// dùng để làm giao diện không lấy từ database
-export interface Reason {
-    id: number;
-    icon: React.ElementType;
-    title: string;
-    description: string;
-    color: string;
-}
+// // dùng để làm giao diện không lấy từ database
+// export interface Reason {
+//     id: number;
+//     icon: React.ElementType;
+//     title: string;
+//     description: string;
+//     color: string;
+// }
 
 export interface Package {
   id: number;

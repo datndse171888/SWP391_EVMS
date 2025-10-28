@@ -1,4 +1,3 @@
-import type { VehicleCategory } from "./Vehicle";
 
 export type ServicePackageStatus = 'active' | 'inactive' | 'hidden';
 
