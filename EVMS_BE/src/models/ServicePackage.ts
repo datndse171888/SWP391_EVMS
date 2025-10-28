@@ -4,10 +4,12 @@ export type ServicePackageStatus = 'active' | 'inactive' | 'hidden';
 export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
 
 export interface IServiceInPackage {
-  serviceID: string;
   name: string;
   price: number;
+  vehicleCategory: VehicleCategory;
   duration: number;
+  description?: string;
+  image?: string;
 }
 
 export interface IServicePackage extends Document {
@@ -39,10 +41,12 @@ const ServicePackageSchema = new Schema<IServicePackage>(
     services: [
       new Schema<IServiceInPackage>(
         {
-          serviceID: { type: String, required: true, trim: true },
           name: { type: String, required: true, trim: true },
           price: { type: Number, required: true, min: 0 },
+          vehicleCategory: { type: String, enum: ['CAR', 'BICYCLE', 'MOTOBIKE'], required: true },
           duration: { type: Number, required: true, min: 1 },
+          description: { type: String, trim: true },
+          image: { type: String, trim: true },
         },
         { _id: false }
       ),

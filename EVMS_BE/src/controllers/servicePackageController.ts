@@ -32,15 +32,46 @@ export async function createServicePackage(req: Request, res: Response) {
       const ids = serviceItems.map((s: any) => s.serviceID);
       const serviceDocs = await Service.find({ _id: { $in: ids } }).lean();
       const idToDoc = new Map(serviceDocs.map((d: any) => [String(d._id), d]));
+      // Ensure all services match package vehicleCategory
+      const hasMismatchedCategory = serviceDocs.some((d: any) => d.vehicleCategory !== vehicleCategory);
+      if (hasMismatchedCategory) {
+        return res.status(400).json({ message: 'Tất cả dịch vụ trong gói phải có cùng vehicleCategory với gói' });
+      }
+      // Chặn tạo nếu tập dịch vụ trùng khớp hoàn toàn với một gói đã có (bỏ qua thứ tự)
+      {
+        const requestedServiceNames = new Set(serviceDocs.map((d: any) => String(d.name)));
+        const candidatesSameSize = await ServicePackage.find({
+          vehicleCategory,
+          services: { $size: requestedServiceNames.size }
+        }).lean();
+        const hasSameServiceSet = candidatesSameSize.some((pkg: any) => {
+          if (!Array.isArray(pkg.services) || pkg.services.length !== requestedServiceNames.size) return false;
+          const namesInPkg = new Set((pkg.services as any[]).map((s: any) => String(s.name)));
+          if (namesInPkg.size !== requestedServiceNames.size) return false;
+          for (const n of requestedServiceNames) {
+            if (!namesInPkg.has(n)) return false;
+          }
+          return true; // tập tên dịch vụ trùng hoàn toàn
+        });
+        if (hasSameServiceSet) {
+          return res.status(400).json({
+            message: 'Đã tồn tại gói dịch vụ với cùng tập dịch vụ lẻ (không phân biệt thứ tự).',
+            reason: 'duplicate_services_set'
+          });
+        }
+      }
+
       services = serviceItems
         .map((item: any) => {
           const doc = idToDoc.get(String(item.serviceID));
           if (!doc) return null;
           return {
-            serviceID: String(doc._id),
             name: doc.name,
             price: doc.price,
+            vehicleCategory: doc.vehicleCategory,
             duration: doc.duration, // chỉ dùng duration từ Service
+            description: doc.description,
+            image: doc.image,
           };
         })
         .filter(Boolean) as any[];
@@ -69,15 +100,15 @@ export async function createServicePackage(req: Request, res: Response) {
       ).lean();
       const normalize = (arr: any[]) =>
         [...arr]
-          .map((s: any) => ({ serviceID: String(s.serviceID), duration: Number(s.duration) }))
-          .sort((a, b) => (a.serviceID > b.serviceID ? 1 : a.serviceID < b.serviceID ? -1 : a.duration - b.duration));
+          .map((s: any) => ({ name: String(s.name), duration: Number(s.duration) }))
+          .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : a.duration - b.duration));
       const wanted = normalize(services);
       let conflicted: any | null = null;
       const hasSameContent = candidates.some((pkg: any) => {
         if ((pkg.description || '') !== (description || '')) return false;
         if (!Array.isArray(pkg.services) || pkg.services.length !== wanted.length) return false;
         const current = normalize(pkg.services);
-        const same = current.every((it: any, idx: number) => it.serviceID === wanted[idx].serviceID && it.duration === wanted[idx].duration);
+        const same = current.every((it: any, idx: number) => it.name === wanted[idx].name && it.duration === wanted[idx].duration);
         if (same) conflicted = pkg;
         return same;
       });
@@ -171,15 +202,23 @@ export async function updateServicePackage(req: Request, res: Response) {
       const ids = serviceItems.map((s: any) => s.serviceID);
       const serviceDocs = await Service.find({ _id: { $in: ids } }).lean();
       const idToDoc = new Map(serviceDocs.map((d: any) => [String(d._id), d]));
+      // Ensure all services match resulting package vehicleCategory
+      const targetCategory = vehicleCategory ?? existing.vehicleCategory;
+      const hasMismatchedCategory = serviceDocs.some((d: any) => d.vehicleCategory !== targetCategory);
+      if (hasMismatchedCategory) {
+        return res.status(400).json({ message: 'Tất cả dịch vụ trong gói phải có cùng vehicleCategory với gói' });
+      }
       resolvedServices = serviceItems
         .map((item: any) => {
           const doc = idToDoc.get(String(item.serviceID));
           if (!doc) return null;
           return {
-            serviceID: String(doc._id),
             name: doc.name,
             price: doc.price,
+            vehicleCategory: doc.vehicleCategory,
             duration: doc.duration, // chỉ dùng duration từ Service
+            description: doc.description,
+            image: doc.image,
           };
         })
         .filter(Boolean) as any[];
@@ -205,14 +244,14 @@ export async function updateServicePackage(req: Request, res: Response) {
       const candidates: any[] = await ServicePackage.find({ ...baseQuery, services: { $size: resolvedServices.length } }).lean();
       const normalize = (arr: any[]) =>
         [...arr]
-          .map((s: any) => ({ serviceID: String(s.serviceID), duration: Number(s.duration) }))
-          .sort((a, b) => (a.serviceID > b.serviceID ? 1 : a.serviceID < b.serviceID ? -1 : a.duration - b.duration));
+          .map((s: any) => ({ name: String(s.name), duration: Number(s.duration) }))
+          .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : a.duration - b.duration));
       const wanted = normalize(resolvedServices);
       const hasSameContent = (candidates as any[]).some((pkg: any) => {
         if ((pkg.description || '') !== ((description ?? existing.description) || '')) return false;
         if (!Array.isArray(pkg.services) || pkg.services.length !== wanted.length) return false;
         const current = normalize(pkg.services);
-        return current.every((it: any, idx: number) => it.serviceID === wanted[idx].serviceID && it.duration === wanted[idx].duration);
+        return current.every((it: any, idx: number) => it.name === wanted[idx].name && it.duration === wanted[idx].duration);
       });
       if (hasSameContent) {
         return res.status(400).json({
