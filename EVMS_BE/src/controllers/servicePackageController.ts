@@ -5,9 +5,17 @@ import { Service } from '../models/Service.js';
 export async function createServicePackage(req: Request, res: Response) {
   try {
     // Expecting serviceItems: [{ serviceID }] - duration từng service tự lấy từ Service
-    const { name, description, price, duration, status, discount, serviceItems, createAt, updateAt } = req.body as any;
-    if (!name || price === undefined) {
-      return res.status(400).json({ message: 'Thiếu name hoặc price' });
+    const { name, description, vehicleCategory, price, duration, status, discount, serviceItems, createAt, updateAt } = req.body as any;
+    if (!name || !vehicleCategory || price === undefined) {
+      return res.status(400).json({ message: 'Thiếu name, vehicleCategory hoặc price' });
+    }
+
+    // Validation vehicleCategory
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ 
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+      });
     }
 
     // Giới hạn giảm giá < 15%
@@ -50,6 +58,7 @@ export async function createServicePackage(req: Request, res: Response) {
     // Duplicate content check: if another package has same non-name attributes and identical services
     if (services && services.length > 0) {
       const baseQuery: any = {
+        vehicleCategory,
         price,
         discount: discount ?? 0,
         duration: finalDuration,
@@ -80,7 +89,7 @@ export async function createServicePackage(req: Request, res: Response) {
         });
       }
     }
-    const created = await ServicePackage.create({ name, description, price, duration: finalDuration, status, discount, services, createAt, updateAt });
+    const created = await ServicePackage.create({ name, description, vehicleCategory, price, duration: finalDuration, status, discount, services, createAt, updateAt });
     return res.status(201).json({ message: 'Tạo gói dịch vụ thành công', servicePackage: created });
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -101,10 +110,12 @@ export async function getServicePackages(req: Request, res: Response) {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit || '10'), 10), 1), 100);
     const q = (req.query.q as string) || '';
     const status = (req.query.status as string) || undefined;
+    const vehicleCategory = (req.query.vehicleCategory as string) || undefined;
 
     const filter: any = {};
     if (q) filter.name = { $regex: q, $options: 'i' };
     if (status) filter.status = status;
+    if (vehicleCategory) filter.vehicleCategory = vehicleCategory;
 
     const [items, total] = await Promise.all([
       ServicePackage.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
@@ -128,11 +139,21 @@ export async function getServicePackageById(req: Request, res: Response) {
 
 export async function updateServicePackage(req: Request, res: Response) {
   try {
-    const { name, description, price, duration, status, discount, services, serviceItems, createAt, updateAt } = req.body as any;
+    const { name, description, vehicleCategory, price, duration, status, discount, services, serviceItems, createAt, updateAt } = req.body as any;
 
     // Tải bản ghi hiện tại để có giá trị mặc định nếu request không gửi
     const existing: any = await ServicePackage.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ message: 'Không tìm thấy gói dịch vụ' });
+
+    // Validation vehicleCategory nếu được cung cấp
+    if (vehicleCategory !== undefined) {
+      const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+      if (!validVehicleCategories.includes(vehicleCategory)) {
+        return res.status(400).json({ 
+          message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+        });
+      }
+    }
 
     // Giới hạn giảm giá < 15%
     if (discount !== undefined && (discount < 0 || discount >= 15)) {
@@ -175,6 +196,7 @@ export async function updateServicePackage(req: Request, res: Response) {
     if (resolvedServices && resolvedServices.length > 0) {
       const baseQuery: any = {
         _id: { $ne: existing._id },
+        vehicleCategory: vehicleCategory ?? existing.vehicleCategory,
         price: price ?? existing.price,
         discount: discount ?? existing.discount ?? 0,
         duration: finalDuration,
@@ -205,6 +227,7 @@ export async function updateServicePackage(req: Request, res: Response) {
       {
         name: name ?? existing.name,
         description: description ?? existing.description,
+        vehicleCategory: vehicleCategory ?? existing.vehicleCategory,
         price: price ?? existing.price,
         duration: finalDuration,
         status: status ?? existing.status,
@@ -226,6 +249,42 @@ export async function updateServicePackage(req: Request, res: Response) {
         keyValue: error?.keyValue,
       });
     }
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+export async function getServicePackagesByVehicleCategory(req: Request, res: Response) {
+  try {
+    const { vehicleCategory } = req.params;
+    const status = (req.query.status as string) || 'active';
+
+    // Validation vehicleCategory
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ 
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+      });
+    }
+
+    const filter: any = { 
+      vehicleCategory,
+      status 
+    };
+
+    const packages = await ServicePackage.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ 
+      message: `Lấy danh sách gói dịch vụ cho ${vehicleCategory} thành công`,
+      data: {
+        packages,
+        count: packages.length,
+        vehicleCategory
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy gói dịch vụ theo danh mục xe:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

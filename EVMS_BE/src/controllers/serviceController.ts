@@ -3,29 +3,16 @@ import { Service } from '../models/Service.js';
 
 export async function createService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status, vehicleType, pricing } = req.body;
-    if (!name || price === undefined || duration === undefined || !vehicleType) {
-      return res.status(400).json({ message: 'Thiếu name, price, duration hoặc vehicleType' });
+    const { name, price, duration, description, image, status } = req.body;
+    if (!name || price === undefined || duration === undefined) {
+      return res.status(400).json({ message: 'Thiếu name, price hoặc duration' });
     }
 
-    let pricingValidated = undefined as undefined | { category: string; price: number }[];
-    if (Array.isArray(pricing)) {
-      const seen = new Set<string>();
-      pricingValidated = []
-      for (const p of pricing) {
-        if (!p || typeof p.price !== 'number' || p.price < 0 || !['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category))) {
-          return res.status(400).json({ message: 'pricing không hợp lệ' });
-        }
-        const key = String(p.category);
-        if (seen.has(key)) {
-          return res.status(400).json({ message: 'pricing trùng category' });
-        }
-        seen.add(key);
-        pricingValidated.push({ category: key, price: p.price });
-      }
+    if (typeof price !== 'number' || price < 0) {
+      return res.status(400).json({ message: 'Price phải là số không âm' });
     }
 
-    const created = await Service.create({ name, price, duration, description, image, status, vehicleType, pricing: pricingValidated });
+    const created = await Service.create({ name, price, duration, description, image, status });
     return res.status(201).json({ message: 'Tạo dịch vụ thành công', service: created });
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -41,12 +28,12 @@ export async function getServices(req: Request, res: Response) {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit || '10'), 10), 1), 100);
     const q = (req.query.q as string) || '';
     const status = (req.query.status as string) || undefined;
-    const vehicleType = (req.query.vehicleType as string) || undefined;
+    const vehicleCategory = (req.query.vehicleCategory as string) || undefined;
 
     const filter: any = {};
     if (q) filter.name = { $regex: q, $options: 'i' };
     if (status) filter.status = status;
-    if (vehicleType) filter.vehicleType = vehicleType;
+    if (vehicleCategory) filter.vehicleCategory = vehicleCategory;
 
     const [items, total] = await Promise.all([
       Service.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
@@ -70,26 +57,15 @@ export async function getServiceById(req: Request, res: Response) {
 
 export async function updateService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status, vehicleType, pricing } = req.body;
-    let pricingValidated = undefined as undefined | { category: string; price: number }[];
-    if (Array.isArray(pricing)) {
-      const seen = new Set<string>();
-      pricingValidated = []
-      for (const p of pricing) {
-        if (!p || typeof p.price !== 'number' || p.price < 0 || !['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category))) {
-          return res.status(400).json({ message: 'pricing không hợp lệ' });
-        }
-        const key = String(p.category);
-        if (seen.has(key)) {
-          return res.status(400).json({ message: 'pricing trùng category' });
-        }
-        seen.add(key);
-        pricingValidated.push({ category: key, price: p.price });
-      }
+    const { name, price, duration, description, image, status } = req.body;
+    
+    if (price !== undefined && (typeof price !== 'number' || price < 0)) {
+      return res.status(400).json({ message: 'Price phải là số không âm' });
     }
+
     const updated = await Service.findByIdAndUpdate(
       req.params.id,
-      { name, price, duration, description, image, status, vehicleType, ...(pricingValidated ? { pricing: pricingValidated } : {}) },
+      { name, price, duration, description, image, status },
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
@@ -98,6 +74,49 @@ export async function updateService(req: Request, res: Response) {
     if (error?.code === 11000) {
       return res.status(400).json({ message: 'Tên dịch vụ đã tồn tại' });
     }
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+export async function getServicesByVehicleCategory(req: Request, res: Response) {
+  try {
+    const { vehicleCategory } = req.params;
+    const status = (req.query.status as string) || 'active';
+
+    // Validation vehicleCategory
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ 
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+      });
+    }
+
+    // Tìm services có pricing cho vehicleCategory này
+    const filter: any = { 
+      'pricing.category': vehicleCategory,
+      status 
+    };
+
+    const services = await Service.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Lọc và format pricing để chỉ hiển thị price cho vehicleCategory này
+    const formattedServices = services.map(service => ({
+      ...service,
+      pricing: service.pricing.find((p: any) => p.category === vehicleCategory)?.price || 0
+    }));
+
+    return res.json({ 
+      message: `Lấy danh sách dịch vụ cho ${vehicleCategory} thành công`,
+      data: {
+        services: formattedServices,
+        count: formattedServices.length,
+        vehicleCategory
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy dịch vụ theo danh mục xe:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

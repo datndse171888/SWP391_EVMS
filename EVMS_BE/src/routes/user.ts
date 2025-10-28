@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, createUser, getCertificates, getTechnicianInfo, getTechnicianCertificates, updateUserStatus } from '../controllers/userController.js';
+import { getAllUsers, createUser, getCertificates, getTechnicianInfo, getTechnicianCertificates, updateUser, updateUserStatus } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { staffOnly, adminOnly, authenticatedOnly } from '../middleware/roleMiddleware.js';
 
@@ -10,5 +10,7 @@ userRouter.post('/', createUser);
 userRouter.get('/certificates', getCertificates);
 userRouter.get('/:userId/technician', getTechnicianInfo);
 userRouter.get('/:userId/certificates', getTechnicianCertificates);
+// Update user info - user can update their own info
+userRouter.put('/:userId', authMiddleware, updateUser);
 // Update user status (enable/disable) - admin only (the system has single admin)
 userRouter.patch('/:userId/status', authMiddleware, adminOnly, updateUserStatus);

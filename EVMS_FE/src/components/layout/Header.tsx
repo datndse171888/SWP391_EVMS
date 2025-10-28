@@ -83,9 +83,13 @@ const Header: React.FC = () => {
     <header 
       className="fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300"
       style={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderBottom: `1px solid #aaafbb`,
-        transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)'
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderBottom: `1px solid rgba(170, 175, 187, 0.3)`,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+        transform: isAtTop ? 'translateY(0)' : 'translateY(-100%)',
+        zIndex: 9999
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -120,16 +124,16 @@ const Header: React.FC = () => {
               <div key={item.name} className="relative group">
                 <Link
                   to={item.path}
-                  className={`text-sm font-semibold uppercase tracking-wider transition-all duration-200 flex items-center space-x-1 ${
+                  className={`text-base font-semibold uppercase tracking-wider transition-all duration-200 flex items-center space-x-1 ${
                     isActive(item.path)
                       ? 'text-white'
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
+                    color: isActive(item.path) ? '#f6ae2d' : '#1f2227',
                     fontFamily: '"Open Sans", sans-serif',
-                    fontSize: '14px',
-                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
+                    fontSize: '16px',
+                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.5)',
                     fontWeight: isActive(item.path) ? 700 : 600
                   }}
                 >
@@ -141,7 +145,7 @@ const Header: React.FC = () => {
                   )}
                 </Link>
                 {item.hasDropdown && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ zIndex: 10000 }}>
                     <div className="py-2">
                       <Link to="/carService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Bảo dưỡng ô tô điện
@@ -185,7 +189,7 @@ const Header: React.FC = () => {
 
                 {/* Dropdown Menu */}
                 {isAvatarDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200" style={{ zIndex: 10000 }}>
                     <div className="py-2">
                       {/* Dashboard - Only for admin, staff, technician */}
                       {user.role !== 'customer' && (
@@ -255,16 +259,16 @@ const Header: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  className={`block px-4 py-3 text-base font-semibold uppercase tracking-wider transition-all duration-200 ${
+                  className={`block px-4 py-3 text-lg font-semibold uppercase tracking-wider transition-all duration-200 ${
                     isActive(item.path)
                       ? 'text-white'
                       : 'text-white hover:text-gray-300'
                   }`}
                   style={{
-                    color: isActive(item.path) ? '#f6ae2d' : '#014091',
+                    color: isActive(item.path) ? '#f6ae2d' : '#1f2227',
                     fontFamily: '"Open Sans", sans-serif',
-                    fontSize: '14px',
-                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
+                    fontSize: '18px',
+                    textShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.5)',
                     fontWeight: isActive(item.path) ? 700 : 600
                   }}
                   onClick={() => setIsMenuOpen(false)}

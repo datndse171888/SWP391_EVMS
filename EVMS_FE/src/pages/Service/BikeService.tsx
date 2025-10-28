@@ -1,60 +1,20 @@
 import { useState, useEffect } from 'react';
-import type { Package, IndividualService } from '../../types/Service';
-import PackageCard from './PackageSevice';
-import ServiceCard from './CardService';
-import { Car, Wrench, Zap, Shield, Clock, Bike } from 'lucide-react';
+import type { ServiceResponse } from '../../types/Service';
+import { Bike } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
+import { PackageCard } from './PackageCard';
+import { ServiceCard } from './ServiceCard';
+import type { ServicePackageResponse } from '../../types/ServicePackage';
+import { samplePackages, sampleServices } from '../../constants/mockdata/Service';
 
 export const BikeService: React.FC = () => {
-    const [packages, setPackages] = useState<Package[]>([]);
-    const [services, setServices] = useState<IndividualService[]>([]);
+    const [packages, setPackages] = useState<ServicePackageResponse[]>([]);
+    const [services, setServices] = useState<ServiceResponse[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchData();
     }, []);
-
-    const samplePackages: Package[] = [
-        {
-            id: 1,
-            service_type_id: "bike",
-            name: "Bảo dưỡng cơ bản",
-            price: 500.000,
-            description: "Bảo dưỡng cần thiết cho xe đạp của bạn",
-            features: ["Điều chỉnh phanh", "Tinh chỉnh số", "Bôi trơn", "Kiểm tra an toàn", "Vệ sinh cơ bản"],
-            display_order: 1,
-            created_at: "2024-01-01T00:00:00Z"
-        },
-        {
-            id: 2,
-            service_type_id: "bike",
-            name: "Bảo dưỡng toàn diện",
-            price: 899.000,
-            description: "Gói bảo dưỡng xe đạp toàn diện",
-            features: ["Tinh chỉnh hoàn toàn", "Cân bằng bánh xe", "Thay cáp", "Kiểm tra an toàn", "Vệ sinh"],
-            display_order: 2,
-            created_at: "2024-01-01T00:00:00Z"
-        },
-        {
-            id: 3,
-            service_type_id: "bike",
-            name: "Bảo dưỡng cao cấp",
-            price: 149.000,
-            description: "Khôi phục và nâng cấp xe đạp hoàn chỉnh",
-            features: ["Tháo rời hoàn toàn", "Vệ sinh sâu", "Thay thế linh kiện", "Tối ưu hóa hiệu suất", "Bảo hành 6 tháng"],
-            display_order: 3,
-            created_at: "2024-01-01T00:00:00Z"
-        }
-    ];
-
-    const sampleServices: IndividualService[] = [
-        { id: 1, service_type_id: "bike", name: "Điều chỉnh phanh", price: 15.990, description: "Hiệu chuẩn phanh chuyên nghiệp", duration: "30 phút", display_order: 1, created_at: "2024-01-01T00:00:00Z" },
-        { id: 2, service_type_id: "bike", name: "Tinh chỉnh số", price: 20.990, description: "Tối ưu hóa chuyển số mượt mà", duration: "30 phút", display_order: 2, created_at: "2024-01-01T00:00:00Z" },
-        { id: 3, service_type_id: "bike", name: "Sửa xăm", price: 12.990, description: "Khắc phục xăm nhanh chóng", duration: "30 phút", display_order: 3, created_at: "2024-01-01T00:00:00Z" },
-        { id: 4, service_type_id: "bike", name: "Thay xích", price: 35.990, description: "Lắp đặt xích mới", duration: "30 phút", display_order: 4, created_at: "2024-01-01T00:00:00Z" },
-        { id: 5, service_type_id: "bike", name: "Cân bằng bánh xe", price: 25.990, description: "Dịch vụ căn chỉnh bánh xe", duration: "30 phút", display_order: 5, created_at: "2024-01-01T00:00:00Z" },
-        { id: 6, service_type_id: "bike", name: "Vệ sinh toàn bộ", price: 18.990, description: "Vệ sinh sâu cho xe đạp", duration: "30 phút", display_order: 6, created_at: "2024-01-01T00:00:00Z" }
-    ];
 
     // Temporarily use sample data
     useEffect(() => {
@@ -155,7 +115,7 @@ export const BikeService: React.FC = () => {
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {packages.map((pkg, index) => (
-                                <PackageCard key={pkg.id} package={pkg} featured={index === 1} />
+                                <PackageCard key={pkg._id} package={pkg} featured={index === 1} />
                             ))}
                         </div>
                     </div>
@@ -169,7 +129,7 @@ export const BikeService: React.FC = () => {
                         </div>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {services.map((service) => (
-                                <ServiceCard key={service.id} service={service} />
+                                <ServiceCard key={service._id} service={service} />
                             ))}
                         </div>
                     </div>

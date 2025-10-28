@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, updateAppointmentStatus } from '../controllers/appointmentController.js';
+import { createVehicleConditionReport, getReportsByAppointment } from '../controllers/vehicleConditionReportController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -24,5 +25,12 @@ appointmentRouter.patch('/:id/assign-technician', authMiddleware, assignTechnici
 
 // Get available technicians (admin/staff only)
 appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
+
+// Update appointment status (admin/staff/technician only)
+appointmentRouter.patch('/:id/status', authMiddleware, updateAppointmentStatus);
+
+// Vehicle Condition Reports for specific appointment
+appointmentRouter.post('/:appointmentId/reports', authMiddleware, createVehicleConditionReport);
+appointmentRouter.get('/:appointmentId/reports', authMiddleware, getReportsByAppointment);
 
 

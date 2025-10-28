@@ -1,4 +1,7 @@
-import type { Service } from '../types/Service'
+import type { DataResponse } from '../types/DataResponse'
+import type { ServiceResponse } from '../types/Service'
+import type { VehicleCategory } from '../types/Vehicle'
+import { api } from '../utils/Axios'
 
 interface FetchServicesParams {
   page: number
@@ -9,7 +12,7 @@ interface FetchServicesParams {
 interface ServicesApiResponse {
   success: boolean
   data: {
-    services: Service[]
+    services: ServiceResponse[]
     pagination: {
       currentPage: number
       totalPages: number
@@ -29,26 +32,25 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
     ...(params.search ? { q: params.search } : {})
   })
 
-  const response = await fetch(`http://localhost:4000/api/services?${query.toString()}`)
-  if (!response.ok) {
-    throw new Error('Không thể tải danh sách dịch vụ')
-  }
-  const raw = await response.json() as { items: any[]; page: number; limit: number; total: number }
+  const response = await api.get(`/services?${query.toString()}`)
+  const raw = response.data as { items: any[]; page: number; limit: number; total: number }
 
-  const mapped: Service[] = (raw.items || []).map((it, idx) => ({
+  const mapped: ServiceResponse[] = (raw.items || []).map((it, idx) => ({
     // id in FE type is number; map from index to avoid type mismatch
     id: (raw.page - 1) * raw.limit + idx + 1,
+    _id: it._id || it.id || String(idx),
     name: it.name,
     description: it.description,
     price: it.price,
     // BE duration is number (minutes), FE expects string
-    duration: typeof it.duration === 'number' ? `${it.duration} phút` : (it.duration || ''),
+    duration: typeof it.duration === 'number' ? `${it.duration}` : (it.duration || ''),
     image: it.image,
     vehicleType: it.vehicleType,
+    vehicleCategory: it.vehicleCategory || it.vehicleType,
     pricing: Array.isArray(it.pricing)
       ? it.pricing
-          .filter((p: any) => p && typeof p.price === 'number' && ['CAR','BICYCLE','MOTOBIKE'].includes(String(p.category)))
-          .map((p: any) => ({ category: String(p.category) as 'CAR'|'BICYCLE'|'MOTOBIKE', price: p.price }))
+        .filter((p: any) => p && typeof p.price === 'number' && ['CAR', 'BICYCLE', 'MOTOBIKE'].includes(String(p.category)))
+        .map((p: any) => ({ category: String(p.category) as 'CAR' | 'BICYCLE' | 'MOTOBIKE', price: p.price }))
       : undefined
   }))
 
@@ -70,4 +72,34 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
   }
 }
 
+// Service API methods
+export const ServiceApi = {
+  allServices: (params: ServiceResponse) => {
+    return api.get('/services', { params });
+  },
+
+  createService: (params: ServiceResponse) => {
+    return api.post('/services', params);
+  },
+
+  updateService: (id: string, params: Partial<ServiceResponse>) => {
+    return api.put(`/services/${id}`, params);
+  },
+
+  deleteService: (id: number) => {
+    return api.delete(`/services/${id}`);
+  },
+
+  getAllServices: () => {
+    return api.get<DataResponse<ServiceResponse>>('/services');
+  },
+
+  getServiceByVehicleCategory: (vehicleCategory: VehicleCategory) => {
+    return api.get<DataResponse<ServiceResponse>>(`/services?vehicleCategory=${vehicleCategory}`);
+  },
+
+  getServiceById: (serviceId: string) => {
+    return api.get<ServiceResponse>(`/services/${serviceId}`);
+  },
+}
 

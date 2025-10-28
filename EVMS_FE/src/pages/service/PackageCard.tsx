@@ -1,18 +1,18 @@
 import { Check } from 'lucide-react';
-import type { Package } from '../../types/Service';
+import type { ServicePackageResponse } from '../../types/ServicePackage';
 
 interface PackageCardProps {
-  package: Package;
+  package: ServicePackageResponse;
   featured?: boolean;
 }
 
-export default function PackageCard({ package: pkg, featured = false }: PackageCardProps) {
+export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, featured = false }) => {
   return (
     <div className="bg-orange-400 rounded-2xl p-2 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 relative">
       {featured && (
-        <div 
+        <div
           className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
-          style={{ 
+          style={{
             backgroundColor: '#f6ae2d',
             color: '#014091'
           }}
@@ -20,14 +20,14 @@ export default function PackageCard({ package: pkg, featured = false }: PackageC
           LỰA CHỌN TỐT NHẤT
         </div>
       )}
-      
-      <div 
+
+      <div
         className={`rounded-xl p-8 h-full ${featured ? '' : 'bg-gray-100'}`}
         style={featured ? {
           background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
         } : {}}
       >
-        <h3 
+        <h3
           className={`text-3xl font-bold mb-4 text-center ${featured ? 'text-white' : ''}`}
           style={!featured ? { color: '#014091' } : {}}
         >
@@ -37,7 +37,7 @@ export default function PackageCard({ package: pkg, featured = false }: PackageC
           {pkg.description}
         </p>
         <div className="mb-6 text-center">
-          <span 
+          <span
             className={`text-5xl font-bold ${featured ? 'text-white' : ''}`}
             style={!featured ? { color: '#014091' } : {}}
           >
@@ -46,10 +46,10 @@ export default function PackageCard({ package: pkg, featured = false }: PackageC
           <span className={`ml-2 ${featured ? 'text-white' : 'text-gray-500'}`}>/lần</span>
         </div>
         <ul className="space-y-4 mb-8">
-          {pkg.features.map((feature, index) => (
+          {pkg.services.map((feature, index) => (
             <li key={index} className="flex items-center">
               <Check className="w-5 h-5 text-green-500 mr-3" />
-              <span className={featured ? 'text-white' : 'text-gray-700'}>{feature}</span>
+              <span className={featured ? 'text-white' : 'text-gray-700'}>{feature.name}</span>
             </li>
           ))}
         </ul>
