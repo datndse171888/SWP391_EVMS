@@ -1,9 +1,9 @@
 import { Clock } from 'lucide-react';
-import type { IndividualService } from '../../types/Service';
 import type React from 'react';
+import type { ServiceResponse } from '../../types/Service';
 
 interface ServiceCardProps {
-  service: IndividualService;
+  service: ServiceResponse;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {

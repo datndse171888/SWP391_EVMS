@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Service } from '../../types/Service'
 import { fetchServices } from '../../api/ServiceApi'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServiceModal } from '../../components/ServiceModal'
+import type { ServiceResponse } from '../../types/Service'
 
 interface ServicesResponsePagination {
   currentPage: number
@@ -14,7 +14,7 @@ interface ServicesResponsePagination {
 }
 
 export const Services: React.FC = () => {
-  const [services, setServices] = useState<Service[]>([])
+  const [services, setServices] = useState<ServiceResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('')
@@ -23,7 +23,7 @@ export const Services: React.FC = () => {
   const limit = 10
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceResponse | null>(null);
 
   const currencyFormatter = useMemo(() => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }), [])
 
@@ -77,17 +77,17 @@ export const Services: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (service: Service) => {
+  const handleEdit = (service: ServiceResponse) => {
     setModalMode('edit');
     setSelectedService(service);
     setIsModalOpen(true);
   };
 
-  const handleSave = async (serviceData: Partial<Service>) => {
+  const handleSave = async (serviceData: Partial<ServiceResponse>) => {
     if (modalMode === 'create') {
       try {
         // Call API to create service
-        const response = await ServiceApi.createService(serviceData as Service);
+        const response = await ServiceApi.createService(serviceData as ServiceResponse);
 
         if (!response.status) {
           throw new Error('Failed to create service');
@@ -102,7 +102,7 @@ export const Services: React.FC = () => {
     } else {
       try {
         // Call API to update service
-        const response = await ServiceApi.updateService(serviceData.id!, serviceData);
+        const response = await ServiceApi.updateService(serviceData._id!, serviceData);
 
         if (!response.status) {
           throw new Error('Failed to update service');
@@ -238,7 +238,7 @@ export const Services: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {services.map((svc) => (
-                      <tr key={svc.id} className="hover:bg-gray-50 transition-colors duration-200">
+                      <tr key={svc._id} className="hover:bg-gray-50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-blue-0 flex items-center justify-center shadow-md overflow-hidden">
@@ -268,10 +268,10 @@ export const Services: React.FC = () => {
                         <td className="py-4 px-6">{svc.duration || '—'}</td>
 
                         <td className="py-4 px-6">
-                          {svc.vehicleType === 'electric_bike' && 'Xe đạp điện'}
-                          {svc.vehicleType === 'electric_motorcycle' && 'Xe máy điện'}
-                          {svc.vehicleType === 'electric_car' && 'Xe ô tô điện'}
-                          {!svc.vehicleType && '—'}
+                          {svc.vehicleCategory === 'BICYCLE' && 'Xe đạp điện'}
+                          {svc.vehicleCategory === 'MOTOBIKE' && 'Xe máy điện'}
+                          {svc.vehicleCategory === 'CAR' && 'Xe ô tô điện'}
+                          {!svc.vehicleCategory && '—'}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
@@ -288,7 +288,7 @@ export const Services: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(String(svc.id), svc.name)}
+                              onClick={() => handleDelete(String(svc._id), svc.name)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >
