@@ -86,7 +86,7 @@ export const ServiceApi = {
     return api.put(`/services/${id}`, params);
   },
 
-  deleteService: (id: number) => {
+  deleteService: (id: string) => {
     return api.delete(`/services/${id}`);
   },
 

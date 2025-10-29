@@ -125,14 +125,10 @@ export const Services: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/services/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (!response.ok) {
+      const response = await ServiceApi.deleteService(id);
+
+      if (!response.status) {
         throw new Error('Failed to delete service');
       }
 
@@ -228,9 +224,6 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Dịch vụ</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Thời lượng</th>
-                      {/* <th className="text-left py-4 px-6 text-gray-600 font-semibold">CAR</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">BICYCLE</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th> */}
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hành động</th>
 
@@ -288,7 +281,7 @@ export const Services: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(String(svc._id), svc.name)}
+                              onClick={() => handleDelete(svc._id, svc.name)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >

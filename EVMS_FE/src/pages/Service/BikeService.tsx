@@ -22,6 +22,7 @@ export const BikeService: React.FC = () => {
         setServices(sampleServices);
         setLoading(false);
     }, []);
+    
     const fetchData = async () => {
         try {
             const packageResponse = await fetch('/api/packages?service_type=bike');

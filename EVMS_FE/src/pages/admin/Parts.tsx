@@ -94,10 +94,10 @@ export const Parts: React.FC = () => {
         }
       }
     };
-    const handleDelete = async (partId: string) => {
+    const handleDelete = async (id: string) => {
         try {
           // Call API to delete part
-          const response = await PartApi.deletePart(partId);
+          const response = await PartApi.deletePart(id);
           if (!response.status) {
             throw new Error('Failed to delete part');
           }
@@ -229,7 +229,7 @@ export const Parts: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(String(p.id))}
+                              onClick={() => handleDelete(p.id)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >
