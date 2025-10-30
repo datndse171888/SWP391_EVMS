@@ -6,6 +6,8 @@ import { ServiceCard } from './ServiceCard';
 import type { ServicePackageResponse } from '../../types/ServicePackage';
 import type { ServiceResponse } from '../../types/Service';
 import { samplePackages, sampleServices } from '../../constants/mockdata/Service';
+import { ServicePackageApi } from '../../api/ServicePackageApi';
+import { ServiceApi } from '../../api/ServiceApi';
 
 export const MotoService: React.FC = () => {
     const [packages, setPackages] = useState<ServicePackageResponse[]>([]);
@@ -25,12 +27,10 @@ export const MotoService: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const packageResponse = await fetch('/api/packages?service_type=bike');
-            const serviceResponse = await fetch('/api/individual-services?service_type=bike');
-            const packageData = await packageResponse.json();
-            const serviceData = await serviceResponse.json();
-            setPackages(packageData);
-            setServices(serviceData);
+            const packageResponse = await ServicePackageApi.getAllServicePackagesByVehicleCategory('MOTOBIKE');
+            const serviceResponse = await ServiceApi.getServiceByVehicleCategory('MOTOBIKE');
+            setPackages(packageResponse.data.items);
+            setServices(serviceResponse.data.items);
         } catch (error) {
             console.error('Error fetching data:', error);
         }
