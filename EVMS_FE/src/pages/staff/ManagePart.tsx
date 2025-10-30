@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { fetchParts } from '../../api/PartApi';
 
 interface Part {
-  id: string;
+  _id?: string;
+  id?: string;
   name: string;
   description?: string;
   manufacturer?: string;
@@ -10,7 +12,6 @@ interface Part {
   status: 'active' | 'inactive' | 'hidden';
   warrantyPeriod?: number;
   warrantyCondition?: string;
-  stockQuantity?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +35,29 @@ const ManagePart: React.FC = () => {
   const [filterManufacturer, setFilterManufacturer] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Fetch data từ API
+  const loadParts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetchParts({ page: currentPage, limit: itemsPerPage, search: searchTerm });
+      if (res?.success) {
+        setParts(res.data.parts || []);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải linh kiện:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchTerm]);
+
+  useEffect(() => {
+    loadParts();
+  }, [loadParts]);
 
   // Mock data - thay thế bằng API calls
   const mockParts: Part[] = [
@@ -190,22 +214,16 @@ const ManagePart: React.FC = () => {
   ];
 
   // Filter function
-  const filterParts = (parts: Part[]) => {
-    return parts.filter(part => {
-      const matchesSearch = searchTerm === '' || 
-        part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        part.partNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        part.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+  const filterParts = (partsToFilter: Part[]) => {
+    return partsToFilter.filter(part => {
       const matchesStatus = filterStatus === '' || part.status === filterStatus;
       const matchesManufacturer = filterManufacturer === '' || part.manufacturer === filterManufacturer;
-      
-      return matchesSearch && matchesStatus && matchesManufacturer;
+
+      return matchesStatus && matchesManufacturer;
     });
   };
 
-  const filteredParts = filterParts(mockParts);
-  const lowStockParts = filteredParts.filter(part => (part.stockQuantity || 0) <= 5);
+  const filteredParts = filterParts(parts);
   const activeParts = filteredParts.filter(part => part.status === 'active');
 
   // Pagination logic
@@ -216,7 +234,7 @@ const ManagePart: React.FC = () => {
         data = filteredParts;
         break;
       case 'low-stock':
-        data = lowStockParts;
+        data = filteredParts; // API sẽ handle low stock
         break;
       case 'usage':
         data = mockPartUsage;
@@ -228,7 +246,6 @@ const ManagePart: React.FC = () => {
   };
 
   const currentData = getCurrentData();
-  const totalPages = Math.ceil(currentData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = currentData.slice(startIndex, endIndex);
@@ -373,8 +390,9 @@ const ManagePart: React.FC = () => {
   };
 
   const renderPartCard = (part: Part) => {
+    const partId = part._id || part.id;
     return (
-      <div key={part.id} className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow h-56">
+      <div key={partId} className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow h-56">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">{part.name}</h3>
@@ -417,20 +435,21 @@ const ManagePart: React.FC = () => {
 
         <div className="flex justify-between items-center">
           <button
-            onClick={() => console.log('Edit part:', part.id)}
+            onClick={() => console.log('Edit part:', partId)}
             className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 transition-colors"
           >
             Sửa
           </button>
-          
+
           <div className="flex space-x-1">
-            <button 
-              className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90"
+            <a
+              href={`/staff/parts/${partId}`}
+              className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90 inline-block"
               style={{ backgroundColor: '#014091' }}
             >
               Chi tiết
-            </button>
-            <button 
+            </a>
+            <button
               className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#f6ae2d' }}
             >
@@ -488,7 +507,7 @@ const ManagePart: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Tổng linh kiện</p>
-              <p className="text-lg font-bold" style={{ color: '#014091' }}>{mockParts.length}</p>
+              <p className="text-lg font-bold" style={{ color: '#014091' }}>{parts.length}</p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#8dcdfa' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
@@ -501,12 +520,12 @@ const ManagePart: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Sắp hết hàng</p>
-              <p className="text-lg font-bold" style={{ color: '#fd8c40' }}>{lowStockParts.length}</p>
+              <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Hoạt động</p>
+              <p className="text-lg font-bold" style={{ color: '#fd8c40' }}>{activeParts.length}</p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#f6ae2d' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
@@ -515,12 +534,12 @@ const ManagePart: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Đang hoạt động</p>
-              <p className="text-lg font-bold" style={{ color: '#0991f3' }}>{activeParts.length}</p>
+              <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Không hoạt động</p>
+              <p className="text-lg font-bold" style={{ color: '#0991f3' }}>{parts.filter(p => p.status !== 'active').length}</p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#0991f3' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'white' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
           </div>
@@ -531,7 +550,7 @@ const ManagePart: React.FC = () => {
             <div>
               <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Tổng giá trị</p>
               <p className="text-lg font-bold" style={{ color: '#014091' }}>
-                {mockParts.reduce((sum, part) => sum + (part.price * (part.stockQuantity || 0)), 0).toLocaleString('vi-VN')}đ
+                {parts.reduce((sum, part) => sum + part.price, 0).toLocaleString('vi-VN')}đ
               </p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#8abdfe' }}>
@@ -630,7 +649,7 @@ const ManagePart: React.FC = () => {
         </div>
 
         {/* Content Grid */}
-         <div 
+         <div
            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 ${
              itemsPerPage > 8 ? 'overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''
            }`}
@@ -640,8 +659,16 @@ const ManagePart: React.FC = () => {
              scrollbarColor: itemsPerPage > 8 ? '#d1d5db #f3f4f6' : 'auto'
            }}
          >
-           {selectedTab === 'inventory' && (paginatedData as Part[]).map(renderPartCard)}
-           {selectedTab === 'low-stock' && (paginatedData as Part[]).map(renderPartCard)}
+           {loading && (
+             <div className="col-span-full flex items-center justify-center py-8">
+               <div className="text-center">
+                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                 <p className="mt-2 text-gray-600">Đang tải linh kiện...</p>
+               </div>
+             </div>
+           )}
+           {!loading && selectedTab === 'inventory' && (paginatedData as Part[]).map(renderPartCard)}
+           {!loading && selectedTab === 'low-stock' && (paginatedData as Part[]).map(renderPartCard)}
           {selectedTab === 'usage' && (
             <div className="col-span-full">
               <p className="text-center text-gray-500 py-8">Lịch sử sử dụng linh kiện sẽ được hiển thị ở đây</p>

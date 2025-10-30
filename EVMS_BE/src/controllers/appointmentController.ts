@@ -31,7 +31,6 @@ export async function createAppointment(req: Request, res: Response) {
       serviceID,
       servicePackageID,
       bookingDate,
-      reason,
       status,
     });
 
