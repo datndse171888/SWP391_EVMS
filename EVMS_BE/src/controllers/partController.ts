@@ -73,4 +73,17 @@ export async function createPart(req: Request, res: Response) {
   }
 }
 
+export async function getPartById(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const part = await Part.findById(id).lean();
+    if (!part) {
+      return res.status(404).json({ message: 'Không tìm thấy phụ tùng' });
+    }
+    return res.json({ part });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 

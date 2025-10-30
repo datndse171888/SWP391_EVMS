@@ -16,7 +16,8 @@ import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
-import { Parts } from './pages/admin/Parts'
+import { Parts as AdminParts } from './pages/admin/Parts'
+import { Parts } from './pages/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
@@ -28,6 +29,7 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 import { BikeService } from './pages/service/BikeService';
 import { CarService } from './pages/service/CarService';
 import { MotoService } from './pages/service/MotoService';
+import PartDetail from './pages/PartDetail';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
@@ -53,6 +55,8 @@ export const Router: React.FC = () => {
           <Route path="/carService" element={<CarService />} />
           <Route path="/bikeService" element={<BikeService />} />
           <Route path="/motoService" element={<MotoService />} />
+          <Route path="/parts" element={<Parts />} />
+          <Route path="/parts/:id" element={<PartDetail />} />
           <Route path='/booking' element={<Booking />} />
         </Route>
         <Route path="/register" element={<Register />} />
@@ -74,7 +78,7 @@ export const Router: React.FC = () => {
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
-              <Parts />
+              <AdminParts />
             </AdminLayout>
           </AdminRoute>
         } />
