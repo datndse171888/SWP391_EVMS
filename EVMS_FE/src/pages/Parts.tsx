@@ -3,6 +3,8 @@ import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Part } from '../types/Part';
 import { fetchParts } from '../api/PartApi';
 import PartCard from '../components/PartCard';
+import RecentlyViewed from '../components/RecentlyViewed';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import Clean from '../assets/images/clean.png';
 
 export const Parts: React.FC = () => {
@@ -13,6 +15,7 @@ export const Parts: React.FC = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [sortBy, setSortBy] = useState<'name' | 'price-asc' | 'price-desc'>('name');
   const limit = 12;
+  const { recentlyViewed, removeFromRecentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
 
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }),
@@ -208,6 +211,15 @@ export const Parts: React.FC = () => {
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
+          )}
+
+          {/* Recently Viewed Section */}
+          {recentlyViewed.length > 0 && (
+            <RecentlyViewed
+              items={recentlyViewed}
+              onRemove={removeFromRecentlyViewed}
+              onClear={clearRecentlyViewed}
+            />
           )}
 
           {/* Info Section */}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../utils/Axios';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Part } from '../types/Part';
 
 const PartDetail: React.FC = () => {
@@ -9,6 +10,7 @@ const PartDetail: React.FC = () => {
   const [part, setPart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addToRecentlyViewed } = useRecentlyViewed();
 
   useEffect(() => {
     const fetchPart = async () => {
@@ -16,7 +18,10 @@ const PartDetail: React.FC = () => {
         setLoading(true);
         const response = await api.get(`/parts/${id}`);
         if (response.data?.part) {
-          setPart(response.data.part);
+          const partData = response.data.part;
+          setPart(partData);
+          // Lưu vào lịch sử xem
+          addToRecentlyViewed(partData);
         } else {
           setError('Không tìm thấy linh kiện');
         }
@@ -31,7 +36,7 @@ const PartDetail: React.FC = () => {
     if (id) {
       fetchPart();
     }
-  }, [id]);
+  }, [id, addToRecentlyViewed]);
 
   if (loading) {
     return (
