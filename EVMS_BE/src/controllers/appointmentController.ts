@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
-import { VehicleConditionReport } from '../models/VehicleConditionReport.js';
 
 export async function createAppointment(req: Request, res: Response) {
   try {
@@ -15,6 +14,7 @@ export async function createAppointment(req: Request, res: Response) {
       serviceID,
       servicePackageID,
       bookingDate,
+      reason,
       status,
     } = req.body;
 
@@ -60,14 +60,13 @@ function parseListParams(req: Request) {
   const from = req.query.from ? new Date(String(req.query.from)) : undefined;
   const to = req.query.to ? new Date(String(req.query.to)) : undefined;
 
-  // Updated time range filters
-  const updatedFrom = req.query.updatedFrom ? new Date(String(req.query.updatedFrom)) : undefined;
-  const updatedTo = req.query.updatedTo ? new Date(String(req.query.updatedTo)) : undefined;
-
   const serviceId = (req.query.serviceId as string | undefined)?.trim();
   const packageId = (req.query.packageId as string | undefined)?.trim();
   const technicianId = (req.query.technicianId as string | undefined)?.trim();
   const userId = (req.query.userId as string | undefined)?.trim();
+
+  const fieldsParam = (req.query.fields as string | undefined)?.trim();
+  const includeParam = (req.query.include as string | undefined)?.trim();
 
   return {
     page,
@@ -76,12 +75,12 @@ function parseListParams(req: Request) {
     status,
     from,
     to,
-    updatedFrom,
-    updatedTo,
     serviceId,
     packageId,
     technicianId,
     userId,
+    fieldsParam,
+    includeParam,
   };
 }
 
@@ -95,6 +94,7 @@ const ALLOWED_APPOINTMENT_FIELDS = new Set([
   'serviceID',
   'servicePackageID',
   'bookingDate',
+  'reason',
   'status',
   'createdAt',
   'updatedAt',
@@ -139,11 +139,6 @@ function buildBaseFilter(params: ReturnType<typeof parseListParams>) {
     if (params.from) filter.bookingDate.$gte = params.from;
     if (params.to) filter.bookingDate.$lte = params.to;
   }
-  if (params.updatedFrom || params.updatedTo) {
-    filter.updatedAt = {} as any;
-    if (params.updatedFrom) filter.updatedAt.$gte = params.updatedFrom;
-    if (params.updatedTo) filter.updatedAt.$lte = params.updatedTo;
-  }
   if (params.serviceId) filter.serviceID = params.serviceId;
   if (params.packageId) filter.servicePackageID = params.packageId;
   if (params.technicianId) {
@@ -171,32 +166,19 @@ export async function listAppointments(req: Request, res: Response) {
       filter.userID = params.userId;
     }
 
+    const select = buildSelect(params.fieldsParam);
+    const populates = buildPopulate(params.includeParam);
+
     const skip = (params.page - 1) * params.limit;
     const [total, docs] = await Promise.all([
       Appointment.countDocuments(filter),
       (() => {
-        return Appointment.find(filter)
+        let query = Appointment.find(filter)
           .sort(params.sort)
           .skip(skip)
-          .limit(params.limit)
-          .populate({ path: 'userID', select: '_id userName fullName email phoneNumber photoURL gender role' })
-          .populate({ path: 'serviceID', select: '_id name price duration description' })
-          .populate({ path: 'servicePackageID', select: '_id name price description' })
-          .populate({ 
-            path: 'technicianLeaderID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          })
-          .populate({ 
-            path: 'technicianSupport1ID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          })
-          .populate({ 
-            path: 'technicianSupport2ID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          });
+          .limit(params.limit);
+        if (select) query = query.select(select);
+        return query.populate(populates);
       })(),
     ]);
 
@@ -208,8 +190,6 @@ export async function listAppointments(req: Request, res: Response) {
         status: params.status,
         from: params.from,
         to: params.to,
-        updatedFrom: params.updatedFrom,
-        updatedTo: params.updatedTo,
         serviceId: params.serviceId,
         packageId: params.packageId,
         technicianId: params.technicianId,
@@ -228,32 +208,19 @@ export async function listMyAppointments(req: Request, res: Response) {
     const filter = buildBaseFilter(params);
     filter.userID = req.user.id;
 
+    const select = buildSelect(params.fieldsParam);
+    const populates = buildPopulate(params.includeParam);
+
     const skip = (params.page - 1) * params.limit;
     const [total, docs] = await Promise.all([
       Appointment.countDocuments(filter),
       (() => {
-        return Appointment.find(filter)
+        let query = Appointment.find(filter)
           .sort(params.sort)
           .skip(skip)
-          .limit(params.limit)
-          .populate({ path: 'userID', select: '_id userName fullName email phoneNumber photoURL gender role' })
-          .populate({ path: 'serviceID', select: '_id name price duration description' })
-          .populate({ path: 'servicePackageID', select: '_id name price description' })
-          .populate({ 
-            path: 'technicianLeaderID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          })
-          .populate({ 
-            path: 'technicianSupport1ID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          })
-          .populate({ 
-            path: 'technicianSupport2ID', 
-            select: '_id introduction experience role',
-            populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-          });
+          .limit(params.limit);
+        if (select) query = query.select(select);
+        return query.populate(populates);
       })(),
     ]);
 
@@ -265,8 +232,6 @@ export async function listMyAppointments(req: Request, res: Response) {
         status: params.status,
         from: params.from,
         to: params.to,
-        updatedFrom: params.updatedFrom,
-        updatedTo: params.updatedTo,
         serviceId: params.serviceId,
         packageId: params.packageId,
         technicianId: params.technicianId,
@@ -380,7 +345,8 @@ export async function cancelAppointment(req: Request, res: Response) {
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
       {
-        status: 'cancelled'
+        status: 'cancelled',
+        ...(reason && { reason: `${appointment.reason ? appointment.reason + ' | ' : ''}Lý do hủy: ${reason}` })
       },
       { new: true }
     ).populate([
@@ -564,7 +530,12 @@ export async function assignTechnician(req: Request, res: Response) {
       updateData.status = 'confirmed';
     }
 
-    // Add notes: (bỏ reason) có thể mở rộng trường notes riêng trong tương lai
+    // Add notes to reason if provided
+    if (notes) {
+      updateData.reason = appointment.reason
+        ? `${appointment.reason} | Ghi chú phân công: ${notes}`
+        : `Ghi chú phân công: ${notes}`;
+    }
 
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
@@ -615,204 +586,6 @@ export async function assignTechnician(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi phân công technician'
-    });
-  }
-}
-
-// Update Appointment Status API
-export async function updateAppointmentStatus(req: Request, res: Response) {
-  try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    // Check permissions - only admin, staff, and technician can update status
-    const role = req.user.role;
-    if (!['admin', 'staff', 'technician'].includes(role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Chỉ admin, staff và technician mới có thể thay đổi trạng thái lịch hẹn'
-      });
-    }
-
-    const appointmentId = String(req.params.id);
-    const { status, reason, notes } = req.body as {
-      status: string;
-      reason?: string;
-      notes?: string;
-    };
-
-    // Validate required fields
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Trạng thái là bắt buộc'
-      });
-    }
-
-    // Validate status values
-    const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Trạng thái không hợp lệ. Phải là một trong: ${validStatuses.join(', ')}`
-      });
-    }
-
-    // Find appointment
-    const appointment = await Appointment.findById(appointmentId);
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy lịch hẹn'
-      });
-    }
-
-    // Check if appointment can be updated
-    if (appointment.status === 'completed') {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể thay đổi trạng thái lịch hẹn đã hoàn thành'
-      });
-    }
-
-    if (appointment.status === 'cancelled') {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể thay đổi trạng thái lịch hẹn đã hủy'
-      });
-    }
-
-    // Define valid status transitions
-    const validTransitions: Record<string, string[]> = {
-      'pending': ['confirmed', 'cancelled'],
-      'confirmed': ['in_progress', 'cancelled', 'no_show'],
-      'in_progress': ['completed', 'cancelled'],
-      'completed': [], // Cannot change from completed
-      'cancelled': [], // Cannot change from cancelled
-      'no_show': [] // Cannot change from no_show
-    };
-
-    // Check if transition is valid
-    if (!validTransitions[appointment.status].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Không thể chuyển từ trạng thái '${appointment.status}' sang '${status}'. Chuyển đổi hợp lệ: ${validTransitions[appointment.status].join(', ') || 'không có'}`
-      });
-    }
-
-    // Business rule: Check for required vehicle condition reports
-    if (status === 'in_progress') {
-      const beforeServiceReport = await VehicleConditionReport.findOne({
-        appointmentID: appointmentId,
-        stage: 'before-service'
-      });
-
-      if (!beforeServiceReport) {
-        return res.status(400).json({
-          success: false,
-          message: 'Không thể bắt đầu sửa chữa. Vui lòng tạo báo cáo tình trạng xe trước khi sửa chữa trước.',
-          requiredAction: 'create_before_service_report'
-        });
-      }
-    }
-
-    if (status === 'completed') {
-      const afterServiceReport = await VehicleConditionReport.findOne({
-        appointmentID: appointmentId,
-        stage: 'after-service'
-      });
-
-      if (!afterServiceReport) {
-        return res.status(400).json({
-          success: false,
-          message: 'Không thể hoàn thành sửa chữa. Vui lòng tạo báo cáo tình trạng xe sau khi sửa chữa trước.',
-          requiredAction: 'create_after_service_report'
-        });
-      }
-    }
-
-    // Special validations for technician role
-    if (role === 'technician') {
-      // Check if technician is assigned to this appointment
-      const isAssigned = appointment.technicianLeaderID?.toString() === req.user.id ||
-                        appointment.technicianSupport1ID?.toString() === req.user.id ||
-                        appointment.technicianSupport2ID?.toString() === req.user.id;
-
-      if (!isAssigned) {
-        return res.status(403).json({
-          success: false,
-          message: 'Bạn chỉ có thể thay đổi trạng thái lịch hẹn được phân công'
-        });
-      }
-
-      // Technician can only change to in_progress or completed
-      if (!['in_progress', 'completed'].includes(status)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Technician chỉ có thể chuyển sang trạng thái in_progress hoặc completed'
-        });
-      }
-    }
-
-    // Update appointment status
-    const updateData: any = { status };
-    if (reason) updateData.reason = reason;
-    if (notes) updateData.notes = notes;
-
-    const updatedAppointment = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      updateData,
-      { new: true }
-    ).populate([
-      { path: 'userID', select: 'userName email fullName phoneNumber' },
-      { path: 'serviceID', select: 'name price duration description' },
-      { path: 'servicePackageID', select: 'name price duration description' },
-      {
-        path: 'technicianLeaderID',
-        select: 'userID introduction experience role',
-        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-      },
-      {
-        path: 'technicianSupport1ID',
-        select: 'userID introduction experience role',
-        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-      },
-      {
-        path: 'technicianSupport2ID',
-        select: 'userID introduction experience role',
-        populate: { path: 'userID', select: 'userName fullName phoneNumber email' }
-      }
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Cập nhật trạng thái lịch hẹn thành công',
-      data: {
-        appointment: updatedAppointment,
-        statusChange: {
-          from: appointment.status,
-          to: status,
-          changedAt: new Date(),
-          changedBy: {
-            id: req.user.id,
-            role: req.user.role,
-            name: req.user.fullName || req.user.userName
-          },
-          reason: reason || null,
-          notes: notes || null
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Update appointment status error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi máy chủ khi cập nhật trạng thái lịch hẹn'
     });
   }
 }
