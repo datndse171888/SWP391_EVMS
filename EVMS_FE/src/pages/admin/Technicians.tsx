@@ -87,7 +87,7 @@ export const Technicians: React.FC = () => {
   const fetchTechnicianDetails = async (userId: string) => {
     try {
       // Fetch technician info
-      const techResponse = await fetch(`http://localhost:4000/api/users/${userId}/technician`)
+      const techResponse = await fetch(`http://localhost:4000/api/technicians/${userId}/info`)
       if (techResponse.ok) {
         const techData = await techResponse.json()
         if (techData.success) {
@@ -99,7 +99,7 @@ export const Technicians: React.FC = () => {
       }
 
       // Fetch certificates
-      const certResponse = await fetch(`http://localhost:4000/api/users/${userId}/certificates`)
+      const certResponse = await fetch(`http://localhost:4000/api/technicians/${userId}/certificates`)
       if (certResponse.ok) {
         const certData = await certResponse.json()
         if (certData.success) {

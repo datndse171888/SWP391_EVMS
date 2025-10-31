@@ -20,6 +20,7 @@ interface UserFormData {
   introduction: string
   experience: number
   startDate: string
+  techRole?: 'leader' | 'member'
   certificates: Array<{
     certificateID: string
     issuedDate: string
@@ -49,6 +50,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
     introduction: '',
     experience: 0,
     startDate: '',
+    techRole: 'member',
     certificates: []
   })
 
@@ -355,6 +357,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
           introduction: formData.introduction,
           experience: formData.experience,
           startDate: formData.startDate,
+          techRole: formData.techRole,
           certificates: formData.certificates.filter(cert => cert.certificateID)
         })
       }
@@ -599,6 +602,21 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Thông tin Technician</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Vai trò kỹ thuật *</label>
+                  <select
+                    name="techRole"
+                    value={formData.techRole}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.techRole ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                  >
+                    <option value="member">Member</option>
+                    <option value="leader">Leader</option>
+                  </select>
+                  {errors.techRole && <p className="text-red-500 text-sm mt-1">{errors.techRole}</p>}
+                </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Giới thiệu *</label>
                   <textarea

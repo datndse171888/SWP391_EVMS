@@ -54,7 +54,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClos
     setLoading(true)
     try {
       // Fetch technician info
-      const techResponse = await fetch(`http://localhost:4000/api/users/${user._id}/technician`)
+      const techResponse = await fetch(`http://localhost:4000/api/technicians/${user._id}/info`)
       if (techResponse.ok) {
         const techData = await techResponse.json()
         if (techData.success) {
@@ -63,7 +63,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClos
       }
 
       // Fetch technician certificates
-      const certResponse = await fetch(`http://localhost:4000/api/users/${user._id}/certificates`)
+      const certResponse = await fetch(`http://localhost:4000/api/technicians/${user._id}/certificates`)
       if (certResponse.ok) {
         const certData = await certResponse.json()
         if (certData.success) {

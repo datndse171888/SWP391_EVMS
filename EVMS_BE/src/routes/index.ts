@@ -11,6 +11,7 @@ import { partRouter } from './part.js';
 
 import { userRouter } from './user.js';
 import { checklistRouter } from './checklist.js';
+import { technicianRouter } from './technician.js';
 
 export const router = Router();
 
@@ -25,5 +26,6 @@ router.use('/conversations', conversationRouter);
 router.use('/messages', messageRouter);
 router.use('/parts', partRouter);
 router.use('/checklists', checklistRouter);
+router.use('/technicians', technicianRouter);
 // router.use('/service-orders', serviceOrderRouter);
 // router.use('/vehicle-condition-reports', vehicleConditionReportRouter);

@@ -181,7 +181,8 @@ export async function createUser(req: Request, res: Response) {
       introduction,
       experience,
       startDate,
-      certificates
+      certificates,
+      techRole
     } = req.body;
 
     // Validation
@@ -197,6 +198,9 @@ export async function createUser(req: Request, res: Response) {
     if (role === 'technician') {
       if (!introduction || !experience || !startDate) {
         return res.status(400).json({ message: 'Technician thiếu thông tin: introduction, experience, startDate' });
+      }
+      if (techRole && !['leader', 'member'].includes(String(techRole))) {
+        return res.status(400).json({ message: 'techRole phải là leader hoặc member' });
       }
     }
 
@@ -226,13 +230,15 @@ export async function createUser(req: Request, res: Response) {
 
     // Nếu là technician, tạo thông tin technician
     if (role === 'technician') {
+      const normalizedExperience = Number(experience);
+      const normalizedStartDate = new Date(startDate);
+      const normalizedTechRole = (techRole === 'leader' || techRole === 'member') ? techRole : 'member';
       technician = await Technician.create({
-        technicianID: user._id,
         userID: user._id,
         introduction,
-        role: 'technician',
-        experience: parseInt(experience),
-        startDate: new Date(startDate),
+        role: normalizedTechRole,
+        experience: isNaN(normalizedExperience) ? 0 : normalizedExperience,
+        startDate: normalizedStartDate,
       });
 
       // Tạo certificates nếu có
@@ -273,6 +279,7 @@ export async function createUser(req: Request, res: Response) {
         technician: technician ? {
           id: technician._id,
           introduction: technician.introduction,
+          role: technician.role,
           experience: technician.experience,
           startDate: technician.startDate,
         } : null,
@@ -313,76 +320,4 @@ export async function getCertificates(req: Request, res: Response) {
   }
 }
 
-export async function getTechnicianInfo(req: Request, res: Response) {
-  try {
-    const { userId } = req.params;
-    
-    const technician = await Technician.findOne({ userID: userId }).lean() as any;
-    
-    if (!technician) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy thông tin technician'
-      });
-    }
-    
-    return res.status(200).json({
-      success: true,
-      data: {
-        technician: {
-          id: technician._id,
-          introduction: technician.introduction,
-          experience: technician.experience,
-          startDate: technician.startDate
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Lỗi khi lấy thông tin technician:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi máy chủ khi lấy thông tin technician'
-    });
-  }
-}
-
-export async function getTechnicianCertificates(req: Request, res: Response) {
-  try {
-    const { userId } = req.params;
-    
-    // Find technician by userID
-    const technician = await Technician.findOne({ userID: userId }).lean() as any;
-    
-    if (!technician) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy technician'
-      });
-    }
-    
-    // Get certificates for this technician
-    const certificates = await TechnicianCertificate.find({ 
-      technicianID: technician._id 
-    }).populate('certificateID', 'name description issuingAuthority').lean();
-    
-    return res.status(200).json({
-      success: true,
-      data: {
-        certificates: certificates.map(cert => ({
-          certificateID: cert.certificateID,
-          issuedDate: cert.issuedDate,
-          expiryDate: cert.expiryDate,
-          status: cert.status,
-          note: cert.note,
-          certificateImage: cert.certificateImage
-        }))
-      }
-    });
-  } catch (error) {
-    console.error('Lỗi khi lấy chứng chỉ technician:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi máy chủ khi lấy chứng chỉ technician'
-    });
-  }
-}
+// Technician-specific APIs have been moved to technicianController.ts
