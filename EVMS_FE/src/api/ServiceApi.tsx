@@ -90,12 +90,8 @@ export const ServiceApi = {
     return api.delete(`/services/${id}`);
   },
 
-  getAllServices: () => {
-    return api.get<DataResponse<ServiceResponse>>('/services');
-  },
-
-  getServiceByVehicleCategory: (vehicleCategory: VehicleCategory) => {
-    return api.get<DataResponse<ServiceResponse>>(`/services?vehicleCategory=${vehicleCategory}`);
+  getService: (vehicleCategory?: VehicleCategory) => {
+    return api.get<DataResponse<ServiceResponse>>(`/services${vehicleCategory ? `?vehicleCategory=${vehicleCategory}` : ''}`);
   },
 
   getServiceById: (serviceId: string) => {

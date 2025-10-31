@@ -45,8 +45,8 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
     setError(null);
 
     try {
-      const serviceResponse = await ServiceApi.getServiceByVehicleCategory(vehicleCategory);
-      const servicePackageResponse = await ServicePackageApi.getAllServicePackagesByVehicleCategory(vehicleCategory);
+      const serviceResponse = await ServiceApi.getService(vehicleCategory);
+      const servicePackageResponse = await ServicePackageApi.getServicePackage(vehicleCategory);
 
       const serviceData: DataResponse<ServiceResponse> = serviceResponse.data;
       const servicePackageData: DataResponse<ServicePackageResponse> = servicePackageResponse.data;
@@ -165,7 +165,6 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
                 service={service}
                 isSelected={selectedId === service._id && selectedType === 'service'}
                 onSelect={() => handleServiceSelect(service._id)}
-                vehicleCategory={vehicleCategory}
               />
             ))}
           </div>

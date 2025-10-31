@@ -102,20 +102,6 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   // Handlers & Functions
   // ================================
 
-  const getServicePrice = () => {
-    if (service) {
-      if (typeof service.pricing === 'number') {
-        return service.pricing;
-      }
-      if (Array.isArray(service.pricing)) {
-        const vehicleCategory = vehicle?.vehicleType;
-        const categoryPricing = service.pricing.find(p => p.category === vehicleCategory);
-        return categoryPricing?.price || 0;
-      }
-    }
-    return servicePackage?.price || 0;
-  };
-
   const getTotalDuration = () => {
     return service?.duration || servicePackage?.duration || 0;
   };
@@ -265,7 +251,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 <div>
                   <p className="text-sm text-gray-500">Giá dịch vụ</p>
                   <p className="font-medium text-orange-600 text-lg">
-                    {formatPrice(getServicePrice())}
+                    {formatPrice(service?.price || servicePackage?.price || 0)}
                   </p>
                 </div>
               </div>
@@ -324,7 +310,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
           <div className="flex justify-between items-center text-xl border-t border-orange-200 pt-4 mt-4">
             <span className="text-gray-700 font-medium">Tổng chi phí:</span>
             <span className="font-bold text-orange-600">
-              {formatPrice(getServicePrice())}
+              {formatPrice(service?.price || servicePackage?.price || 0)}
             </span>
           </div>
         </div>
