@@ -187,10 +187,10 @@ export const Services: React.FC = () => {
                 onChange={(e) => setSelectedVehicleType(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent bg-white"
               >
-                <option value="">Tất cả loại xe</option>
-                <option value="electric_bike">Xe đạp điện</option>
-                <option value="electric_motorcycle">Xe máy điện</option>
-                <option value="electric_car">Xe ô tô điện</option>
+                 <option value="">Tất cả loại xe</option>
+                <option value="BICYCLE">Xe đạp điện</option>
+                <option value="MOTOBIKE">Xe máy điện</option>
+                <option value="CAR">Xe ô tô điện</option>
               </select>
             </div>
             <button

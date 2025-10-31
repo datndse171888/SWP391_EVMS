@@ -66,7 +66,6 @@ export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, featured
           CHỌN GÓI
         </button>
         <p className={`text-xs mt-4 text-center ${featured ? 'text-white' : 'text-gray-400'}`}>
-          *Áp dụng cho tất cả loại xe điện
         </p>
       </div>
     </div>

@@ -15,7 +15,7 @@ const Header: React.FC = () => {
     { name: 'TRANG CHỦ', path: '/' },
     { name: 'GIỚI THIỆU', path: '/introduction' },
     { name: 'DỊCH VỤ', path: '/service', hasDropdown: true },
-    { name: 'LINH KIỆN', path: '/parts', hasDropdown: false },
+    { name: 'LINH KIỆN', path: '/pages', hasDropdown: true },
     { name: 'LIÊN HỆ', path: '/contact' },
   ];
 

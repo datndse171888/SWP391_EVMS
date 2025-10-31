@@ -32,7 +32,7 @@ const upload = multer({
       cb(null, true);
     } else {
       console.log("❌ File type not allowed:", file.mimetype);
-      cb(null, false);
+      cb(new Error('Chỉ chấp nhận file ảnh JPG, PNG, GIF, WEBP!'), false);
     }
   }
 });
