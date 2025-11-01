@@ -13,6 +13,7 @@ import { userRouter } from './user.js';
 import { checklistRouter } from './checklist.js';
 import { technicianRouter } from './technician.js';
 import { vehicleRouter } from './vehicle.js';
+import { slotTimeRouter } from './slotTime.js';
 
 export const router = Router();
 
@@ -29,5 +30,6 @@ router.use('/parts', partRouter);
 router.use('/checklists', checklistRouter);
 router.use('/technicians', technicianRouter);
 router.use('/vehicles', vehicleRouter);
+router.use('/slottimes', slotTimeRouter);
 // router.use('/service-orders', serviceOrderRouter);
 // router.use('/vehicle-condition-reports', vehicleConditionReportRouter);
