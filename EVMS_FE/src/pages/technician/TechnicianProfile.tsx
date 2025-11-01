@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { authApi } from "../../api/AuthApi";
 import { technicianApi } from "../../api/TechnicianApi";
-import { uploadImageApi, compressImage } from "../../api/UploadApi";
+import { compressImage } from "../../api/UploadApi";
 import type { AxiosError } from "axios";
 import React from "react";
 
@@ -323,30 +323,100 @@ export default function TechnicianProfile() {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
 
-    // Preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
+    const startTime = performance.now();
     setIsUploadingAvatar(true);
+
     try {
-      // Compress image before upload - optimized for avatar (600x600, max 300KB for fast upload)
-      console.log(`📤 Uploading avatar, original size: ${(file.size / 1024).toFixed(2)}KB`);
-      const compressedFile = await compressImage(file, 600, 600, 0.6, 300);
-      console.log(`📤 Compressed size: ${(compressedFile.size / 1024).toFixed(2)}KB, uploading...`);
-      const imageUrl = await uploadImageApi(compressedFile);
-      await authApi.updateProfile({ photoURL: imageUrl });
-      const updated = { ...user, photoURL: imageUrl };
-      setUser(updated);
-      setEditData(updated);
-      updateUser({ photoURL: imageUrl });
-      showToast("success", "Cập nhật ảnh đại diện thành công!");
+      // Step 1: Compress image - optimized for avatar (smaller size = faster upload)
+      console.log(`📸 Starting compression... Original: ${(file.size / 1024).toFixed(2)}KB`);
+      const compressionStart = performance.now();
+      const compressedFile = await compressImage(file, 400, 400, 0.5, 150); // Optimized for avatar
+      const compressionTime = ((performance.now() - compressionStart) / 1000).toFixed(2);
+      const compressedSizeKB = (compressedFile.size / 1024).toFixed(2);
+      console.log(`✅ Compression done in ${compressionTime}s: ${compressedSizeKB}KB (${((1 - compressedFile.size / file.size) * 100).toFixed(1)}% reduction)`);
+
+      // Create preview from compressed file
+      setAvatarPreview(URL.createObjectURL(compressedFile));
+
+      // Step 2: Upload to Cloudinary using fetch API (no timeout limit)
+      console.log(`📤 Starting upload to Cloudinary...`);
+      const uploadStart = performance.now();
+      const formData = new FormData();
+      formData.append('image', compressedFile);
+
+      const baseUrl = import.meta.env.VITE_BASE_API_URL || 'http://localhost:4000/api';
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        showToast('error', "Vui lòng đăng nhập lại!");
+        setIsUploadingAvatar(false);
+        return;
+      }
+
+      const uploadResponse = await fetch(`${baseUrl}/uploads/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type for FormData, browser will set it automatically with boundary
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed: ${uploadResponse.status}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      const uploadTime = ((performance.now() - uploadStart) / 1000).toFixed(2);
+      console.log(`✅ Upload done in ${uploadTime}s`);
+
+      if (!uploadData.imageUrl) {
+        throw new Error('No imageUrl in response');
+      }
+
+      // Step 3: Update profile
+      console.log(`💾 Updating profile...`);
+      const updateStart = performance.now();
+      await authApi.updateProfile({ photoURL: uploadData.imageUrl });
+      const updateTime = ((performance.now() - updateStart) / 1000).toFixed(2);
+      console.log(`✅ Profile updated in ${updateTime}s`);
+
+      // Fetch updated profile to ensure we have latest data
+      try {
+        const profileResponse = await authApi.getProfile();
+        const updatedProfile = profileResponse.data?.data?.user || profileResponse.data?.user || profileResponse.data;
+        if (updatedProfile && updatedProfile.id === user.id) {
+          setUser(updatedProfile);
+          setEditData(updatedProfile);
+          // Update auth context so other components also get updated avatar
+          updateUser({ photoURL: uploadData.imageUrl });
+        } else {
+          // Fallback: Update local state if profile fetch fails
+          const updated = { ...user, photoURL: uploadData.imageUrl };
+          setUser(updated);
+          setEditData(updated);
+          updateUser({ photoURL: uploadData.imageUrl });
+        }
+      } catch (profileError) {
+        console.warn("Failed to fetch updated profile, using uploaded image URL:", profileError);
+        // Fallback: Update local state if profile fetch fails
+        const updated = { ...user, photoURL: uploadData.imageUrl };
+        setUser(updated);
+        setEditData(updated);
+        updateUser({ photoURL: uploadData.imageUrl });
+      }
+
+      const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      console.log(`🎉 Total time: ${totalTime}s (Compress: ${compressionTime}s, Upload: ${uploadTime}s, Update: ${updateTime}s)`);
+      
+      // Show success feedback
+      showToast('success', 'Cập nhật ảnh đại diện thành công!');
       setAvatarPreview(null);
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      showToast("error", "Không thể cập nhật ảnh đại diện!");
+    } catch (error: unknown) {
+      console.error("❌ Error uploading avatar:", error);
+      const errorMsg = error instanceof Error ? error.message : "Không thể tải ảnh lên. Vui lòng thử lại!";
+      showToast('error', errorMsg);
       setAvatarPreview(null);
     } finally {
       setIsUploadingAvatar(false);
@@ -402,19 +472,22 @@ export default function TechnicianProfile() {
                     className="relative group cursor-pointer"
                     onClick={handleAvatarClick}
                   >
-                    {avatarPreview || user?.photoURL ? (
-                      <div className="w-24 h-24 rounded-full overflow-hidden">
-                        <img
-                          src={avatarPreview || user?.photoURL || ""}
-                          alt="avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-semibold">
-                        {user?.fullName?.charAt(0)?.toUpperCase() || user?.userName?.charAt(0)?.toUpperCase() || 'T'}
-                      </div>
-                    )}
+                    <div className="w-24 h-24 rounded-full overflow-hidden">
+                      <img
+                        src={
+                          avatarPreview ||
+                          user?.photoURL ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.userName || 'Technician')}&background=014091&color=fff`
+                        }
+                        alt="avatar"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to generated avatar if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.userName || 'Technician')}&background=014091&color=fff`;
+                        }}
+                      />
+                    </div>
                     <div className="absolute inset-0 flex items-center justify-center rounded-full bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
                       <svg
                         className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300"
@@ -998,10 +1071,45 @@ function CertificateModal({
     }
     setUploading(true);
     try {
-      const imageUrl = await uploadImageApi(file);
-      setData((prev) => ({ ...prev, certificateImage: imageUrl }));
-    } catch {
-      setUploadError("Tải ảnh lên thất bại.");
+      // Compress image before upload for certificates (larger size allowed)
+      const compressedFile = await compressImage(file, 1920, 1920, 0.6, 500);
+      
+      const formData = new FormData();
+      formData.append('image', compressedFile);
+
+      const baseUrl = import.meta.env.VITE_BASE_API_URL || 'http://localhost:4000/api';
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        setUploadError("Vui lòng đăng nhập lại!");
+        setUploading(false);
+        return;
+      }
+
+      const uploadResponse = await fetch(`${baseUrl}/uploads/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed: ${uploadResponse.status}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      
+      if (!uploadData.imageUrl) {
+        throw new Error('No imageUrl in response');
+      }
+
+      setData((prev) => ({ ...prev, certificateImage: uploadData.imageUrl }));
+    } catch (error: unknown) {
+      console.error("Error uploading certificate image:", error);
+      const errorMsg = error instanceof Error ? error.message : "Tải ảnh lên thất bại.";
+      setUploadError(errorMsg);
     } finally {
       setUploading(false);
     }

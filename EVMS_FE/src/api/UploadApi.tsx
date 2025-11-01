@@ -136,9 +136,19 @@ export const uploadImageApi = async (file: File): Promise<string> => {
     } else {
       throw new Error('No imageUrl in response');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error);
-    const errorMessage = error?.response?.data?.message || 'Failed to upload image';
+    let errorMessage = 'Failed to upload image';
+    
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     throw new Error(errorMessage);
   }
 };
