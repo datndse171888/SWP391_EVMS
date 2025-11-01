@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     const variantStyles = {
         primary: `
             bg-orange-0 hover:bg-orange-6 active:bg-orange-7
-            text-gray-1 hover:text-gray-0
+            text-white hover:text-gray-0
             focus:ring-orange-1
             shadow-md hover:shadow-lg
             ${disabled ? 'bg-gray-2 text-gray-5 cursor-not-allowed' : ''}

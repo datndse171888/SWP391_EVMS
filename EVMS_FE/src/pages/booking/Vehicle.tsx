@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Loading } from '../../components/Loading';
 import { Select } from '../../components/ui/Select';
 import type { CreateAppointmentRequest } from '../../types/Appoitment';
+import { useAlert } from '../../hooks/useAlert';
 
 interface VehicleProps {
   formData: CreateAppointmentRequest;
@@ -47,6 +48,8 @@ const Vehicle: React.FC<VehicleProps> = ({
   const [showNewVehicleForm, setShowNewVehicleForm] = useState<boolean>(false); // Show new vehicle form
 
   const [error, setError] = useState<string>('');
+
+  const {showAlert, AlertComponent} = useAlert();
 
   const vehicleCategoryOptions = [
     { value: 'CAR', label: 'Ô tô điện' },
@@ -121,10 +124,10 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   const createNewVehicle = async () => {
     if (!isNewVehicleValid()) {
-      alert('Vui lòng điền đầy đủ thông tin xe');
+      showAlert('error', 'Vui lòng điền đầy đủ thông tin xe hợp lệ trước khi tạo.');
       return null;
     }
-
+    
     setIsCreating(true);
     try {
       const response = await VehicleApi.createVehicle(newVehicleData);
@@ -166,12 +169,13 @@ const Vehicle: React.FC<VehicleProps> = ({
         ...prev,
         vehicleID: vehicleId
       }));
+
       if (vehicleCategory) {
         setVehicleCategory(vehicleCategory);
       }
       onNext();
     } else {
-      alert('Vui lòng chọn xe hoặc điền đầy đủ thông tin xe mới');
+      showAlert('error', 'Vui lòng chọn hoặc tạo xe hợp lệ trước khi tiếp tục.');
     }
   };
 
@@ -200,7 +204,6 @@ const Vehicle: React.FC<VehicleProps> = ({
 
       {/* Vehicle Selection */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Chọn xe của bạn</h3>
 
         {isLoading ? (
           <Loading />
@@ -396,6 +399,8 @@ const Vehicle: React.FC<VehicleProps> = ({
           Tiếp theo
         </Button>
       </div>
+
+      {AlertComponent}
     </>
   );
 };

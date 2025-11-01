@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import type { CreateAppointmentRequest } from '../../types/Appoitment'
+import { formatDateTime } from '../../utils/DataFormat';
+import { Input } from '../../components/ui/Input';
 
 interface DateTimeProps {
   formData: CreateAppointmentRequest;
@@ -28,9 +30,9 @@ const DateTime: React.FC<DateTimeProps> = ({
   // UseStates & Variables
   // ================================
 
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString());
   const [selectedTime, setSelectedTime] = useState<string>('');
-  const [unavailableTimes, setUnavailableTimes] = useState< string[]>([]);
+  const [unavailableTimes, setUnavailableTimes] = useState<string[]>([]);
 
   // Time slots from 07:00 to 20:00 (1-hour intervals)
   const timeSlots: TimeSlot[] = [
@@ -39,15 +41,10 @@ const DateTime: React.FC<DateTimeProps> = ({
     { time: '09:00', value: '09:00:00', available: true },
     { time: '10:00', value: '10:00:00', available: true },
     { time: '11:00', value: '11:00:00', available: true },
-    { time: '12:00', value: '12:00:00', available: true },
     { time: '13:00', value: '13:00:00', available: true },
     { time: '14:00', value: '14:00:00', available: true },
     { time: '15:00', value: '15:00:00', available: true },
-    { time: '16:00', value: '16:00:00', available: true },
-    { time: '17:00', value: '17:00:00', available: true },
-    { time: '18:00', value: '18:00:00', available: true },
-    { time: '19:00', value: '19:00:00', available: true },
-    { time: '20:00', value: '20:00:00', available: true }
+    { time: '16:00', value: '16:00:00', available: true }
   ];
 
   // ================================
@@ -61,7 +58,7 @@ const DateTime: React.FC<DateTimeProps> = ({
         const bookingDateTime = new Date(formData.bookingDate);
         const dateStr = bookingDateTime.toISOString().split('T')[0];
         const timeStr = bookingDateTime.toTimeString().split(' ')[0];
-        
+
         setSelectedDate(dateStr);
         setSelectedTime(timeStr);
       } catch (error) {
@@ -80,14 +77,14 @@ const DateTime: React.FC<DateTimeProps> = ({
     try {
       // TODO: Replace with actual API call
       // const response = await AppointmentApi.getUnavailableTimes(date);
-      
+
       // Mock API call - simulate some unavailable times
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Mock unavailable times (simulating existing appointments)
       const mockUnavailable = ['09:00:00', '14:00:00', '16:00:00'];
       setUnavailableTimes(mockUnavailable);
-      
+
     } catch (error) {
       console.error('Error fetching unavailable times:', error);
       setUnavailableTimes([]);
@@ -107,37 +104,37 @@ const DateTime: React.FC<DateTimeProps> = ({
 
   const isTimeAvailable = (timeValue: string): boolean => {
     if (!selectedDate) return false;
-    
+
     const now = new Date();
     const selectedDateTime = new Date(`${selectedDate}T${timeValue}`);
-    
+
     // Cannot select past times
     if (selectedDateTime <= now) return false;
-    
+
     // Cannot select if time is in unavailable list
     if (unavailableTimes.includes(timeValue)) return false;
-    
+
     return true;
   };
 
   const getTimeSlotClassName = (timeValue: string): string => {
     const baseClasses = 'flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 text-center';
-    
+
     if (!selectedDate) {
       // No date selected - disabled state
       return `${baseClasses} bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed`;
     }
-    
+
     if (!isTimeAvailable(timeValue)) {
       // Unavailable - disabled state
       return `${baseClasses} bg-red-50 border-red-200 text-red-400 cursor-not-allowed`;
     }
-    
+
     if (selectedTime === timeValue) {
       // Selected state
       return `${baseClasses} bg-orange-500 border-orange-500 text-white shadow-lg transform scale-105`;
     }
-    
+
     // Available state
     return `${baseClasses} bg-white border-gray-300 text-gray-700 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600`;
   };
@@ -154,7 +151,7 @@ const DateTime: React.FC<DateTimeProps> = ({
 
   const handleTimeSelect = (timeValue: string) => {
     if (!selectedDate || !isTimeAvailable(timeValue)) return;
-    
+
     setSelectedTime(timeValue);
   };
 
@@ -178,7 +175,7 @@ const DateTime: React.FC<DateTimeProps> = ({
 
   const formatSelectedDateTime = () => {
     if (!selectedDate || !selectedTime) return '';
-    
+
     const dateObj = new Date(`${selectedDate}T${selectedTime}`);
     return dateObj.toLocaleDateString('vi-VN', {
       weekday: 'long',
@@ -211,27 +208,48 @@ const DateTime: React.FC<DateTimeProps> = ({
             <Calendar className="w-5 h-5 mr-2 text-orange-500" />
             Chọn ngày
           </h3>
-          
+
           <div className="bg-gray-50 p-6 rounded-lg border">
-            <input
+            {/* <input
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
               min={getMinDate()}
               max={getMaxDate()}
               className="w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+            /> */}
+
+            <Input
+              type="date"
+              name="bookingDate"
+              label="Chọn ngày"
+              value={selectedDate}
+              onChange={handleDateChange}
+              min={getMinDate()}
+              max={getMaxDate()}
             />
-            
+
             {selectedDate && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Ngày đã chọn
+                </h4>
                 <p className="text-sm text-blue-700">
-                  <CheckCircle className="w-4 h-4 inline mr-1" />
-                  Ngày đã chọn: {new Date(selectedDate).toLocaleDateString('vi-VN', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
+                  {formatDateTime(selectedDate).date}
+                </p>
+              </div>
+            )}
+
+            {/* Selected DateTime Summary */}
+            {selectedDate && selectedTime && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Thời gian đã chọn
+                </h4>
+                <p className="text-green-700 text-sm">
+                  {formatDateTime(`${selectedDate}T${selectedTime}`).time}
                 </p>
               </div>
             )}
@@ -262,12 +280,6 @@ const DateTime: React.FC<DateTimeProps> = ({
                   >
                     <div>
                       <div className="font-semibold">{slot.time}</div>
-                      <div className="text-xs mt-1">
-                        {!selectedDate ? 'Chọn ngày' :
-                         !isTimeAvailable(slot.value) ? 'Không khả dụng' :
-                         selectedTime === slot.value ? 'Đã chọn' :
-                         'Có thể chọn'}
-                      </div>
                     </div>
                   </button>
                 ))}
@@ -293,19 +305,6 @@ const DateTime: React.FC<DateTimeProps> = ({
         </div>
       </div>
 
-      {/* Selected DateTime Summary */}
-      {selectedDate && selectedTime && (
-        <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-          <h4 className="text-lg font-semibold text-green-800 mb-2 flex items-center">
-            <CheckCircle className="w-5 h-5 mr-2" />
-            Thời gian đã chọn
-          </h4>
-          <p className="text-green-700 text-lg">
-            {formatSelectedDateTime()}
-          </p>
-        </div>
-      )}
-
       {/* Navigation Buttons */}
       <div className="flex justify-between pt-6 border-t border-gray-200 mt-8">
         <Button
@@ -316,7 +315,7 @@ const DateTime: React.FC<DateTimeProps> = ({
         >
           Quay lại
         </Button>
-        
+
         <Button
           variant="primary"
           size="sm"

@@ -2,7 +2,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import React, { useState, useEffect } from 'react'
 
 interface InputProps {
-    type: "text" | "password" | "email" | "tel" | "number";
+    type: "text" | "password" | "email" | "tel" | "number" | "date";
     id?: string;
     name: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -13,6 +13,8 @@ interface InputProps {
     value?: string | number;
     disabled?: boolean;
     required?: boolean;
+    min?: string | number;
+    max?: string | number;
 }
 
 export const Input: React.FC<InputProps> = ({

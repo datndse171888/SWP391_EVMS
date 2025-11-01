@@ -143,10 +143,10 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {servicePackages.map((pkg) => (
               <ServicePackageCard
-                key={pkg.name}
+                key={pkg._id}
                 servicePackage={pkg}
-                isSelected={selectedId === pkg.name && selectedType === 'package'}
-                onSelect={() => handlePackageSelect(pkg.name)}
+                isSelected={selectedId === pkg._id && selectedType === 'package'}
+                onSelect={() => handlePackageSelect(pkg._id)}
               />
             ))}
           </div>

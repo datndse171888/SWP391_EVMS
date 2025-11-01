@@ -15,7 +15,7 @@ export interface VehicleResponse {
     _id: string;
     userID: UserIDObject;
     VIN: string;
-    vehicleType: VehicleCategory;
+    vehicleCategory: VehicleCategory;
     plateNumber: string;
     brand: string;
     year: number;

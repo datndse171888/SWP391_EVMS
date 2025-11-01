@@ -1,11 +1,15 @@
 import React, { useState } from 'react'
 import Vehicle from './Vehicle';
 import { ProcessBar } from '../../components/ui/ProcessBar';
-import type { CreateAppointmentRequest } from '../../types/Appoitment';
+import type { AppointmentResponse, CreateAppointmentRequest } from '../../types/Appoitment';
 import Service from './Service';
 import type { VehicleCategory } from '../../types/Vehicle';
 import DateTime from './DateTime';
 import Confirmation from './Confirmation';
+import { useAlert } from '../../hooks/useAlert';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { AppointmentApi } from '../../api/AppointmentApi';
 
 const Booking: React.FC = () => {
 
@@ -14,8 +18,9 @@ const Booking: React.FC = () => {
     // =================================
 
     const [step, setStep] = useState<number>(1);
+    const { user } = useAuth();
     const [formData, setFormData] = useState<CreateAppointmentRequest>({
-        userID: '',
+        userID: user?.id || '',
         vehicleID: '',
         bookingDate: '',
         serviceID: '',
@@ -23,6 +28,9 @@ const Booking: React.FC = () => {
     });
 
     const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
+
+    const { showAlert, AlertComponent } = useAlert();
+    const navigate = useNavigate();
 
     const steps = [
         { step: 1, info: 'Chọn phương tiện' },
@@ -45,22 +53,19 @@ const Booking: React.FC = () => {
         }));
     };
 
-    const handleBookingComplete = () => {
-        // Reset form and redirect to success page or dashboard
-        setFormData({
-            userID: '',
-            vehicleID: '',
-            bookingDate: '',
-            serviceID: '',
-            servicePackageID: '',
-        });
-        setStep(1);
-
-        // Show success message or redirect
-        alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
-
-        // Optional: redirect to appointments list
-        // navigate('/customer/appointments');
+    const handleBookingComplete = async () => {
+        try {
+            const response = await AppointmentApi.createAppointment(formData);
+            const data: AppointmentResponse = response.data;
+            console.log('Appointment created successfully:', data);
+            // Show success message or redirect
+            showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 3000, () => {
+                navigate('/customer/appointments');
+            });
+        } catch (error) {
+            showAlert('error', 'Đặt lịch thất bại. Vui lòng thử lại sau.');
+            return;
+        }
     };
 
     const renderStep = () => {
@@ -72,8 +77,8 @@ const Booking: React.FC = () => {
                         setFormData={setFormData}
                         setVehicleCategory={setVehicleCategory}
                         onNext={() => {
+                            console.log(formData);
                             setStep(2);
-                            console.log('Form Data after Vehicle:', formData);
                         }}
                     />
                 )
@@ -113,9 +118,10 @@ const Booking: React.FC = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md mt-22 mb-10">
             <ProcessBar currentStep={step} steps={steps} />
             {renderStep()}
+            {AlertComponent}
         </div>
     )
 }

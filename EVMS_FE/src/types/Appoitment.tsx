@@ -9,11 +9,6 @@ export interface CreateAppointmentRequest {
     reason?: string;
 }
 
-export interface CreateAppointmentResponse {
-    message: string;
-    appointment: AppointmentResponse;
-}
-
 export interface AppointmentResponse {
     _id: string;
     userID?: string;
