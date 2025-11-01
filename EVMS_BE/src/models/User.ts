@@ -10,6 +10,9 @@ export interface IUser extends Document {
   role: 'admin' | 'staff' | 'technician' | 'customer';
   gender?: string;
   isDisabled: boolean;
+  verificationToken?: string;
+  verificationTokenExpiresAt?: Date;
+  isVerified: boolean;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -27,6 +30,9 @@ const UserSchema = new Schema<IUser>(
     },
     gender: { type: String },
     isDisabled: { type: Boolean, default: false },
+    verificationToken: { type: String },
+    verificationTokenExpiresAt: { type: Date },
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

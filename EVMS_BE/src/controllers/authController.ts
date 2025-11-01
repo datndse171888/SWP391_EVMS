@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../config/env.js';
-import { sendForgotPasswordEmail } from '../services/emailService.js';
+import { sendForgotPasswordEmail, sendVerificationEmail } from '../services/emailService.js';
 
 export async function updateProfile(req: Request, res: Response) {
   try {
@@ -23,13 +23,52 @@ export async function updateProfile(req: Request, res: Response) {
     // Chỉ cho phép cập nhật các field cho phép
     const update: any = {};
     if (typeof fullName === 'string') update.fullName = fullName.trim();
-    if (typeof phoneNumber === 'string') update.phoneNumber = phoneNumber.trim();
     if (typeof photoURL === 'string') update.photoURL = photoURL.trim();
     if (typeof gender === 'string') update.gender = gender.trim();
     if (typeof userName === 'string' && userName.trim()) update.userName = userName.trim();
+    
+    // Validate phone number if provided
+    if (typeof phoneNumber === 'string') {
+      const trimmedPhone = phoneNumber.trim();
+      
+      // If phone number is provided, it must be valid
+      if (trimmedPhone !== '') {
+        // Must start with 0
+        if (!trimmedPhone.startsWith('0')) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'Số điện thoại phải bắt đầu từ số 0' 
+          });
+        }
+        
+        // Must be exactly 10 digits
+        if (trimmedPhone.length !== 10) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'Số điện thoại phải có đúng 10 số' 
+          });
+        }
+        
+        // Must be all digits
+        if (!/^\d+$/.test(trimmedPhone)) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'Số điện thoại chỉ được chứa số' 
+          });
+        }
+        
+        update.phoneNumber = trimmedPhone;
+      } else {
+        // Allow empty phone number (optional field)
+        update.phoneNumber = trimmedPhone;
+      }
+    }
 
     if (Object.keys(update).length === 0) {
-      return res.status(400).json({ message: 'Không có dữ liệu để cập nhật' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Không có dữ liệu để cập nhật' 
+      });
     }
 
     // Nếu đổi username, kiểm tra trùng
@@ -82,34 +121,81 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ message: 'Thiếu email, password hoặc userName' });
     }
 
-    const existed = await User.findOne({ $or: [{ email }, { userName }] }).lean();
-    if (existed) {
-      return res.status(400).json({ message: 'Email hoặc userName đã tồn tại' });
+    // Format inputs
+    const formatEmail = email.toLowerCase().trim();
+    const formatUserName = userName.trim();
+    const formatPassword = password;
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formatEmail)) {
+      return res.status(400).json({ message: 'Email không hợp lệ' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(formatPassword)) {
+      return res.status(400).json({ 
+        message: 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt' 
+      });
+    }
 
+    // Check for duplicates
+    const existed = await User.findOne({ 
+      $or: [
+        { email: formatEmail }, 
+        { userName: formatUserName },
+        ...(phoneNumber ? [{ phoneNumber: phoneNumber.trim() }] : [])
+      ] 
+    }).lean();
+    if (existed) {
+      return res.status(400).json({ message: 'Email, userName hoặc số điện thoại đã tồn tại' });
+    }
+
+    // Generate OTP (6 digits)
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(formatPassword, 10);
+
+    // Create user with verification token
     const user = await User.create({
-      email,
-      userName,
+      email: formatEmail,
+      userName: formatUserName,
       passwordHash,
-      fullName,
-      phoneNumber,
-      photoURL,
-      role,
-      gender,
+      fullName: fullName?.trim(),
+      phoneNumber: phoneNumber?.trim(),
+      photoURL: photoURL?.trim(),
+      role: role || 'customer',
+      gender: gender?.trim(),
+      verificationToken,
+      verificationTokenExpiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      isVerified: false,
     });
 
+    // Send verification email
+    try {
+      await sendVerificationEmail(user.email, user.userName, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Continue even if email fails, but log the error
+    }
+
     return res.status(201).json({
-      id: user._id,
-      email: user.email,
-      userName: user.userName,
-      fullName: user.fullName,
-      phoneNumber: user.phoneNumber,
-      photoURL: user.photoURL,
-      role: user.role,
-      gender: user.gender,
-      isDisabled: user.isDisabled,
+      message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+      data: {
+        id: user._id,
+        email: user.email,
+        userName: user.userName,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        photoURL: user.photoURL,
+        role: user.role,
+        gender: user.gender,
+        isVerified: false,
+        // Only include token in development mode for testing
+        ...(process.env.NODE_ENV === 'development' && { verificationToken }),
+      },
     });
   } catch (error) {
     // Duplicate key (email hoặc userName đã tồn tại)
@@ -120,6 +206,7 @@ export async function register(req: Request, res: Response) {
     if ((error as any)?.name === 'ValidationError') {
       return res.status(422).json({ message: 'Dữ liệu không hợp lệ' });
     }
+    console.error('Register error:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
@@ -131,13 +218,20 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ message: 'Thiếu email hoặc password' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
     }
 
     if (user.isDisabled) {
       return res.status(403).json({ message: 'Tài khoản đã bị vô hiệu hóa' });
+    }
+
+    // Check if account is verified
+    if (!user.isVerified) {
+      return res.status(403).json({ 
+        message: 'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực tài khoản.' 
+      });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
@@ -169,6 +263,7 @@ export async function login(req: Request, res: Response) {
         role: user.role,
         gender: user.gender,
         isDisabled: user.isDisabled,
+        isVerified: user.isVerified,
       },
     });
   } catch (error) {
@@ -449,6 +544,118 @@ export async function resetPassword(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi đặt lại mật khẩu'
+    });
+  }
+}
+
+// Check OTP for email verification
+export async function checkOTP(req: Request, res: Response) {
+  try {
+    const { verifyCode } = req.body;
+
+    if (!verifyCode) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Mã xác thực là bắt buộc' 
+      });
+    }
+
+    // Find user with valid OTP that hasn't expired
+    const user = await User.findOne({
+      verificationToken: verifyCode,
+      verificationTokenExpiresAt: { $gt: new Date() }, // Still valid
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Mã không hợp lệ hoặc đã hết hạn' 
+      });
+    }
+
+    // Update verification status
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'Xác nhận tài khoản thành công' 
+    });
+  } catch (error) {
+    console.error('Check OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi xác thực OTP'
+    });
+  }
+}
+
+// Send new verification email
+export async function sendNewVerifyEmail(req: Request, res: Response) {
+  try {
+    const { email, userName } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email là bắt buộc' 
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Người dùng không tồn tại' 
+      });
+    }
+
+    // If already verified, no need to resend
+    if (user.isVerified) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Tài khoản đã được xác thực' 
+      });
+    }
+
+    // Generate new OTP
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationTokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user with new token
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = verificationTokenExpiresAt;
+    await user.save();
+
+    // Send verification email
+    try {
+      await sendVerificationEmail(
+        user.email,
+        userName || user.userName,
+        verificationToken
+      );
+
+      return res.status(200).json({ 
+        success: true,
+        message: 'Mã OTP đã được gửi đến email của bạn',
+        // Only include token in development mode for testing
+        ...(process.env.NODE_ENV === 'development' && { verificationToken }),
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Không thể gửi email. Vui lòng thử lại sau.'
+      });
+    }
+  } catch (error) {
+    console.error('Send new verify email error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi gửi email xác thực'
     });
   }
 }

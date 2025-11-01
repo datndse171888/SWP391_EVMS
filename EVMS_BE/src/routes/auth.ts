@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, loginWithGoogle, updateProfile, forgotPassword, resetPassword } from '../controllers/authController.js';
+import { register, login, loginWithGoogle, updateProfile, forgotPassword, resetPassword, checkOTP, sendNewVerifyEmail } from '../controllers/authController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { customerOnly, authenticatedOnly } from '../middleware/roleMiddleware.js';
 
@@ -9,6 +9,8 @@ export const authRouter = Router();
 authRouter.post('/register', register);
 authRouter.post('/login', login);
 authRouter.post('/google-login', loginWithGoogle);
+authRouter.post('/check-otp', checkOTP);
+authRouter.post('/send-new-verify-email', sendNewVerifyEmail);
 
 // Protected routes
 authRouter.get('/profile', authMiddleware, (req, res) => {

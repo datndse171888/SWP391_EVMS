@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { AccountRegister, Gender, UserResponse } from '../../types/Account';
+import type { AccountRegister, Gender } from '../../types/Account';
 import loginBackground from '../../assets/images/login_background.jpg';
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button';
@@ -32,26 +32,32 @@ export const Register: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [otpResendMsg, setOtpResendMsg] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const validateForm = (): boolean => {
     const newError: FormError = {};
 
-    let emailError = validEmail(account.email);
+    const emailError = validEmail(account.email);
     if (emailError) {
       newError.email = emailError;
     }
 
-    let phoneNumberError = validPhoneNumber(account.phoneNumber);
+    const phoneNumberError = validPhoneNumber(account.phoneNumber);
     if (phoneNumberError) {
       newError.phoneNumber = phoneNumberError;
     }
 
-    let passwordError = validPassword(account.password);
+    const passwordError = validPassword(account.password);
     if (passwordError) {
       newError.password = passwordError;
     }
 
-    let confirmPasswordError = validConfirmPassword(account.password, confirmPassword);
+    const confirmPasswordError = validConfirmPassword(account.password, confirmPassword);
     if (confirmPasswordError) {
       newError.confirmPassword = confirmPasswordError;
     }
@@ -93,21 +99,79 @@ export const Register: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
     try {
       const response = await authApi.register(account);
-      const data: UserResponse = response.data;
-      console.log('Registered user:', data);
+      console.log('Registered user:', response.data);
+      // Show OTP form instead of redirecting
+      setShowOtp(true);
       showAlert(
         'success',
-        'Đăng ký thành công! Vui lòng đợi mail để kích hoạt tài khoản.',
-        5000,
-        () => navigate('/login')
+        'Đăng ký thành công! Vui lòng kiểm tra email để lấy mã OTP.',
+        5000
       );
-    } catch {
-      showAlert('error', 'Đăng ký thất bại! Vui lòng thử lại.');
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng ký thất bại! Vui lòng thử lại.';
+      showAlert('error', errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!otp || otp.length !== 6) {
+      setOtpError('Vui lòng nhập mã OTP 6 số');
+      return;
+    }
+
+    setIsVerifying(true);
+    setOtpError('');
+    setOtpSuccess('');
+    setOtpResendMsg('');
+
+    try {
+      // 1. Verify OTP
+      await authApi.checkOtp(otp);
+
+      // 2. After successful verification, auto login
+      const loginResponse = await authApi.login({
+        email: account.email,
+        password: account.password,
+      });
+
+      // 3. Save to localStorage
+      if (loginResponse.data.accessToken) {
+        localStorage.setItem('token', loginResponse.data.accessToken);
+        localStorage.setItem('userId', loginResponse.data.user.id);
+        localStorage.setItem('userInfo', JSON.stringify(loginResponse.data.user));
+      }
+
+      // 4. Show success and redirect to login
+      setOtpSuccess('Xác thực thành công! Đang chuyển đến trang đăng nhập...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1200);
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Mã OTP không đúng, đã hết hạn hoặc đăng nhập tự động thất bại!';
+      setOtpError(errorMessage);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setOtpError('');
+    setOtpSuccess('');
+    setOtpResendMsg('');
+
+    try {
+      await authApi.sendOtp(account.email, account.userName);
+      setOtpResendMsg('Đã gửi lại mã OTP! Vui lòng kiểm tra email.');
+      setOtp(''); // Clear current OTP input
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Không thể gửi lại OTP. Vui lòng thử lại!';
+      setOtpError(errorMessage);
     }
   };
   return (
@@ -118,10 +182,17 @@ export const Register: React.FC = () => {
         {/* Blur container with light background */}
         <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Chào mừng</h1>
-            <p className="text-gray-600">Đăng ký ngay để trải nghiệm dịch vụ xe điện tốt nhất</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              {showOtp ? 'Xác thực Email' : 'Chào mừng'}
+            </h1>
+            <p className="text-gray-600">
+              {showOtp 
+                ? `Vui lòng nhập mã OTP đã được gửi đến ${account.email}` 
+                : 'Đăng ký ngay để trải nghiệm dịch vụ xe điện tốt nhất'}
+            </p>
           </div>
 
+          {!showOtp ? (
           <form onSubmit={handleSubmit} className="space-y-6 " method='POST'>
 
             {/* 2-Column Grid Layout */}
@@ -266,21 +337,108 @@ export const Register: React.FC = () => {
                 {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
               </Button>
             </div>
-          </form>
 
-          {/* Additional Links */}
-          <div className="text-center mt-6">
-            <p className="text-gray-600">
-              Đã có tài khoản?{' '}
+            {/* Additional Links */}
+            <div className="text-center mt-6">
+              <p className="text-gray-600">
+                Đã có tài khoản?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
+                >
+                  Đăng nhập
+                </button>
+              </p>
+            </div>
+          </form>
+          ) : (
+          <form onSubmit={handleOtpSubmit} className="space-y-6">
+            <div className="max-w-md mx-auto space-y-6">
+              {/* OTP Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mã OTP (6 số)
+                </label>
+                <input
+                  id="otp"
+                  type="text"
+                  name="otp"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setOtp(value);
+                    if (otpError) setOtpError('');
+                  }}
+                  placeholder="000000"
+                  required={true}
+                  maxLength={6}
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest font-mono border border-orange-1 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-0 bg-azure-1/70 hover:bg-azure-0/20 focus:bg-blue-1/80 transition-all duration-200"
+                />
+              </div>
+
+              {/* Error Message */}
+              {otpError && (
+                <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
+                  {otpError}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {otpSuccess && (
+                <div className="text-green-600 text-sm text-center bg-green-50 p-3 rounded-md">
+                  {otpSuccess}
+                </div>
+              )}
+
+              {/* Resend Message */}
+              {otpResendMsg && (
+                <div className="text-blue-600 text-sm text-center bg-blue-50 p-3 rounded-md">
+                  {otpResendMsg}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="w-full">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  type="submit"
+                  disabled={isVerifying || otp.length !== 6}
+                >
+                  {isVerifying ? 'Đang xác thực...' : 'Xác nhận'}
+                </Button>
+              </div>
+
+              {/* Resend OTP Button */}
+              <div className="w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendOtp}
+                >
+                  Gửi lại mã OTP
+                </Button>
+              </div>
+
+              {/* Back to Register */}
               <button
                 type="button"
-                onClick={() => navigate('/login')}
-                className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
+                onClick={() => {
+                  setShowOtp(false);
+                  setOtp('');
+                  setOtpError('');
+                  setOtpSuccess('');
+                  setOtpResendMsg('');
+                }}
+                className="text-blue-600 hover:text-blue-800 hover:underline text-sm w-full text-center"
               >
-                Đăng nhập
+                ← Quay lại đăng ký
               </button>
-            </p>
-          </div>
+            </div>
+          </form>
+          )}
         </div>
       </div >
 

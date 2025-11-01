@@ -6,7 +6,7 @@ import { AppointmentApi } from "../../api/AppointmentApi";
 import { compressImage } from "../../api/UploadApi";
 import type { Appointment } from "../../types/Account";
 import type { AxiosError } from "axios";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, XCircle, Info, X } from "lucide-react";
 import whaleLogo from "../../assets/images/whale.png";
 
 type Tab = "profile" | "appointments";
@@ -30,7 +30,8 @@ export default function Profile() {
     gender: authUser?.gender || "",
   });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // For appointments loading
+  const [saving, setSaving] = useState(false); // For profile saving
   const [fieldError, setFieldError] = useState<{
     fullName?: string;
     phoneNumber?: string;
@@ -47,6 +48,18 @@ export default function Profile() {
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [pwdError, setPwdError] = useState("");
   const [pwdLoading, setPwdLoading] = useState(false);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  // Show toast notification
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000); // Auto hide after 3 seconds
+  };
 
   useEffect(() => {
     // Prevent duplicate API calls in React StrictMode (development only)
@@ -173,11 +186,11 @@ export default function Profile() {
       console.log(`🎉 Total time: ${totalTime}s (Compress: ${compressionTime}s, Upload: ${uploadTime}s, Update: ${updateTime}s)`);
       
       // Show success feedback
-      alert('Cập nhật ảnh đại diện thành công!');
+      showToast('success', 'Cập nhật ảnh đại diện thành công!');
     } catch (error: unknown) {
       console.error("❌ Error uploading avatar:", error);
       const errorMsg = error instanceof Error ? error.message : "Không thể tải ảnh lên. Vui lòng thử lại!";
-      alert(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -193,31 +206,46 @@ export default function Profile() {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
-      await authApi.updateProfile({
+      const response = await authApi.updateProfile({
         fullName: editData.fullName,
         phoneNumber: editData.phoneNumber,
         gender: editData.gender,
       });
+ 
+      const updatedUser = response.data.data?.user;
       
-      const response = await authApi.getProfile();
-      const updatedUser = response.data?.data?.user || response.data?.user || response.data;
       if (updatedUser) {
         updateUser(updatedUser);
+        setEditMode(false);
+        setFieldError({});
+        showToast('success', 'Cập nhật thông tin thành công!');
+      } else {
+        // If no user data in response, fetch profile again as fallback
+        const profileResponse = await authApi.getProfile();
+        const userFromProfile = profileResponse.data?.data?.user || profileResponse.data?.user || profileResponse.data;
+        if (userFromProfile) {
+          updateUser(userFromProfile);
+        }
+        setEditMode(false);
+        setFieldError({});
+        showToast('success', 'Cập nhật thông tin thành công!');
       }
-      
-      setEditMode(false);
-      setFieldError({});
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ message?: string }>;
       const errorMsg = axiosErr?.response?.data?.message || "Cập nhật thất bại!";
       
+      // Show error toast
+      showToast('error', errorMsg);
+      
       if (errorMsg.toLowerCase().includes("số điện thoại")) {
         setFieldError((prev) => ({ ...prev, phoneNumber: errorMsg }));
+      } else {
+        setFieldError((prev) => ({ ...prev, fullName: errorMsg }));
       }
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -260,6 +288,8 @@ export default function Profile() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setPwdError("");
+      showToast('success', 'Đổi mật khẩu thành công!');
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ message?: string }>;
       setPwdError(
@@ -478,7 +508,7 @@ export default function Profile() {
                               </button>
                               <button
                                 onClick={handleUpdate}
-                                disabled={loading}
+                                disabled={saving}
                                 className="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
                                 style={{ backgroundColor: '#014091' }}
                               >
@@ -494,7 +524,7 @@ export default function Profile() {
                                     clipRule="evenodd"
                                   />
                                 </svg>
-                                {loading ? "Đang lưu..." : "Lưu thay đổi"}
+                                {saving ? "Đang lưu..." : "Lưu thay đổi"}
                               </button>
                             </>
                           )}
@@ -984,6 +1014,63 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-[60] px-6 py-4 rounded-xl shadow-2xl text-white text-base font-medium transition-all duration-300 flex items-center gap-3 min-w-[300px] max-w-md ${
+            toast.type === "success"
+              ? "bg-gradient-to-r from-green-500 to-green-600"
+              : toast.type === "error"
+              ? "bg-gradient-to-r from-red-500 to-red-600"
+              : "bg-gradient-to-r from-blue-500 to-blue-600"
+          } animate-slide-in-right`}
+          style={{
+            animation: "slideInRight 0.3s ease-out",
+          }}
+        >
+          {/* Icon */}
+          <div className="flex-shrink-0">
+            {toast.type === "success" ? (
+              <CheckCircle className="w-6 h-6" />
+            ) : toast.type === "error" ? (
+              <XCircle className="w-6 h-6" />
+            ) : (
+              <Info className="w-6 h-6" />
+            )}
+          </div>
+          
+          {/* Message */}
+          <div className="flex-1">
+            <p className="text-white font-semibold">{toast.message}</p>
+          </div>
+          
+          {/* Close button */}
+          <button
+            onClick={() => setToast(null)}
+            className="flex-shrink-0 hover:bg-white/20 rounded-full p-1 transition-colors"
+            aria-label="Close notification"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in-right {
+          animation: slideInRight 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
