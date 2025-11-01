@@ -7,7 +7,8 @@ import {
   AdminRoute,
   StaffRoute,
   TechnicianRoute,
-  CustomerRoute
+  CustomerRoute,
+  PrivateRoute
 } from './components/auth/ProtectedRoute'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { StaffLayout } from './components/layout/StaffLayout'
@@ -23,7 +24,6 @@ import { Test } from './Test'
 import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
-import ProfileView from './pages/user/UserProfile'
 import StaffDashboard from './pages/staff/StaffDashboard';
 import { BikeService } from './pages/Service/BikeService';
 import { CarService } from './pages/Service/CarService';
@@ -37,6 +37,7 @@ import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
 import TechnicianProfile from './pages/technician/TechnicianProfile';
+import Profile from './pages/user/Profile';
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -63,7 +64,11 @@ export const Router: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
-        <Route path="/profile" element={<ProfileView />} />
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Profile />
+          </PrivateRoute>
+        } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
