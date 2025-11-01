@@ -1,8 +1,5 @@
-import { createRequire } from 'module';
+import { v2 as cloudinary } from "cloudinary";
 import { env } from "./env.js";
-
-const require = createRequire(import.meta.url);
-const cloudinary = require("cloudinary");
 
 console.log("🔧 Configuring Cloudinary...");
 console.log("☁️ Cloud name:", env.cloudinaryCloudName);

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { authApi } from "../../api/AuthApi";
 import { AppointmentApi } from "../../api/AppointmentApi";
-import { compressImage, uploadImageApi } from "../../api/UploadApi";
+import { compressImage } from "../../api/UploadApi";
 import type { Appointment } from "../../types/Account";
 import type { AxiosError } from "axios";
 import { Eye, EyeOff } from "lucide-react";
@@ -15,6 +15,9 @@ const menuTabs = [
   { key: "profile", label: "Hồ sơ người dùng" },
   { key: "appointments", label: "Lịch hẹn" },
 ];
+
+// Module-level variable to prevent duplicate API calls in React StrictMode
+let isFetchingAppointments = false;
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -46,38 +49,62 @@ export default function Profile() {
   const [pwdLoading, setPwdLoading] = useState(false);
 
   useEffect(() => {
-    fetchAppointments();
-  }, []);
-
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      const response = await AppointmentApi.getAppointmentByMe();
-      let appointmentsData: Appointment[] = [];
-      
-      const data = response.data as unknown;
-      
-      if (Array.isArray(data)) {
-        appointmentsData = data;
-      } else if (data && typeof data === 'object') {
-        const dataObj = data as Record<string, unknown>;
-        if (Array.isArray(dataObj.data)) {
-          appointmentsData = dataObj.data;
-        } else if (Array.isArray(dataObj.appointment)) {
-          appointmentsData = dataObj.appointment;
-        } else if (Array.isArray(dataObj.appointments)) {
-          appointmentsData = dataObj.appointments;
+    // Prevent duplicate API calls in React StrictMode (development only)
+    // In production, this won't be an issue
+    if (isFetchingAppointments) return;
+    isFetchingAppointments = true;
+    
+    let isMounted = true;
+    
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const response = await AppointmentApi.getAppointmentByMe();
+        
+        if (!isMounted) return;
+        
+        let appointmentsData: Appointment[] = [];
+        
+        const data = response.data as unknown;
+        
+        if (Array.isArray(data)) {
+          appointmentsData = data;
+        } else if (data && typeof data === 'object') {
+          const dataObj = data as Record<string, unknown>;
+          if (Array.isArray(dataObj.data)) {
+            appointmentsData = dataObj.data;
+          } else if (Array.isArray(dataObj.appointment)) {
+            appointmentsData = dataObj.appointment;
+          } else if (Array.isArray(dataObj.appointments)) {
+            appointmentsData = dataObj.appointments;
+          }
         }
+        
+        if (isMounted) {
+          setAppointments(appointmentsData);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error fetching appointments:", error);
+          setAppointments([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+        // Reset flag after a short delay to allow StrictMode remount
+        setTimeout(() => {
+          isFetchingAppointments = false;
+        }, 100);
       }
-      
-      setAppointments(appointmentsData);
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-      setAppointments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    fetchAppointments();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) {
@@ -89,15 +116,68 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file || !authUser?.id) return;
 
+    const startTime = performance.now();
+    setIsUploadingAvatar(true);
+
     try {
-      setIsUploadingAvatar(true);
-      const compressedFile = await compressImage(file, 600, 600, 0.6, 300);
-      const imageUrl = await uploadImageApi(compressedFile);
+      // Step 1: Compress image - optimized for avatar (smaller size = faster upload)
+      console.log(`📸 Starting compression... Original: ${(file.size / 1024).toFixed(2)}KB`);
+      const compressionStart = performance.now();
+      const compressedFile = await compressImage(file, 400, 400, 0.5, 150); // Optimized for avatar
+      const compressionTime = ((performance.now() - compressionStart) / 1000).toFixed(2);
+      const compressedSizeKB = (compressedFile.size / 1024).toFixed(2);
+      console.log(`✅ Compression done in ${compressionTime}s: ${compressedSizeKB}KB (${((1 - compressedFile.size / file.size) * 100).toFixed(1)}% reduction)`);
+
+      // Step 2: Upload to Cloudinary using fetch API (no timeout limit)
+      console.log(`📤 Starting upload to Cloudinary...`);
+      const uploadStart = performance.now();
+      const formData = new FormData();
+      formData.append('image', compressedFile);
+
+      const baseUrl = import.meta.env.VITE_BASE_API_URL || 'http://localhost:4000/api';
+      const token = localStorage.getItem('accessToken');
+
+      const uploadResponse = await fetch(`${baseUrl}/uploads/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type for FormData, browser will set it automatically with boundary
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed: ${uploadResponse.status}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      const uploadTime = ((performance.now() - uploadStart) / 1000).toFixed(2);
+      console.log(`✅ Upload done in ${uploadTime}s`);
+
+      if (!uploadData.imageUrl) {
+        throw new Error('No imageUrl in response');
+      }
+
+      // Step 3: Update profile
+      console.log(`💾 Updating profile...`);
+      const updateStart = performance.now();
+      await authApi.updateProfile({ photoURL: uploadData.imageUrl });
+      const updateTime = ((performance.now() - updateStart) / 1000).toFixed(2);
+      console.log(`✅ Profile updated in ${updateTime}s`);
+
+      // Update local state
+      updateUser({ photoURL: uploadData.imageUrl });
+
+      const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      console.log(`🎉 Total time: ${totalTime}s (Compress: ${compressionTime}s, Upload: ${uploadTime}s, Update: ${updateTime}s)`);
       
-      await authApi.updateProfile({ photoURL: imageUrl });
-      updateUser({ photoURL: imageUrl });
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
+      // Show success feedback
+      alert('Cập nhật ảnh đại diện thành công!');
+    } catch (error: unknown) {
+      console.error("❌ Error uploading avatar:", error);
+      const errorMsg = error instanceof Error ? error.message : "Không thể tải ảnh lên. Vui lòng thử lại!";
+      alert(errorMsg);
     } finally {
       setIsUploadingAvatar(false);
     }
