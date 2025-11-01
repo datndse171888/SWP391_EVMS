@@ -7,6 +7,7 @@ interface FetchServicesParams {
   page: number
   limit: number
   search?: string
+  vehicleCategory?: string
 }
 
 interface ServicesApiResponse {
@@ -29,24 +30,34 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
   const query = new URLSearchParams({
     page: String(params.page),
     limit: String(params.limit),
-    ...(params.search ? { q: params.search } : {})
+    ...(params.search ? { q: params.search } : {}),
+    ...(params.vehicleCategory ? { vehicleCategory: params.vehicleCategory } : {})
   })
 
   const response = await api.get(`/services?${query.toString()}`)
   const raw = response.data as { items: any[]; page: number; limit: number; total: number }
 
-  const mapped: ServiceResponse[] = (raw.items || []).map((it, idx) => ({
-    // id in FE type is number; map from index to avoid type mismatch
-    id: (raw.page - 1) * raw.limit + idx + 1,
-    _id: it._id || it.id || String(idx),
-    name: it.name,
-    description: it.description,
-    price: it.price,
+  // Ensure unique items by _id to prevent duplicates
+  const uniqueItemsMap = new Map<string, any>();
+  (raw.items || []).forEach((it: any) => {
+    const id = it._id ? String(it._id) : (it.id ? String(it.id) : null);
+    if (id && !uniqueItemsMap.has(id)) {
+      uniqueItemsMap.set(id, it);
+    }
+  });
+
+  const mapped: ServiceResponse[] = Array.from(uniqueItemsMap.values()).map((it) => ({
+    // Use _id as the primary identifier
+    id: 0, // Deprecated field, use _id instead
+    _id: it._id ? String(it._id) : (it.id ? String(it.id) : ''),
+    name: it.name || '',
+    description: it.description || '',
+    price: typeof it.price === 'number' ? it.price : 0,
     // BE duration is number (minutes), FE expects string
     duration: typeof it.duration === 'number' ? `${it.duration}` : (it.duration || ''),
-    image: it.image,
+    image: it.image || '',
     vehicleType: it.vehicleType,
-    vehicleCategory: it.vehicleCategory || it.vehicleType,
+    vehicleCategory: it.vehicleCategory || it.vehicleType || 'CAR',
     pricing: Array.isArray(it.pricing)
       ? it.pricing
         .filter((p: any) => p && typeof p.price === 'number' && ['CAR', 'BICYCLE', 'MOTOBIKE'].includes(String(p.category)))

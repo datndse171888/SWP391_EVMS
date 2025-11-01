@@ -41,7 +41,7 @@ export async function getServices(req: Request, res: Response) {
     if (vehicleCategory) filter.vehicleCategory = vehicleCategory;
 
     const [items, total] = await Promise.all([
-      Service.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Service.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Service.countDocuments(filter),
     ]);
     return res.json({ items, page, limit, total });
