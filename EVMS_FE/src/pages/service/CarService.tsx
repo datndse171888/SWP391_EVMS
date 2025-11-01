@@ -4,9 +4,10 @@ import { Car } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
 import { PackageCard } from './PackageCard';
 import { ServiceCard } from './ServiceCard';
+import { ServiceDetailModal } from './ServiceDetailModal';
+import { PackageDetailModal } from './PackageDetailModal';
 import type { ServicePackageResponse } from '../../types/ServicePackage';
 import { samplePackages, sampleServices } from '../../constants/mockdata/Service';
-import Service from '../booking/Service';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { ServiceApi } from '../../api/ServiceApi';
 
@@ -14,33 +15,108 @@ export const CarService: React.FC = () => {
     const [packages, setPackages] = useState<ServicePackageResponse[]>([]);
     const [services, setServices] = useState<ServiceResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedService, setSelectedService] = useState<ServiceResponse | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<ServicePackageResponse | null>(null);
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
     }, []);
 
-    // Temporarily use sample data
-    useEffect(() => {
-        setPackages(samplePackages);
-        setServices(sampleServices);
-        setLoading(false);
-    }, []);
     const fetchData = async () => {
         try {
-            const packageResponse = await ServicePackageApi.getAllServicePackagesByVehicleCategory('CAR');
-            const serviceResponse = await ServiceApi.getServiceByVehicleCategory('CAR');
-            setPackages(packageResponse.data.items);
-            setServices(serviceResponse.data.items);
-        } catch (error) {
+            setLoading(true);
+            setError(null);
+            
+            // Fetch packages and services in parallel
+            const [packageResponse, serviceResponse] = await Promise.all([
+                ServicePackageApi.getAllServicePackagesByVehicleCategory('CAR'),
+                ServiceApi.getServiceByVehicleCategory('CAR')
+            ]);
+
+            // Map package data to match ServicePackageResponse type
+            const mappedPackages: ServicePackageResponse[] = (packageResponse.data.items || []).map((pkg: any) => ({
+                _id: pkg._id || String(pkg.id || ''),
+                name: pkg.name || '',
+                description: pkg.description || '',
+                vehicleCategory: pkg.vehicleCategory || 'CAR',
+                price: typeof pkg.price === 'number' ? pkg.price : 0,
+                duration: typeof pkg.duration === 'number' ? pkg.duration : 0,
+                discount: typeof pkg.discount === 'number' ? pkg.discount : 0,
+                status: pkg.status || 'active',
+                services: Array.isArray(pkg.services) ? pkg.services.map((svc: any) => ({
+                    _id: svc._id || svc.id || '',
+                    name: svc.name || '',
+                    price: typeof svc.price === 'number' ? svc.price : 0,
+                    vehicleCategory: svc.vehicleCategory || 'CAR',
+                    duration: typeof svc.duration === 'number' ? svc.duration : 0,
+                    description: svc.description || '',
+                    image: svc.image || ''
+                })) : [],
+                createAt: pkg.createAt || pkg.createdAt || new Date().toISOString(),
+                updateAt: pkg.updateAt || pkg.updatedAt || new Date().toISOString()
+            }));
+
+            // Map service data to match ServiceResponse type
+            const serviceItems = serviceResponse?.data?.items || [];
+            
+            if (serviceItems.length === 0) {
+                console.warn('No services found for CAR category. Response:', serviceResponse);
+            }
+            
+            const mappedServices: ServiceResponse[] = serviceItems.map((svc: any) => {
+                if (!svc || !svc._id) {
+                    console.warn('Invalid service data:', svc);
+                    return null;
+                }
+                return {
+                    _id: svc._id || String(svc.id || ''),
+                    name: svc.name || '',
+                    price: typeof svc.price === 'number' ? svc.price : 0,
+                    vehicleCategory: svc.vehicleCategory || 'CAR',
+                    duration: typeof svc.duration === 'number' ? svc.duration : 0,
+                    description: svc.description || '',
+                    image: svc.image || ''
+                };
+            }).filter((svc): svc is ServiceResponse => svc !== null);
+            setPackages(mappedPackages);
+            setServices(mappedServices);
+        } catch (error: any) {
             console.error('Error fetching data:', error);
+            setError(error?.message || 'Có lỗi xảy ra khi tải dữ liệu');
+            // Fallback to sample data on error
+            setPackages(samplePackages);
+            setServices(sampleServices);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     if (loading) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-12">
-                <div className="text-center text-slate-600">Loading services...</div>
+                <div className="text-center text-slate-600">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+                    <p className="mt-4">Đang tải dịch vụ...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 py-12">
+                <div className="text-center text-red-600">
+                    <p className="text-lg font-semibold">{error}</p>
+                    <button 
+                        onClick={fetchData}
+                        className="mt-4 px-6 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800"
+                    >
+                        Thử lại
+                    </button>
+                </div>
             </div>
         );
     }
@@ -115,11 +191,24 @@ export const CarService: React.FC = () => {
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Gói dịch vụ</h2>
                         </div>
 
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {packages.map((pkg, index) => (
-                                <PackageCard key={pkg._id} package={pkg} featured={index === 1} />
-                            ))}
-                        </div>
+                        {packages.length > 0 ? (
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {packages.map((pkg) => (
+                                    <PackageCard 
+                                        key={pkg._id} 
+                                        package={pkg} 
+                                        onViewDetail={() => {
+                                            setSelectedPackage(pkg);
+                                            setIsPackageModalOpen(true);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 text-lg">Chưa có gói dịch vụ nào</p>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -129,15 +218,40 @@ export const CarService: React.FC = () => {
                         <div className='text-center'>
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Dịch vụ đơn</h2>
                         </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {services.map((service) => (
-                                <ServiceCard key={service._id} service={service} />
-                            ))}
-                        </div>
+                        {services.length > 0 ? (
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {services.map((service) => (
+                                    <ServiceCard 
+                                        key={service._id} 
+                                        service={service}
+                                        onViewDetail={() => {
+                                            setSelectedService(service);
+                                            setIsServiceModalOpen(true);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 text-lg">Chưa có dịch vụ nào</p>
+                            </div>
+                        )}
                     </div>
                 </section>
 
             </div>
+
+            {/* Modals */}
+            <ServiceDetailModal
+                isOpen={isServiceModalOpen}
+                onClose={() => setIsServiceModalOpen(false)}
+                service={selectedService}
+            />
+            <PackageDetailModal
+                isOpen={isPackageModalOpen}
+                onClose={() => setIsPackageModalOpen(false)}
+                package={selectedPackage}
+            />
         </div>
     );
 } 

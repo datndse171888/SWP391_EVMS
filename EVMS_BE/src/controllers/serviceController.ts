@@ -104,7 +104,7 @@ export async function getServicesByVehicleCategory(req: Request, res: Response) 
 
     // Tìm services theo vehicleCategory (model mới)
     const filter: any = { vehicleCategory };
-    if (status) filter.status = status; // nếu có status trong schema
+    // Note: Service model doesn't have status field, so we skip status filter
 
     const services = await Service.find(filter)
       .sort({ createdAt: -1 })

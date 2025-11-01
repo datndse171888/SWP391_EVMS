@@ -39,19 +39,19 @@ export async function createServicePackage(req: Request, res: Response) {
       }
       // Chặn tạo nếu tập dịch vụ trùng khớp hoàn toàn với một gói đã có (bỏ qua thứ tự)
       {
-        const requestedServiceNames = new Set(serviceDocs.map((d: any) => String(d.name)));
+        const requestedServiceIds = new Set(ids.map((id: any) => String(id)));
         const candidatesSameSize = await ServicePackage.find({
           vehicleCategory,
-          services: { $size: requestedServiceNames.size }
-        }).lean();
+          services: { $size: requestedServiceIds.size }
+        }).populate('services').lean();
         const hasSameServiceSet = candidatesSameSize.some((pkg: any) => {
-          if (!Array.isArray(pkg.services) || pkg.services.length !== requestedServiceNames.size) return false;
-          const namesInPkg = new Set((pkg.services as any[]).map((s: any) => String(s.name)));
-          if (namesInPkg.size !== requestedServiceNames.size) return false;
-          for (const n of requestedServiceNames) {
-            if (!namesInPkg.has(n)) return false;
+          if (!Array.isArray(pkg.services) || pkg.services.length !== requestedServiceIds.size) return false;
+          const idsInPkg = new Set((pkg.services as any[]).map((s: any) => String(s._id || s)));
+          if (idsInPkg.size !== requestedServiceIds.size) return false;
+          for (const id of requestedServiceIds) {
+            if (!idsInPkg.has(id)) return false;
           }
-          return true; // tập tên dịch vụ trùng hoàn toàn
+          return true; // tập service IDs trùng hoàn toàn
         });
         if (hasSameServiceSet) {
           return res.status(400).json({
@@ -61,24 +61,19 @@ export async function createServicePackage(req: Request, res: Response) {
         }
       }
 
+      // Chỉ lưu serviceIDs (ObjectId) thay vì toàn bộ thông tin
       services = serviceItems
         .map((item: any) => {
           const doc = idToDoc.get(String(item.serviceID));
           if (!doc) return null;
-          return {
-            name: doc.name,
-            price: doc.price,
-            vehicleCategory: doc.vehicleCategory,
-            duration: doc.duration, // chỉ dùng duration từ Service
-            description: doc.description,
-            image: doc.image,
-          };
+          return item.serviceID; // chỉ lưu ObjectId
         })
-        .filter(Boolean) as any[];
+        .filter(Boolean);
       if (services.length === 0) {
         return res.status(400).json({ message: 'Danh sách serviceItems không hợp lệ' });
       }
-      finalDuration = services.reduce((sum: number, s: any) => sum + (Number(s.duration) || 0), 0);
+      // Tính duration từ serviceDocs
+      finalDuration = serviceDocs.reduce((sum: number, s: any) => sum + (Number(s.duration) || 0), 0);
       if (!finalDuration || finalDuration <= 0) {
         return res.status(400).json({ message: 'Tổng duration phải > 0' });
       }
@@ -97,18 +92,18 @@ export async function createServicePackage(req: Request, res: Response) {
       };
       const candidates = await ServicePackage.find(
         services ? { ...baseQuery, services: { $size: services.length } } : baseQuery
-      ).lean();
-      const normalize = (arr: any[]) =>
+      ).populate('services').lean();
+      const normalizeIds = (arr: any[]) =>
         [...arr]
-          .map((s: any) => ({ name: String(s.name), duration: Number(s.duration) }))
-          .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : a.duration - b.duration));
-      const wanted = normalize(services);
+          .map((s: any) => String(s._id || s))
+          .sort();
+      const wantedIds = normalizeIds(services);
       let conflicted: any | null = null;
       const hasSameContent = candidates.some((pkg: any) => {
         if ((pkg.description || '') !== (description || '')) return false;
-        if (!Array.isArray(pkg.services) || pkg.services.length !== wanted.length) return false;
-        const current = normalize(pkg.services);
-        const same = current.every((it: any, idx: number) => it.name === wanted[idx].name && it.duration === wanted[idx].duration);
+        if (!Array.isArray(pkg.services) || pkg.services.length !== wantedIds.length) return false;
+        const currentIds = normalizeIds(pkg.services);
+        const same = currentIds.every((id: string, idx: number) => id === wantedIds[idx]);
         if (same) conflicted = pkg;
         return same;
       });
@@ -121,7 +116,8 @@ export async function createServicePackage(req: Request, res: Response) {
       }
     }
     const created = await ServicePackage.create({ name, description, vehicleCategory, price, duration: finalDuration, status, discount, services, createAt, updateAt });
-    return res.status(201).json({ message: 'Tạo gói dịch vụ thành công', servicePackage: created });
+    const populated = await ServicePackage.findById(created._id).populate('services').lean();
+    return res.status(201).json({ message: 'Tạo gói dịch vụ thành công', servicePackage: populated });
   } catch (error: any) {
     if (error?.code === 11000) {
       return res.status(400).json({
@@ -149,7 +145,7 @@ export async function getServicePackages(req: Request, res: Response) {
     if (vehicleCategory) filter.vehicleCategory = vehicleCategory;
 
     const [items, total] = await Promise.all([
-      ServicePackage.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      ServicePackage.find(filter).populate('services').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       ServicePackage.countDocuments(filter),
     ]);
     return res.json({ items, page, limit, total });
@@ -160,7 +156,7 @@ export async function getServicePackages(req: Request, res: Response) {
 
 export async function getServicePackageById(req: Request, res: Response) {
   try {
-    const item = await ServicePackage.findById(req.params.id).lean();
+    const item = await ServicePackage.findById(req.params.id).populate('services').lean();
     if (!item) return res.status(404).json({ message: 'Không tìm thấy gói dịch vụ' });
     return res.json({ servicePackage: item });
   } catch {
@@ -208,24 +204,19 @@ export async function updateServicePackage(req: Request, res: Response) {
       if (hasMismatchedCategory) {
         return res.status(400).json({ message: 'Tất cả dịch vụ trong gói phải có cùng vehicleCategory với gói' });
       }
+      // Chỉ lưu serviceIDs (ObjectId) thay vì toàn bộ thông tin
       resolvedServices = serviceItems
         .map((item: any) => {
           const doc = idToDoc.get(String(item.serviceID));
           if (!doc) return null;
-          return {
-            name: doc.name,
-            price: doc.price,
-            vehicleCategory: doc.vehicleCategory,
-            duration: doc.duration, // chỉ dùng duration từ Service
-            description: doc.description,
-            image: doc.image,
-          };
+          return item.serviceID; // chỉ lưu ObjectId
         })
-        .filter(Boolean) as any[];
+        .filter(Boolean);
       if (!resolvedServices || resolvedServices.length === 0) {
         return res.status(400).json({ message: 'Danh sách serviceItems không hợp lệ' });
       }
-      finalDuration = (resolvedServices as any[]).reduce((sum: number, s: any) => sum + (Number(s.duration) || 0), 0);
+      // Tính duration từ serviceDocs
+      finalDuration = serviceDocs.reduce((sum: number, s: any) => sum + (Number(s.duration) || 0), 0);
       if (!finalDuration || finalDuration <= 0) {
         return res.status(400).json({ message: 'Tổng duration phải > 0' });
       }
@@ -241,17 +232,17 @@ export async function updateServicePackage(req: Request, res: Response) {
         duration: finalDuration,
         status: status ?? existing.status,
       };
-      const candidates: any[] = await ServicePackage.find({ ...baseQuery, services: { $size: resolvedServices.length } }).lean();
-      const normalize = (arr: any[]) =>
+      const candidates: any[] = await ServicePackage.find({ ...baseQuery, services: { $size: resolvedServices.length } }).populate('services').lean();
+      const normalizeIds = (arr: any[]) =>
         [...arr]
-          .map((s: any) => ({ name: String(s.name), duration: Number(s.duration) }))
-          .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : a.duration - b.duration));
-      const wanted = normalize(resolvedServices);
+          .map((s: any) => String(s._id || s))
+          .sort();
+      const wantedIds = normalizeIds(resolvedServices);
       const hasSameContent = (candidates as any[]).some((pkg: any) => {
         if ((pkg.description || '') !== ((description ?? existing.description) || '')) return false;
-        if (!Array.isArray(pkg.services) || pkg.services.length !== wanted.length) return false;
-        const current = normalize(pkg.services);
-        return current.every((it: any, idx: number) => it.name === wanted[idx].name && it.duration === wanted[idx].duration);
+        if (!Array.isArray(pkg.services) || pkg.services.length !== wantedIds.length) return false;
+        const currentIds = normalizeIds(pkg.services);
+        return currentIds.every((id: string, idx: number) => id === wantedIds[idx]);
       });
       if (hasSameContent) {
         return res.status(400).json({
@@ -311,6 +302,7 @@ export async function getServicePackagesByVehicleCategory(req: Request, res: Res
     };
 
     const packages = await ServicePackage.find(filter)
+      .populate('services')
       .sort({ createdAt: -1 })
       .lean();
 

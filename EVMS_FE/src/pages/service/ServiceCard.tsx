@@ -4,9 +4,10 @@ import type { ServiceResponse } from '../../types/Service';
 
 interface ServiceCardProps {
   service: ServiceResponse;
+  onViewDetail?: () => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onViewDetail }) => {
   const priceFormatted = new Intl.NumberFormat('vi-VN').format(Number(service.price ?? 0));
   const initials = String(service.name || '?').trim().split(' ').slice(0,2).map(s => s[0]).join('').toUpperCase();
 
@@ -61,12 +62,20 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
           <div className="flex items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-white/90 px-3 py-1 rounded-full shadow-sm text-sm text-slate-700">
               <Clock size={16} />
-              <span className="font-medium">{service.duration} phút</span>
+              <span className="font-medium">{typeof service.duration === 'number' ? service.duration : parseInt(service.duration) || 0} phút</span>
             </div>
           </div>
         </div>
 
-        
+        {/* Action Button */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={onViewDetail}
+            className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold shadow-sm"
+          >
+            Xem chi tiết
+          </button>
+        </div>
       </div>
 
       {/* decorative accent */}

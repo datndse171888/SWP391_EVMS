@@ -3,15 +3,6 @@ import mongoose, { Schema, Document } from 'mongoose';
 export type ServicePackageStatus = 'active' | 'inactive' | 'hidden';
 export type VehicleCategory = 'CAR' | 'BICYCLE' | 'MOTOBIKE';
 
-export interface IServiceInPackage {
-  name: string;
-  price: number;
-  vehicleCategory: VehicleCategory;
-  duration: number;
-  description?: string;
-  image?: string;
-}
-
 export interface IServicePackage extends Document {
   name: string;
   description?: string;
@@ -19,7 +10,7 @@ export interface IServicePackage extends Document {
   price: number; // using Number for simplicity; can switch to Decimal128 if needed
   duration: number; // minutes or hours depending on business rule
   discount?: number; // discount amount, default 0
-  services?: IServiceInPackage[]; // embedded services in the package
+  services?: mongoose.Types.ObjectId[]; // reference to Service collection
   status: ServicePackageStatus;
   createAt?: Date;
   updateAt?: Date;
@@ -39,17 +30,11 @@ const ServicePackageSchema = new Schema<IServicePackage>(
     duration: { type: Number, required: true, min: 1 },
     discount: { type: Number, default: 0, min: 0 },
     services: [
-      new Schema<IServiceInPackage>(
-        {
-          name: { type: String, required: true, trim: true },
-          price: { type: Number, required: true, min: 0 },
-          vehicleCategory: { type: String, enum: ['CAR', 'BICYCLE', 'MOTOBIKE'], required: true },
-          duration: { type: Number, required: true, min: 1 },
-          description: { type: String, trim: true },
-          image: { type: String, trim: true },
-        },
-        { _id: false }
-      ),
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Service',
+        required: true
+      }
     ],
     status: { type: String, enum: ['active', 'inactive', 'hidden'], default: 'active', index: true },
   },

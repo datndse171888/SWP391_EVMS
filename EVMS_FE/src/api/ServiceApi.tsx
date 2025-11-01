@@ -97,5 +97,38 @@ export const ServiceApi = {
   getServiceById: (serviceId: string) => {
     return api.get<ServiceResponse>(`/services/${serviceId}`);
   },
+
+  getServiceByVehicleCategory: async (vehicleCategory: VehicleCategory) => {
+    try {
+      const response = await api.get(`/services/category/${vehicleCategory}`);
+      
+      // BE returns: { message, data: { services, count, vehicleCategory } }
+      const responseData = response.data;
+      
+      // Extract services from response
+      let services: any[] = [];
+      if (responseData?.data?.services && Array.isArray(responseData.data.services)) {
+        services = responseData.data.services;
+      } else if (responseData?.services && Array.isArray(responseData.services)) {
+        services = responseData.services;
+      }
+      
+      const count = responseData?.data?.count || responseData?.count || services.length;
+      
+      console.log(`Fetched ${services.length} services for ${vehicleCategory}:`, services);
+      
+      return {
+        success: true,
+        data: {
+          items: services,
+          total: count
+        }
+      };
+    } catch (error: any) {
+      console.error('Error in getServiceByVehicleCategory:', error);
+      console.error('Error response:', error?.response?.data);
+      throw error;
+    }
+  },
 }
 
