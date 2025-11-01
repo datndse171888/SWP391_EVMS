@@ -20,14 +20,14 @@ import { Parts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import Service from './pages/service/Service'
+import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
 import ProfileView from './pages/user/UserProfile'
 import StaffDashboard from './pages/staff/StaffDashboard';
-import { BikeService } from './pages/service/BikeService';
-import { CarService } from './pages/service/CarService';
-import { MotoService } from './pages/service/MotoService';
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarService';
+import { MotoService } from './pages/Service/MotoService';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
@@ -36,6 +36,7 @@ import Booking from './pages/booking/Booking'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
+import TechnicianProfile from './pages/technician/TechnicianProfile';
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -124,6 +125,7 @@ export const Router: React.FC = () => {
               <Routes>
                 <Route path="dashboard" element={<TechnicianDashboard />} />
                 <Route path="schedule" element={<TechnicianSchedule />} />
+                <Route path="profile" element={<TechnicianProfile />} />
                 <Route path="appointments/:id" element={<AppointmentWorkspace />} />
                 <Route path="*" element={<Navigate to="/technician/dashboard" replace />} />
               </Routes>

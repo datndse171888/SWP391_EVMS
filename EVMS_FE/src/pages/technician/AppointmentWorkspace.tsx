@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { technicianApi } from '../../api/TechnicianApi';
 
 type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
 type ReportStage = 'before-service' | 'intermediate' | 'after-service';
@@ -46,10 +48,45 @@ const AppointmentWorkspace: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   // Mock current user (allow override via ?role=leader)
   const roleOverride = searchParams.get('role');
-  const currentUser: TechnicianUser = useMemo(() => ({ id: 'tech-2', name: 'Member B', role: roleOverride === 'leader' ? 'technician-leader' : 'technician-member' }), [roleOverride]);
+  const [techRole, setTechRole] = useState<'technician-leader' | 'technician-member'>('technician-member');
+  const [currentUser, setCurrentUser] = useState<TechnicianUser>({ id: user?.id || 'me', name: user?.fullName || user?.userName || 'Me', role: techRole });
+
+  useEffect(() => {
+    setCurrentUser(prev => ({ ...prev, id: user?.id || prev.id, name: user?.fullName || user?.userName || prev.name }));
+  }, [user]);
+
+  useEffect(() => {
+    const fetchTechRole = async () => {
+      // Allow role override via query for quick testing; otherwise fetch real role
+      if (roleOverride === 'leader') {
+        setTechRole('technician-leader');
+        return;
+      }
+      try {
+        if (!user?.id) {
+          console.warn('User ID not available yet, cannot fetch technician role');
+          return;
+        }
+        console.log('Fetching technician info for user ID:', user.id);
+        const res = await technicianApi.getTechnicianInfo(user.id);
+        const role = res.data?.data?.technician?.role === 'leader' ? 'technician-leader' : 'technician-member';
+        setTechRole(role);
+        console.log('Technician role fetched:', role);
+      } catch (error) {
+        console.error('Failed to fetch technician role:', error);
+        // fallback keeps default member
+      }
+    };
+    fetchTechRole();
+  }, [user?.id, roleOverride]);
+
+  useEffect(() => {
+    setCurrentUser(prev => ({ ...prev, role: techRole }));
+  }, [techRole]);
 
   // Mock appointment info
   const info: AppointmentInfo = useMemo(() => ({
