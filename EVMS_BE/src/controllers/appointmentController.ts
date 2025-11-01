@@ -35,10 +35,7 @@ export async function createAppointment(req: Request, res: Response) {
       status,
     });
 
-    return res.status(201).json({
-      message: 'Tạo lịch hẹn thành công',
-      appointment,
-    });
+    return res.status(201).json(appointment);
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
