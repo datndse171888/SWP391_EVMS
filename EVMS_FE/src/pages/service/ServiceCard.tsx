@@ -4,9 +4,10 @@ import type { ServiceResponse } from '../../types/Service';
 
 interface ServiceCardProps {
   service: ServiceResponse;
+  onViewDetail?: () => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onViewDetail }) => {
   const priceFormatted = new Intl.NumberFormat('vi-VN').format(Number(service.price ?? 0));
   const initials = String(service.name || '?').trim().split(' ').slice(0,2).map(s => s[0]).join('').toUpperCase();
 
@@ -17,23 +18,23 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
       aria-labelledby={`svc-${service._id}-title`}
     >
       {/* Top band / image */}
-      <div className="relative h-40 bg-gradient-to-r from-orange-50 to-white">
+      <div className="relative h-40 bg-gray-100">
         {service.image ? (
           <img
             src={service.image}
             alt={service.name}
-            className="absolute inset-0 w-full h-full object-cover opacity-95"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-orange-100 to-blue-50">
-            <div className="flex items-center justify-center w-20 h-20 rounded-xl bg-gradient-to-br from-orange-400 to-blue-500 text-white text-2xl font-extrabold shadow-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="flex items-center justify-center w-20 h-20 rounded-xl bg-blue-600 text-white text-2xl font-extrabold shadow-lg">
               {initials}
             </div>
           </div>
         )}
 
         {/* category badge */}
-        <span className="absolute top-3 right-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-orange-600 shadow-sm">
+        <span className="absolute top-3 right-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-700 shadow-md border border-gray-200">
           {service.vehicleCategory ?? '—'}
         </span>
       </div>
@@ -61,16 +62,26 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
           <div className="flex items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-white/90 px-3 py-1 rounded-full shadow-sm text-sm text-slate-700">
               <Clock size={16} />
-              <span className="font-medium">{service.duration} phút</span>
+              <span className="font-medium">{typeof service.duration === 'number' ? service.duration : parseInt(service.duration) || 0} phút</span>
             </div>
           </div>
         </div>
 
-        
+        {/* Action Buttons */}
+        <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+          <button
+            onClick={onViewDetail}
+            className="flex-1 px-4 py-2 bg-white border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-all duration-200 font-semibold"
+          >
+            Chi tiết
+          </button>
+          <button
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 font-semibold"
+          >
+            Chọn gói
+          </button>
+        </div>
       </div>
-
-      {/* decorative accent */}
-      <div className="pointer-events-none absolute -right-10 -top-10 w-36 h-36 rounded-full bg-gradient-to-br from-orange-200 to-transparent opacity-40 blur-2xl transform rotate-12" />
     </article>
   );
 };
