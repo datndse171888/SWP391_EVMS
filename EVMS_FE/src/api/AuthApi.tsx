@@ -1,4 +1,4 @@
-import type { AccountLogin, ForgotPasswordRequest, LoginResponse, ResetPasswordRequest } from "../types/Account";
+import type { AccountLogin, ForgotPasswordRequest, LoginResponse, ResetPasswordRequest, UserResponse } from "../types/Account";
 import type { AccountRegister } from "../types/Account";
 import { api } from "../utils/Axios";
 
@@ -13,7 +13,7 @@ export const authApi = {
   },
 
   register: (userData: AccountRegister) => {
-    return api.post('/auth/register', userData);
+    return api.post<UserResponse>('/auth/register', userData);
   },
 
   logout: () => {

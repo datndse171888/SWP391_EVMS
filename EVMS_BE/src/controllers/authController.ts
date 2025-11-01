@@ -101,17 +101,15 @@ export async function register(req: Request, res: Response) {
     });
 
     return res.status(201).json({
-      user: {
-        id: user._id,
-        email: user.email,
-        userName: user.userName,
-        fullName: user.fullName,
-        phoneNumber: user.phoneNumber,
-        photoURL: user.photoURL,
-        role: user.role,
-        gender: user.gender,
-        isDisabled: user.isDisabled,
-      },
+      id: user._id,
+      email: user.email,
+      userName: user.userName,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
+      photoURL: user.photoURL,
+      role: user.role,
+      gender: user.gender,
+      isDisabled: user.isDisabled,
     });
   } catch (error) {
     // Duplicate key (email hoặc userName đã tồn tại)

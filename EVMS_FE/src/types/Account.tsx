@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'staff' | 'technician' | 'customer';
-export type Gender = 'male' | 'female';
+export type Gender = 'Male' | 'Female';
 
 export interface AccountLogin {
   email: string;
@@ -29,7 +29,7 @@ export interface AccountRegister {
   fullName: string;
   password: string;
   phoneNumber: string;
-  gender: string;
+  gender: Gender;
   photoURL: string;
   role: Role;
 }

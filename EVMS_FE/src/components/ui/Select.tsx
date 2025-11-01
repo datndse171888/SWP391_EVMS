@@ -1,4 +1,3 @@
-import type { ReactElement } from "react";
 
 interface SelectProps {
     // Define props for Select component here
@@ -16,7 +15,6 @@ interface SelectProps {
     required?: boolean;
     defaultValue?: { value: string; label: string };
 }
-
 export const Select: React.FC<SelectProps> = ({
     id,
     name,
