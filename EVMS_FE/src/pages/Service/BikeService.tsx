@@ -4,6 +4,8 @@ import { Bike } from 'lucide-react';
 import Clean from '../../assets/images/clean.png';
 import { PackageCard } from './PackageCard';
 import { ServiceCard } from './ServiceCard';
+import { ServiceDetailModal } from './ServiceDetailModal';
+import { PackageDetailModal } from './PackageDetailModal';
 import type { ServicePackageResponse } from '../../types/ServicePackage';
 import { samplePackages, sampleServices } from '../../constants/mockdata/Service';
 import Service from '../booking/Service';
@@ -15,6 +17,10 @@ export const BikeService: React.FC = () => {
     const [services, setServices] = useState<ServiceResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [selectedService, setSelectedService] = useState<ServiceResponse | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<ServicePackageResponse | null>(null);
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -127,8 +133,15 @@ export const BikeService: React.FC = () => {
                             
                             return filteredPackages.length > 0 ? (
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {filteredPackages.map((pkg, index) => (
-                                        <PackageCard key={pkg._id} package={pkg} featured={index === 1} />
+                                    {filteredPackages.map((pkg) => (
+                                        <PackageCard 
+                                            key={pkg._id} 
+                                            package={pkg} 
+                                            onViewDetail={() => {
+                                                setSelectedPackage(pkg);
+                                                setIsPackageModalOpen(true);
+                                            }}
+                                        />
                                     ))}
                                 </div>
                             ) : (
@@ -156,7 +169,14 @@ export const BikeService: React.FC = () => {
                             return filteredServices.length > 0 ? (
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {filteredServices.map((service) => (
-                                        <ServiceCard key={service._id} service={service} />
+                                        <ServiceCard 
+                                            key={service._id} 
+                                            service={service}
+                                            onViewDetail={() => {
+                                                setSelectedService(service);
+                                                setIsServiceModalOpen(true);
+                                            }}
+                                        />
                                     ))}
                                 </div>
                             ) : (
@@ -169,6 +189,18 @@ export const BikeService: React.FC = () => {
                 </section>
 
             </div>
+
+            {/* Modals */}
+            <ServiceDetailModal
+                isOpen={isServiceModalOpen}
+                onClose={() => setIsServiceModalOpen(false)}
+                service={selectedService}
+            />
+            <PackageDetailModal
+                isOpen={isPackageModalOpen}
+                onClose={() => setIsPackageModalOpen(false)}
+                package={selectedPackage}
+            />
         </div>
     );
 } 
