@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../utils/Axios';
+import { PartApi } from '../api/PartApi';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Part } from '../types/Part';
 
@@ -11,23 +11,48 @@ const PartDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addToRecentlyViewed } = useRecentlyViewed();
+  const hasAddedToViewed = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchPart = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/parts/${id}`);
+        setError(null);
+        
+        if (!id) {
+          setError('ID linh kiện không hợp lệ');
+          setLoading(false);
+          return;
+        }
+        
+        const response = await PartApi.getPartById(id);
         if (response.data?.part) {
           const partData = response.data.part;
-          setPart(partData);
-          // Lưu vào lịch sử xem
-          addToRecentlyViewed(partData);
+          // Map data to match Part interface
+          const mappedPart: Part = {
+            id: partData._id || partData.id || String(partData._id || partData.id),
+            name: partData.name || '',
+            description: partData.description || '',
+            manufacturer: partData.manufacturer || '',
+            partNumber: partData.partNumber || '',
+            price: partData.price || 0,
+            status: partData.status || 'active',
+            warrantyPeriod: partData.warrantyPeriod,
+            warrantyCondition: partData.warrantyCondition || '',
+            createdAt: partData.createdAt || new Date().toISOString(),
+            updatedAt: partData.updatedAt || new Date().toISOString()
+          };
+          setPart(mappedPart);
         } else {
           setError('Không tìm thấy linh kiện');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Lỗi khi tải chi tiết linh kiện:', err);
-        setError('Lỗi khi tải chi tiết linh kiện');
+        if (err.response?.status === 404) {
+          setError('Không tìm thấy linh kiện');
+        } else {
+          setError('Lỗi khi tải chi tiết linh kiện');
+        }
       } finally {
         setLoading(false);
       }
@@ -36,7 +61,16 @@ const PartDetail: React.FC = () => {
     if (id) {
       fetchPart();
     }
-  }, [id, addToRecentlyViewed]);
+  }, [id]);
+
+  // Lưu vào lịch sử xem riêng biệt để tránh infinite loop
+  useEffect(() => {
+    if (part && part.id && hasAddedToViewed.current !== part.id) {
+      hasAddedToViewed.current = part.id;
+      addToRecentlyViewed(part);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [part?.id]);
 
   if (loading) {
     return (
@@ -151,7 +185,7 @@ const PartDetail: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Thời gian bảo hành</label>
-                      <p className="text-gray-900 font-semibold">{part.warrantyPeriod} {part.warrantyCondition}</p>
+                      <p className="text-gray-900 font-semibold">{part.warrantyPeriod} tháng</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Điều kiện bảo hành</label>
@@ -176,12 +210,6 @@ const PartDetail: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                <button
-                  className="w-full px-4 py-3 text-white rounded-lg font-medium transition-colors hover:opacity-90"
-                  style={{ backgroundColor: '#014091' }}
-                >
-                  Liên hệ để đặt hàng
-                </button>
                 <button
                   onClick={() => navigate('/parts')}
                   className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors hover:bg-gray-300"

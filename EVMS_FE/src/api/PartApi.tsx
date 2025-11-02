@@ -65,6 +65,9 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
 }
 
 export const PartApi = {
+  getPartById: (id: string) => {
+    return api.get<{ part: Part }>(`/parts/${id}`)
+  },
   createPart: (params: Part) => {
     return api.post('/parts', params)
   },

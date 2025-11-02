@@ -83,19 +83,13 @@ const PartCard: React.FC<PartCardProps> = ({ part }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+        <div className="mt-4 pt-4 border-t border-gray-200">
           <Link
             to={`/part/${part.id}`}
-            className="flex-1 px-4 py-2 bg-white border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-all duration-200 font-semibold text-center"
+            className="w-full block px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 font-semibold text-center"
           >
-            Chi tiết
+            Xem chi tiết
           </Link>
-          <button
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 font-semibold"
-            disabled={part.status !== 'active'}
-          >
-            {part.status === 'active' ? 'Thêm vào giỏ' : 'Không có sẵn'}
-          </button>
         </div>
       </div>
     </article>

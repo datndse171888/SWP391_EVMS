@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Part } from '../types/Part';
 
 const STORAGE_KEY = 'recentlyViewedParts';
@@ -27,8 +27,8 @@ export const useRecentlyViewed = () => {
     setIsLoaded(true);
   }, []);
 
-  // Thêm part vào lịch sử xem
-  const addToRecentlyViewed = (part: Part) => {
+  // Thêm part vào lịch sử xem - sử dụng useCallback để tránh re-create function
+  const addToRecentlyViewed = useCallback((part: Part) => {
     setRecentlyViewed((prev) => {
       // Loại bỏ part nếu đã tồn tại
       const filtered = prev.filter((p) => p.id !== part.id && p._id !== part._id);
@@ -47,7 +47,7 @@ export const useRecentlyViewed = () => {
 
       return updated;
     });
-  };
+  }, []);
 
   // Xóa một part khỏi lịch sử
   const removeFromRecentlyViewed = (partId: string) => {
