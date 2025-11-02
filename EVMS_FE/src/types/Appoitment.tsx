@@ -11,8 +11,8 @@ export interface CreateAppointmentRequest {
 
 export interface AppointmentResponse {
     _id: string;
-    userID?: string;
-    vehicleID?: string;
+    userID: string;
+    vehicleID: string;
     serviceID?: string;
     servicePackageID?: string;
     bookingDate: string;

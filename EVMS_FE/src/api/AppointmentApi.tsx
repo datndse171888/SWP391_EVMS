@@ -1,4 +1,5 @@
 import type { AppointmentResponse, AppointmentStatus, CreateAppointmentRequest, UpdateAppointmentStatusRequest } from "../types/Appoitment";
+import type { FilteredDataResponse } from "../types/DataResponse";
 import { api } from "../utils/Axios";
 
 export const AppointmentApi = {
@@ -6,8 +7,8 @@ export const AppointmentApi = {
     return api.post<AppointmentResponse>('/appointments', data);
   },
 
-  getAppointmentsByStatus: (status: AppointmentStatus) => {
-    return api.get<AppointmentResponse>(`/appointments?status=${status}`);
+  getAllAppointments: (status?: AppointmentStatus) => {
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments' + (status ? `?status=${status}` : ''));
   },
 
   getAppointmentByMe: () => {
