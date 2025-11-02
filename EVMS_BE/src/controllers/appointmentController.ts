@@ -798,6 +798,86 @@ export async function assignTechnician(req: Request, res: Response) {
   }
 }
 
+// Get Appointments by User ID API
+export async function getAppointmentsByUserId(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const userId = String(req.params.userId);
+    const role = req.user.role;
+
+    // Check permissions: user can only view their own appointments, admin/staff can view any
+    if (role === 'customer' && userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn chỉ có thể xem lịch hẹn của chính mình'
+      });
+    }
+
+    // Parse query params for pagination and filtering
+    const params = parseListParams(req);
+    const filter = buildBaseFilter(params);
+    filter.userID = userId;
+
+    const select = buildSelect(params.fieldsParam);
+    const populates = buildPopulate(params.includeParam);
+
+    // Default populate if not specified
+    if (populates.length === 0) {
+      populates.push(
+        { path: 'userID', select: 'userName fullName email phoneNumber' },
+        { path: 'serviceID', select: 'name price duration' },
+        { path: 'servicePackageID', select: 'name price duration description' }
+      );
+    }
+
+    const skip = (params.page - 1) * params.limit;
+    const [total, docs] = await Promise.all([
+      Appointment.countDocuments(filter),
+      (() => {
+        let query = Appointment.find(filter)
+          .sort(params.sort)
+          .skip(skip)
+          .limit(params.limit);
+        if (select) query = query.select(select);
+        return query.populate(populates);
+      })(),
+    ]);
+
+    const totalPages = Math.ceil(total / params.limit) || 1;
+    
+    return res.status(200).json({
+      success: true,
+      data: docs,
+      pagination: { 
+        page: params.page, 
+        limit: params.limit, 
+        total, 
+        totalPages 
+      },
+      filters: {
+        userId,
+        status: params.status,
+        from: params.from,
+        to: params.to,
+        serviceId: params.serviceId,
+        packageId: params.packageId,
+      },
+    });
+  } catch (error) {
+    console.error('Get appointments by userId error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy danh sách lịch hẹn'
+    });
+  }
+}
+
 // Get Available Technicians API (helper for assignment)
 export async function getAvailableTechnicians(req: Request, res: Response) {
   try {

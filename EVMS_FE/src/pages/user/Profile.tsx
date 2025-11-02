@@ -1,36 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { authApi } from "../../api/AuthApi";
-import { AppointmentApi } from "../../api/AppointmentApi";
 import { compressImage } from "../../api/UploadApi";
-import type { Appointment } from "../../types/Account";
 import type { AxiosError } from "axios";
 import { Eye, EyeOff, CheckCircle, XCircle, Info, X } from "lucide-react";
 import whaleLogo from "../../assets/images/whale.png";
 
-type Tab = "profile" | "appointments";
-
-const menuTabs = [
-  { key: "profile", label: "Hồ sơ người dùng" },
-  { key: "appointments", label: "Lịch hẹn" },
-];
-
-// Module-level variable to prevent duplicate API calls in React StrictMode
-let isFetchingAppointments = false;
 
 export default function Profile() {
-  const navigate = useNavigate();
   const { user: authUser, updateUser } = useAuth();
-  const [tab, setTab] = useState<Tab>("profile");
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({
     fullName: authUser?.fullName || "",
     phoneNumber: authUser?.phoneNumber || "",
     gender: authUser?.gender || "",
   });
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(false); // For appointments loading
   const [saving, setSaving] = useState(false); // For profile saving
   const [fieldError, setFieldError] = useState<{
     fullName?: string;
@@ -60,64 +45,6 @@ export default function Profile() {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000); // Auto hide after 3 seconds
   };
-
-  useEffect(() => {
-    // Prevent duplicate API calls in React StrictMode (development only)
-    // In production, this won't be an issue
-    if (isFetchingAppointments) return;
-    isFetchingAppointments = true;
-    
-    let isMounted = true;
-    
-    const fetchAppointments = async () => {
-      try {
-        setLoading(true);
-        const response = await AppointmentApi.getAppointmentByMe();
-        
-        if (!isMounted) return;
-        
-        let appointmentsData: Appointment[] = [];
-        
-        const data = response.data as unknown;
-        
-        if (Array.isArray(data)) {
-          appointmentsData = data;
-        } else if (data && typeof data === 'object') {
-          const dataObj = data as Record<string, unknown>;
-          if (Array.isArray(dataObj.data)) {
-            appointmentsData = dataObj.data;
-          } else if (Array.isArray(dataObj.appointment)) {
-            appointmentsData = dataObj.appointment;
-          } else if (Array.isArray(dataObj.appointments)) {
-            appointmentsData = dataObj.appointments;
-          }
-        }
-        
-        if (isMounted) {
-          setAppointments(appointmentsData);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Error fetching appointments:", error);
-          setAppointments([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-        // Reset flag after a short delay to allow StrictMode remount
-        setTimeout(() => {
-          isFetchingAppointments = false;
-        }, 100);
-      }
-    };
-    
-    fetchAppointments();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) {
@@ -300,46 +227,6 @@ export default function Profile() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString("vi-VN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return { backgroundColor: 'rgba(9, 145, 243, 0.1)', borderColor: '#0991f3', color: '#014091' };
-      case "completed":
-        return { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: '#22c55e', color: '#15803d' };
-      case "cancelled":
-        return { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: '#ef4444', color: '#dc2626' };
-      default:
-        return { backgroundColor: '#f9fafb', borderColor: '#e5e7eb', color: '#374151' };
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return "Đã đặt lịch";
-      case "completed":
-        return "Hoàn thành";
-      case "cancelled":
-        return "Đã hủy";
-      default:
-        return status;
-    }
-  };
-
   if (!authUser) {
     return (
       <div className="min-h-screen bg-[#DBE8FA] flex items-center justify-center">
@@ -385,37 +272,31 @@ export default function Profile() {
               Trang chủ
             </Link>
             <nav className="flex flex-col gap-2">
-              {menuTabs.map((m) => (
-                <button
-                  key={m.key}
-                  className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
-                    tab === m.key
-                      ? "bg-white shadow-sm"
-                      : "text-gray-600 hover:bg-opacity-10"
-                  }`}
-                  style={tab === m.key ? { color: '#014091' } : { color: '#5f6777' }}
-                  onMouseEnter={(e) => {
-                    if (tab !== m.key) {
-                      e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (tab !== m.key) {
-                      e.currentTarget.style.backgroundColor = '';
-                    }
-                  }}
-                  onClick={() => setTab(m.key as Tab)}
-                >
-                  {m.label}
-                </button>
-              ))}
+              <button
+                className="text-left px-4 py-3 rounded-lg font-medium transition-colors bg-white shadow-sm"
+                style={{ color: '#014091' }}
+              >
+                Hồ sơ người dùng
+              </button>
+              <Link
+                to="/appointment-history"
+                className="text-left px-4 py-3 rounded-lg font-medium transition-colors text-gray-600 hover:bg-opacity-10"
+                style={{ color: '#5f6777' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '';
+                }}
+              >
+                Lịch hẹn
+              </Link>
             </nav>
           </div>
           {/* Main content */}
           <div className="flex-1">
             <div className="w-full px-8 py-8">
-              {tab === "profile" && (
-                <div className="bg-white rounded-lg shadow-lg p-8 w-full">
+              <div className="bg-white rounded-lg shadow-lg p-8 w-full">
                   <div className="flex flex-col md:flex-row gap-8">
                     {/* Phần Avatar */}
                     <div className="flex flex-col items-center space-y-4 w-full md:w-1/3">
@@ -704,130 +585,6 @@ export default function Profile() {
                     </div>
                   </div>
                 </div>
-              )}
-              {tab === "appointments" && (
-                <div className="p-7 w-full">
-                  <div 
-                    className="font-semibold mb-4 text-lg"
-                    style={{ color: '#014091' }}
-                  >
-                    Lịch hẹn của bạn
-                  </div>
-
-                  {loading ? (
-                    <div className="text-center py-12">
-                      <div 
-                        className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin"
-                        style={{ borderColor: '#014091' }}
-                      ></div>
-                      <p className="text-gray-500 mt-4">Đang tải...</p>
-                    </div>
-                  ) : appointments.length === 0 ? (
-                    <div className="bg-white rounded-xl p-12 text-center">
-                      <svg
-                        className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <p className="text-gray-500 text-lg mb-4">Bạn chưa có lịch hẹn nào</p>
-                      <button
-                        onClick={() => navigate("/booking")}
-                        className="px-6 py-3 text-white rounded-lg transition-colors font-medium hover:opacity-90"
-                        style={{ backgroundColor: '#f6ae2d', color: '#014091' }}
-                      >
-                        Đặt lịch ngay
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {appointments.map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          className="bg-white hover:bg-opacity-95 transition-all duration-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm cursor-pointer border"
-                          style={{ 
-                            borderColor: '#e3f2fd',
-                            backgroundColor: 'rgba(219, 232, 250, 0.3)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
-                            e.currentTarget.style.borderColor = '#0991f3';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(219, 232, 250, 0.3)';
-                            e.currentTarget.style.borderColor = '#e3f2fd';
-                          }}
-                        >
-                          <div>
-                            <div className="font-medium text-base text-gray-800 flex items-center gap-2 mb-1">
-                              {appointment.title}
-                              <span
-                                className="px-2 py-0.5 text-xs font-medium rounded-full border"
-                                style={getStatusColor(appointment.status)}
-                              >
-                                {getStatusLabel(appointment.status)}
-                              </span>
-                            </div>
-                            {appointment.description && (
-                              <div className="text-sm text-gray-600 mb-2">
-                                {appointment.description}
-                              </div>
-                            )}
-                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                              <svg
-                                className="w-3 h-3"
-                                style={{ color: '#0991f3' }}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                              {formatDate(appointment.appointment_date)}
-                            </div>
-                            {appointment.location && (
-                              <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                <svg
-                                  className="w-3 h-3 text-sky-500"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                </svg>
-                                {appointment.location}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
