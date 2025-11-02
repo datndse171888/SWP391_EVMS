@@ -14,6 +14,7 @@ export const BikeService: React.FC = () => {
     const [packages, setPackages] = useState<ServicePackageResponse[]>([]);
     const [services, setServices] = useState<ServiceResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState<string>('');
 
     useEffect(() => {
         fetchData();
@@ -75,6 +76,8 @@ export const BikeService: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="Tìm kiếm dịch vụ..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full px-6 py-4 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-lg"
                                 />
                                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
@@ -115,11 +118,25 @@ export const BikeService: React.FC = () => {
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Gói dịch vụ</h2>
                         </div>
 
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {packages.map((pkg, index) => (
-                                <PackageCard key={pkg._id} package={pkg} featured={index === 1} />
-                            ))}
-                        </div>
+                        {(() => {
+                            const filteredPackages = searchTerm.trim() === '' 
+                                ? packages 
+                                : packages.filter(pkg => 
+                                    pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
+                                );
+                            
+                            return filteredPackages.length > 0 ? (
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredPackages.map((pkg, index) => (
+                                        <PackageCard key={pkg._id} package={pkg} featured={index === 1} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-500 text-lg">Không tìm thấy gói dịch vụ nào với từ khóa "{searchTerm}"</p>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </section>
 
@@ -129,11 +146,25 @@ export const BikeService: React.FC = () => {
                         <div className='text-center'>
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Dịch vụ đơn</h2>
                         </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {services.map((service) => (
-                                <ServiceCard key={service._id} service={service} />
-                            ))}
-                        </div>
+                        {(() => {
+                            const filteredServices = searchTerm.trim() === '' 
+                                ? services 
+                                : services.filter(service => 
+                                    service.name.toLowerCase().includes(searchTerm.toLowerCase())
+                                );
+                            
+                            return filteredServices.length > 0 ? (
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredServices.map((service) => (
+                                        <ServiceCard key={service._id} service={service} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-500 text-lg">Không tìm thấy dịch vụ nào với từ khóa "{searchTerm}"</p>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </section>
 

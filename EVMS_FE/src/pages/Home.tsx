@@ -147,11 +147,11 @@ const Home: React.FC = () => {
           <div className="max-w-2xl -ml-4 mt-0">
             {/* Slogan */}
             <h1
-              className="text-5xl lg:text-6xl font-bold mb-8 leading-tight text-left animate-fade-in-up"
+              className="text-5xl lg:text-6xl font-semibold mb-8 leading-tight text-left animate-fade-in-up"
               style={{
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 color: '#014091',
-                textShadow: '0 2px 4px rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.2)',
+                textShadow: '0 1px 2px rgba(255, 255, 255, 0.5), 0 0 4px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15)',
                 animationDelay: '0.2s'
               }}
             >
