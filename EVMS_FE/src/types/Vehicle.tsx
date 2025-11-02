@@ -27,7 +27,7 @@ export interface VehicleResponse {
 }
 
 export interface VehicleRequest {
-  VIN: string;
+  VIN?: string;
   vehicleCategory: VehicleCategory;
   plateNumber: string;
   brand: string;

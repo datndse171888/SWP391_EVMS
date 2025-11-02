@@ -49,7 +49,7 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   const [error, setError] = useState<string>('');
 
-  const {showAlert, AlertComponent} = useAlert();
+  const { showAlert, AlertComponent } = useAlert();
 
   const vehicleCategoryOptions = [
     { value: 'CAR', label: 'Ô tô điện' },
@@ -64,6 +64,7 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   useEffect(() => {
     getVehicleOfUser();
+    handleVehicleSelect('new');
   }, []);
 
   const getVehicleOfUser = async () => {
@@ -114,12 +115,17 @@ const Vehicle: React.FC<VehicleProps> = ({
   };
 
   const isNewVehicleValid = () => {
-    return newVehicleData.VIN.trim() !== '' &&
+    const baseValid =
+      newVehicleData.vehicleCategory &&
       newVehicleData.plateNumber.trim() !== '' &&
       newVehicleData.brand.trim() !== '' &&
       newVehicleData.year > 1950 &&
       newVehicleData.mileage >= 0 &&
-      newVehicleData.batteryCapacity > 0;
+      newVehicleData.batteryCapacity >= 0;
+    if (newVehicleData.vehicleCategory === 'CAR') {
+      return baseValid && newVehicleData.VIN?.trim().length === 17;
+    }
+    return baseValid;
   };
 
   const createNewVehicle = async () => {
@@ -127,7 +133,7 @@ const Vehicle: React.FC<VehicleProps> = ({
       showAlert('error', 'Vui lòng điền đầy đủ thông tin xe hợp lệ trước khi tạo.');
       return null;
     }
-    
+
     setIsCreating(true);
     try {
       const response = await VehicleApi.createVehicle(newVehicleData);
@@ -230,8 +236,7 @@ const Vehicle: React.FC<VehicleProps> = ({
                 ...vehicles.map((vehicle) => ({
                   value: vehicle._id,
                   label: `${vehicle.brand} - ${vehicle.plateNumber} (${vehicle.year})`
-                })),
-
+                }))
               ]}
             />
           </div>
@@ -254,7 +259,7 @@ const Vehicle: React.FC<VehicleProps> = ({
                 value={selectedVehicle?.VIN || newVehicleData.VIN}
                 onChange={(e) => !selectedVehicle && handleNewVehicleChange('VIN', e.target.value)}
                 disabled={!!selectedVehicle}
-                required={!selectedVehicle}
+                required={!selectedVehicle && newVehicleData.vehicleCategory === 'CAR'}
                 placeholder="Nhập số VIN (17 ký tự)"
               />
             </div>

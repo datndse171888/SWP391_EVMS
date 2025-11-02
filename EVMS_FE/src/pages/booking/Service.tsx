@@ -179,7 +179,7 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
             <span className="text-blue-800 font-medium">
               Đã chọn: {selectedType === 'package' ? 'Gói dịch vụ' : 'Dịch vụ'} -
               {selectedType === 'package'
-                ? servicePackages.find(p => p.name === selectedId)?.name
+                ? servicePackages.find(p => p._id === selectedId)?.name
                 : services.find(s => s._id === selectedId)?.name
               }
             </span>
