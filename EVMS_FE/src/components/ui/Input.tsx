@@ -29,6 +29,8 @@ export const Input: React.FC<InputProps> = ({
     value,
     disabled = false,
     required = false,
+    min,
+    max,
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const [hasValue, setHasValue] = useState(!!value);
@@ -75,6 +77,8 @@ export const Input: React.FC<InputProps> = ({
                 placeholder={isFocused ? placeholder : ''}
                 disabled={disabled}
                 required={required}
+                min={min}
+                max={max}
                 className={`
                     w-full px-3 pt-5 pb-2 
                     border border-orange-1 

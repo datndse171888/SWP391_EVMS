@@ -2,7 +2,7 @@ export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'compl
 
 export interface CreateAppointmentRequest {
     userID: string;
-    vehicleID: string;
+    vehicleID?: string;
     serviceID?: string;
     servicePackageID?: string;
     bookingDate: string;

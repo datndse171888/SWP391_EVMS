@@ -13,6 +13,8 @@ import { VehicleApi } from '../../api/VehicleApi'
 import { useAlert } from '../../hooks/useAlert'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServicePackageApi } from '../../api/ServicePackageApi'
+import { AppointmentApi } from '../../api/AppointmentApi'
+import type { AppointmentResponse } from '../../types/Appoitment'
 
 interface ConfirmationProps {
   formData: CreateAppointmentRequest;
@@ -70,9 +72,11 @@ const Confirmation: React.FC<ConfirmationProps> = ({
         if (formData.serviceID) {
           try {
             const servicePromise = await ServiceApi.getServiceById(formData.serviceID);
-            const serviceResponse: ServiceResponse = servicePromise.data;
+            // Backend returns { service: ServiceResponse }
+            const serviceResponse: ServiceResponse = (servicePromise.data as any).service || servicePromise.data;
             setService(serviceResponse);
           } catch (error) {
+            console.error('Error fetching service:', error);
             showAlert('error', 'Không thể tải thông tin dịch vụ');
           }
         }
@@ -81,9 +85,11 @@ const Confirmation: React.FC<ConfirmationProps> = ({
         if (formData.servicePackageID) {
           try {
             const servicePackagePromise = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
-            const servicePackageResponse: ServicePackageResponse = servicePackagePromise.data;
+            // Backend returns { servicePackage: ServicePackageResponse }
+            const servicePackageResponse: ServicePackageResponse = (servicePackagePromise.data as any).servicePackage || servicePackagePromise.data;
             setServicePackage(servicePackageResponse);
           } catch (error) {
+            console.error('Error fetching service package:', error);
             showAlert('error', 'Không thể tải thông tin gói dịch vụ');
           }
         }
@@ -110,14 +116,32 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   const handleConfirmBooking = async () => {
     setIsSubmitting(true);
 
+    // Validate formData before sending
+    if (!formData.userID || !formData.bookingDate) {
+      const missingFields = [];
+      if (!formData.userID) missingFields.push('userID');
+      if (!formData.bookingDate) missingFields.push('bookingDate');
+      showAlert('error', `Thiếu thông tin: ${missingFields.join(', ')}`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Prepare clean data - remove empty strings for optional fields
+    const cleanFormData: CreateAppointmentRequest = {
+      userID: formData.userID,
+      bookingDate: formData.bookingDate,
+      ...(formData.vehicleID && formData.vehicleID.trim() !== '' && { vehicleID: formData.vehicleID }),
+      ...(formData.serviceID && formData.serviceID.trim() !== '' && { serviceID: formData.serviceID }),
+      ...(formData.servicePackageID && formData.servicePackageID.trim() !== '' && { servicePackageID: formData.servicePackageID }),
+      ...(formData.reason && formData.reason.trim() !== '' && { reason: formData.reason }),
+    };
+
+    console.log('Submitting appointment with cleanFormData:', cleanFormData);
+
     try {
-      // TODO: Replace with actual API call
-      // const response = await AppointmentApi.createAppointment(formData);
-
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      console.log('Booking confirmed with data:', formData);
+      const response = await AppointmentApi.createAppointment(cleanFormData);
+      const data: AppointmentResponse = response.data;
+      console.log('Appointment created successfully:', data);
 
       // Close modal and complete booking
       setShowConfirmModal(false);
@@ -125,7 +149,9 @@ const Confirmation: React.FC<ConfirmationProps> = ({
 
     } catch (error: any) {
       console.error('Error creating appointment:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.');
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
+      showAlert('error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -308,11 +334,18 @@ const Confirmation: React.FC<ConfirmationProps> = ({
             </span>
           </div>
 
-          <div className="flex justify-between items-center text-xl border-t border-orange-200 pt-4 mt-4">
-            <span className="text-gray-700 font-medium">Tổng chi phí:</span>
-            <span className="font-bold text-orange-600">
-              {formatPrice(service?.price || servicePackage?.price || 0)}
-            </span>
+          <div className="border-t border-orange-200 pt-4 mt-4">
+            <div className="flex justify-between items-start text-xl">
+              <div className="flex flex-col flex-1 mr-4">
+                <span className="text-gray-700 font-medium">Tổng chi phí dự kiến:</span>
+                <span className="text-xs text-gray-500 mt-1 italic">
+                  * Chi phí có thể thay đổi do sử dụng thêm linh kiện trong quá trình sửa chữa
+                </span>
+              </div>
+              <span className="font-bold text-orange-600 whitespace-nowrap">
+                {formatPrice(service?.price || servicePackage?.price || 0)}
+              </span>
+            </div>
           </div>
         </div>
       </div>

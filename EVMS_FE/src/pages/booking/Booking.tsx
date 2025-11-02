@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Vehicle from './Vehicle';
 import { ProcessBar } from '../../components/ui/ProcessBar';
 import type { AppointmentResponse, CreateAppointmentRequest } from '../../types/Appoitment';
@@ -26,6 +26,16 @@ const Booking: React.FC = () => {
         serviceID: '',
         servicePackageID: '',
     });
+
+    // Update userID when user is loaded
+    useEffect(() => {
+        if (user?.id) {
+            setFormData(prev => ({
+                ...prev,
+                userID: user.id
+            }));
+        }
+    }, [user?.id]);
 
     const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
 

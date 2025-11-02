@@ -3,7 +3,7 @@ import { api } from "../utils/Axios";
 
 export const AppointmentApi = {
   createAppointment: (data: CreateAppointmentRequest) => {
-    return api.post<AppointmentResponse>('/appointments ', data);
+    return api.post<AppointmentResponse>('/appointments', data);
   },
 
   getAppointmentsByStatus: (status: AppointmentStatus) => {

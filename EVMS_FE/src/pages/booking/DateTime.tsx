@@ -270,16 +270,17 @@ const DateTime: React.FC<DateTimeProps> = ({
                 <p>Vui lòng chọn ngày trước</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
                 {timeSlots.map((slot) => (
                   <button
                     key={slot.value}
+                    type="button"
                     onClick={() => handleTimeSelect(slot.value)}
                     disabled={!isTimeAvailable(slot.value)}
-                    className={getTimeSlotClassName(slot.value)}
+                    className={`${getTimeSlotClassName(slot.value)} min-h-[60px]`}
                   >
-                    <div>
-                      <div className="font-semibold">{slot.time}</div>
+                    <div className="w-full text-center">
+                      <div className="font-semibold text-base">{slot.time}</div>
                     </div>
                   </button>
                 ))}

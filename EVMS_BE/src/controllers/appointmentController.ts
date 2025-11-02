@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
@@ -22,21 +23,60 @@ export async function createAppointment(req: Request, res: Response) {
       return res.status(400).json({ message: 'Thiếu userID hoặc bookingDate' });
     }
 
+    // Validate ít nhất một trong serviceID hoặc servicePackageID
+    if (!serviceID && !servicePackageID) {
+      return res.status(400).json({ message: 'Phải chọn ít nhất một dịch vụ hoặc gói dịch vụ' });
+    }
+
+    // Validate ObjectId format for required fields
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+      return res.status(400).json({ message: 'userID không hợp lệ' });
+    }
+
+    // Helper function to convert string to ObjectId or undefined
+    const toObjectIdOrUndefined = (value: string | undefined): mongoose.Types.ObjectId | undefined => {
+      if (!value || value.trim() === '') return undefined;
+      if (!mongoose.Types.ObjectId.isValid(value)) return undefined;
+      return new mongoose.Types.ObjectId(value);
+    };
+
+    // Parse bookingDate
+    let parsedBookingDate: Date;
+    try {
+      parsedBookingDate = new Date(bookingDate);
+      if (isNaN(parsedBookingDate.getTime())) {
+        return res.status(400).json({ message: 'bookingDate không hợp lệ' });
+      }
+    } catch (error) {
+      return res.status(400).json({ message: 'bookingDate không hợp lệ' });
+    }
+
     const appointment = await Appointment.create({
-      userID,
-      vehicleID,
-      technicianLeaderID,
-      technicianSupport1ID,
-      technicianSupport2ID,
-      serviceID,
-      servicePackageID,
-      bookingDate,
-      reason,
-      status,
+      userID: new mongoose.Types.ObjectId(userID),
+      vehicleID: toObjectIdOrUndefined(vehicleID),
+      technicianLeaderID: toObjectIdOrUndefined(technicianLeaderID),
+      technicianSupport1ID: toObjectIdOrUndefined(technicianSupport1ID),
+      technicianSupport2ID: toObjectIdOrUndefined(technicianSupport2ID),
+      serviceID: toObjectIdOrUndefined(serviceID),
+      servicePackageID: toObjectIdOrUndefined(servicePackageID),
+      bookingDate: parsedBookingDate,
+      reason: reason || undefined,
+      status: status || 'pending',
     });
 
     return res.status(201).json(appointment);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Error creating appointment:', error);
+    
+    // Return more detailed error in development
+    if (process.env.NODE_ENV === 'development') {
+      return res.status(500).json({ 
+        message: 'Lỗi máy chủ',
+        error: error.message,
+        stack: error.stack
+      });
+    }
+    
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
