@@ -35,6 +35,7 @@ import StaffProfile from './pages/staff/StaffProfile';
 import Booking from './pages/booking/Booking'
 import PartsPage from './pages/Parts'
 import PartDetail from './pages/PartDetail'
+import Technicians from './pages/Technicians'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
@@ -60,6 +61,7 @@ export const Router: React.FC = () => {
           <Route path="/motoService" element={<MotoService />} />
           <Route path="/parts" element={<PartsPage />} />
           <Route path="/part/:id" element={<PartDetail />} />
+          <Route path="/technicians" element={<Technicians />} />
           <Route path='/booking' element={<Booking />} />
         </Route>
         <Route path="/register" element={<Register />} />

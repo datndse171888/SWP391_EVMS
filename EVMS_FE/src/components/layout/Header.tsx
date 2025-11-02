@@ -13,10 +13,10 @@ const Header: React.FC = () => {
 
   const navigationItems = [
     { name: 'TRANG CHỦ', path: '/' },
-    { name: 'GIỚI THIỆU', path: '/introduction' },
     { name: 'DỊCH VỤ', path: '/service', hasDropdown: true },
     { name: 'LINH KIỆN', path: '/parts' },
-    { name: 'LIÊN HỆ', path: '/contact' },
+    { name: 'ĐỘI NGŨ KỸ THUẬT VIÊN', path: '/technicians' },
+    { name: 'GIỚI THIỆU', path: '/introduction' },
   ];
 
   const isActive = (path: string) => {
