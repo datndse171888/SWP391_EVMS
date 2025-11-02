@@ -133,16 +133,27 @@ const Vehicle: React.FC<VehicleProps> = ({
       const response = await VehicleApi.createVehicle(newVehicleData);
       const data: CheckingResponse<VehicleResponse> = response.data;
 
+      console.log('[Vehicle] Create vehicle response:', response);
+      console.log('[Vehicle] Response data:', data);
+
       if (data.success && data.data) {
         // Add new vehicle to list
         setVehicles(prev => [...prev, data.data]);
         setSelectedVehicle(data.data);
+        setShowNewVehicleForm(false);
+        showAlert('success', 'Tạo xe thành công!');
         return data.data._id;
+      } else {
+        const errorMessage = data.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+        showAlert('error', errorMessage);
+        setError(errorMessage);
+        return null;
       }
-      return null;
     } catch (error: any) {
       console.error('Error creating vehicle:', error);
-      setError('Đã có lỗi xảy ra khi tạo xe mới');
+      const errorMessage = error.response?.data?.message || error.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+      showAlert('error', errorMessage);
+      setError(errorMessage);
       return null;
     } finally {
       setIsCreating(false);
@@ -156,7 +167,7 @@ const Vehicle: React.FC<VehicleProps> = ({
     if (selectedVehicle) {
       // Use existing vehicle
       vehicleId = selectedVehicle._id;
-      vehicleCategory = selectedVehicle.vehicleType;
+      vehicleCategory = selectedVehicle.vehicleCategory;
     } else if (showNewVehicleForm && isNewVehicleValid()) {
       // Create new vehicle
       vehicleId = await createNewVehicle();
