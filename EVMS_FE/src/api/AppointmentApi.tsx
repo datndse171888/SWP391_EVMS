@@ -15,7 +15,7 @@ export const AppointmentApi = {
   },
 
   getAppointmentByUserId: (userId: string) => {
-    return api.get<AppointmentResponse>(`/appointments?userId=${userId}&sort=bookingDate&order=desc`);
+    return api.get<AppointmentResponse>(`/appointments/user/${userId}?sort=bookingDate&order=desc`);
   },
 
   updateAppointmentStatus: (appointmentId: string, request: UpdateAppointmentStatusRequest) => {
