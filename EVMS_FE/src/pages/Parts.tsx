@@ -5,7 +5,7 @@ import { fetchParts } from '../api/PartApi';
 import PartCard from '../components/PartCard';
 import RecentlyViewed from '../components/RecentlyViewed';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import Clean from '../assets/images/clean.png';
+import PartBg from '../assets/images/part.jpg';
 
 export const Parts: React.FC = () => {
   const [parts, setParts] = useState<Part[]>([]);
@@ -76,64 +76,66 @@ export const Parts: React.FC = () => {
     <div className="relative min-h-screen bg-white">
       {/* Hero Section */}
       <section
-        className="py-20 pt-32 pb-16 px-4 sm:px-6 lg:px-8"
+        className="relative py-20 pt-32 pb-16 px-4 sm:px-6 lg:px-8"
         style={{
-          backgroundImage: `url(${Clean})`,
+          backgroundImage: `url(${PartBg})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-6xl md:text-6xl font-bold text-blue-900 mb-6 drop-shadow-lg">
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h1 className="text-6xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg border-b-8 border-orange-500 inline-block px-4 py-2">
             Linh Kiện
           </h1>
-          <p className="text-xl text-blue-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-white mb-8 max-w-3xl mx-auto drop-shadow-md">
             Cung cấp linh kiện chính hãng chất lượng cao cho tất cả các loại phương tiện điện.
             Đảm bảo độ bền, hiệu suất và an toàn cho xe của bạn.
           </p>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Search and Filter Bar */}
-          <div className="mb-12 space-y-4">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              {/* Search Form */}
-              <form onSubmit={handleSearch} className="w-full md:flex-1">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm linh kiện..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    className="w-full px-6 py-3 pl-12 rounded-lg border-2 border-gray-200 focus:border-orange-500 focus:outline-none transition-colors"
-                  />
-                  <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                </div>
-              </form>
-
-              {/* Sort Dropdown */}
-              <div className="w-full md:w-auto flex items-center gap-2">
-                <Filter className="w-5 h-5 text-gray-600" />
-                <select
-                  value={sortBy}
-                  onChange={handleSortChange}
-                  className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-orange-500 focus:outline-none transition-colors bg-white"
-                >
-                  <option value="name">Sắp xếp: Tên A-Z</option>
-                  <option value="price-asc">Sắp xếp: Giá thấp đến cao</option>
-                  <option value="price-desc">Sắp xếp: Giá cao đến thấp</option>
-                </select>
+      {/* Search Bar */}
+      <section className="pt-8 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Tìm kiếm linh kiện..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full px-6 py-4 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-lg"
+              />
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                <Search className="h-6 w-6 text-gray-400" />
               </div>
             </div>
 
-            {/* Results Info */}
-            <div className="text-sm text-gray-600">
-              Tìm thấy <span className="font-semibold text-gray-900">{parts.length}</span> linh kiện
-              {searchTerm && ` cho từ khóa "${searchTerm}"`}
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1 shadow-lg">
+              <Filter className="w-5 h-5 text-gray-600 ml-3" />
+              <select
+                value={sortBy}
+                onChange={handleSortChange}
+                className="px-4 py-3 rounded-full text-gray-600 font-medium focus:outline-none bg-transparent border-0 cursor-pointer"
+              >
+                <option value="name">Tên A-Z</option>
+                <option value="price-asc">Giá thấp đến cao</option>
+                <option value="price-desc">Giá cao đến thấp</option>
+              </select>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Results Info */}
+          <div className="mb-12 text-sm text-gray-600">
+            Tìm thấy <span className="font-semibold text-gray-900">{parts.length}</span> linh kiện
+            {searchTerm && ` cho từ khóa "${searchTerm}"`}
           </div>
 
           {/* Loading State */}

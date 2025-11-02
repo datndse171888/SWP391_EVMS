@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ServiceResponse } from '../../types/Service';
 import { Bike } from 'lucide-react';
-import Clean from '../../assets/images/clean.png';
+import ServiceBg from '../../assets/images/service.png';
 import { PackageCard } from './PackageCard';
 import { ServiceCard } from './ServiceCard';
 import { ServiceDetailModal } from './ServiceDetailModal';
@@ -57,17 +57,18 @@ export const BikeService: React.FC = () => {
         <div className="relative min-h-screen bg-gray-900">
             <div className="relative z-10">
                 {/* Hero Section */}
-                <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8" style={{ backgroundImage: `url(${Clean})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                    <div className="max-w-4xl mx-auto text-center">
+                <section className="relative pt-20 pb-16 px-4 sm:px-6 lg:px-8" style={{ backgroundImage: `url(${ServiceBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                    <div className="absolute inset-0 bg-black/50"></div>
+                    <div className="relative z-10 max-w-4xl mx-auto text-center">
                         <div className="flex justify-center mb-6 mt-5">
-                            <Bike className="h-16 w-16 text-blue-500" />
+                            <Bike className="h-16 w-16 text-white drop-shadow-lg" />
                         </div>
-                        <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-orange-500 block">
+                        <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
+                            <span className="text-white block">
                                 Dịch vụ bảo dưỡng xe đạp điện
                             </span>
                         </h1>
-                        <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                        <p className="text-xl text-white mb-8 max-w-3xl mx-auto drop-shadow-md">
                             Giữ cho chiếc xe đạp điện của bạn luôn trong tình trạng tốt nhất với các gói dịch vụ và bảo dưỡng cá nhân của chúng tôi.
                         </p>
                     </div>

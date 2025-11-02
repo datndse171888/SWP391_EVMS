@@ -17,7 +17,7 @@ import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
-import { Parts } from './pages/admin/Parts'
+import { Parts as AdminParts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
@@ -33,6 +33,7 @@ import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
 import Booking from './pages/booking/Booking'
+import PartsPage from './pages/Parts'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
@@ -56,6 +57,7 @@ export const Router: React.FC = () => {
           <Route path="/carService" element={<CarService />} />
           <Route path="/bikeService" element={<BikeService />} />
           <Route path="/motoService" element={<MotoService />} />
+          <Route path="/parts" element={<PartsPage />} />
           <Route path='/booking' element={<Booking />} />
         </Route>
         <Route path="/register" element={<Register />} />
@@ -81,7 +83,7 @@ export const Router: React.FC = () => {
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
-              <Parts />
+              <AdminParts />
             </AdminLayout>
           </AdminRoute>
         } />

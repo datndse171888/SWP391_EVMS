@@ -15,11 +15,18 @@ const Header: React.FC = () => {
     { name: 'TRANG CHỦ', path: '/' },
     { name: 'GIỚI THIỆU', path: '/introduction' },
     { name: 'DỊCH VỤ', path: '/service', hasDropdown: true },
-    { name: 'LINH KIỆN', path: '/pages', hasDropdown: true },
+    { name: 'LINH KIỆN', path: '/parts' },
     { name: 'LIÊN HỆ', path: '/contact' },
   ];
 
   const isActive = (path: string) => {
+    if (path === '/service') {
+      // Check if current path is service page or any service sub-page
+      return location.pathname === '/service' || 
+             location.pathname === '/carService' || 
+             location.pathname === '/motoService' || 
+             location.pathname === '/bikeService';
+    }
     return location.pathname === path;
   };
 
@@ -144,7 +151,7 @@ const Header: React.FC = () => {
                     </svg>
                   )}
                 </Link>
-                {item.hasDropdown && (
+                {item.hasDropdown && item.name === 'DỊCH VỤ' && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ zIndex: 10000 }}>
                     <div className="py-2">
                       <Link to="/carService" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
