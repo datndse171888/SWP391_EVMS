@@ -1,13 +1,13 @@
 // src/pages/staff/ManageAppointment.tsx - Updated with filters and pagination
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Car, Wrench, Package, Filter, Search, RefreshCw } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import type { AppointmentResponse, AppointmentStatus } from '../../types/Appoitment';
 import { AppointmentApi } from '../../api/AppointmentApi';
 import AppointmentDetailModal from './../../components/ui/AppointmentDetailModal';
-import { formatDate, formatTime } from '../../utils/DataFormat';
 import type { FilteredDataResponse } from '../../types/DataResponse';
-import { Input } from '../../components/ui/Input';
+import { AppointmentCard } from '../../components/ui/AppointmentCard';
+import { useAlert } from '../../hooks/useAlert';
 
 const ManageAppointment: React.FC = () => {
   // ================================
@@ -17,7 +17,8 @@ const ManageAppointment: React.FC = () => {
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<AppointmentResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const { showAlert, AlertComponent } = useAlert();
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,7 +54,6 @@ const ManageAppointment: React.FC = () => {
 
   const fetchAppointments = async () => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const response = await AppointmentApi.getAllAppointments();
@@ -64,23 +64,12 @@ const ManageAppointment: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      setError('Không thể tải danh sách lịch hẹn');
       setAppointments([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateAppointmentStatus = async (appointmentId: string, newStatus: AppointmentStatus) => {
-    try {
-      await AppointmentApi.updateAppointmentStatus(appointmentId, { status: newStatus });
-
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error updating appointment status:', error);
-      setError('Không thể cập nhật trạng thái lịch hẹn');
-    }
-  };
 
   // ================================
   // Filters & Pagination
@@ -157,11 +146,25 @@ const ManageAppointment: React.FC = () => {
   // ================================
 
   const handleApprove = async (appointmentId: string) => {
-    await updateAppointmentStatus(appointmentId, 'confirmed');
+    try {
+      await AppointmentApi.updateAppointmentStatus(appointmentId, { status: 'confirmed' });
+      showAlert('success', 'Lịch hẹn đã nhận thành công');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error rejecting appointment:', error);
+      showAlert('error', 'Không thể nhận lịch hẹn');
+    }
   };
 
   const handleReject = async (appointmentId: string) => {
-    await updateAppointmentStatus(appointmentId, 'cancelled');
+    try {
+      await AppointmentApi.cancelAppointment(appointmentId);
+      showAlert('success', 'Lịch hẹn đã được hủy thành công');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error rejecting appointment:', error);
+      showAlert('error', 'Không thể hủy lịch hẹn');
+    }
   };
 
   const handleViewDetail = (appointment: AppointmentResponse) => {
@@ -182,134 +185,7 @@ const ManageAppointment: React.FC = () => {
 
   // ================================
   // Render Helpers
-  // ================================
-
-  const getStatusColor = (status: AppointmentStatus) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      confirmed: 'bg-green-100 text-green-800 border-green-200',
-      in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
-      completed: 'bg-gray-100 text-gray-800 border-gray-200',
-      cancelled: 'bg-red-100 text-red-800 border-red-200',
-      no_show: 'bg-purple-100 text-purple-800 border-purple-200'
-    };
-    return colors[status] || colors.pending;
-  };
-
-  const getStatusLabel = (status: AppointmentStatus) => {
-    const labels = {
-      pending: 'Chờ xác nhận',
-      confirmed: 'Đã xác nhận',
-      in_progress: 'Đang thực hiện',
-      completed: 'Hoàn thành',
-      cancelled: 'Đã hủy',
-      no_show: 'Không đến'
-    };
-    return labels[status] || status;
-  };
-
-  const renderAppointmentCard = (appointment: AppointmentResponse) => {
-    const cardColors = [
-      'bg-blue-50 border-blue-200',
-      'bg-green-50 border-green-200',
-      'bg-pink-50 border-pink-200',
-      'bg-purple-50 border-purple-200',
-      'bg-yellow-50 border-yellow-200',
-      'bg-indigo-50 border-indigo-200'
-    ];
-
-    const randomColor = cardColors[Math.floor(Math.random() * cardColors.length)];
-
-    return (
-      <div key={appointment._id} className={`${randomColor} border-2 rounded-lg p-4 hover:shadow-md transition-all duration-300`}>
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 font-bold text-sm shadow-sm">
-              <User className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-sm">ID: {appointment._id.slice(-8)}</p>
-              <p className="text-xs text-gray-600">User: {appointment.userID?.slice(-8)}</p>
-            </div>
-          </div>
-
-          {/* Status Badge */}
-          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
-            {getStatusLabel(appointment.status)}
-          </span>
-        </div>
-
-        {/* Booking Info */}
-        <div className="space-y-2 mb-3">
-          <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-            <span>{formatDate(appointment.bookingDate)} lúc {formatTime(appointment.bookingDate)}</span>
-          </div>
-
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="w-4 h-4 mr-2 text-gray-400" />
-            <span>Tạo: {formatDate(appointment.createdAt)}</span>
-          </div>
-
-          {/* Service/Package Info */}
-          {appointment.serviceID && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Wrench className="w-4 h-4 mr-2 text-gray-400" />
-              <span>Dịch vụ: {appointment.serviceID.slice(-8)}</span>
-            </div>
-          )}
-
-          {appointment.servicePackageID && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Package className="w-4 h-4 mr-2 text-gray-400" />
-              <span>Gói: {appointment.servicePackageID.slice(-8)}</span>
-            </div>
-          )}
-
-          {appointment.vehicleID && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Car className="w-4 h-4 mr-2 text-gray-400" />
-              <span>Xe: {appointment.vehicleID.slice(-8)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleViewDetail(appointment)}
-          >
-            Chi tiết
-          </Button>
-
-          {appointment.status === 'pending' && (
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={() => handleApprove(appointment._id)}
-              >
-                Duyệt
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleReject(appointment._id)}
-              >
-                Từ chối
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
+  // ================================   
 
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -428,24 +304,9 @@ const ManageAppointment: React.FC = () => {
 
   const statusCounts = getStatusCounts();
 
-  if (error) {
-    return (
-      <div className="p-6 text-center">
-        <div className="text-red-600 mb-4">{error}</div>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={fetchAppointments}
-        >
-          Thử lại
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 space-y-6">
+      {AlertComponent}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -595,7 +456,16 @@ const ManageAppointment: React.FC = () => {
             <>
               {/* Appointments Grid */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {paginatedAppointments.map(renderAppointmentCard)}
+                {paginatedAppointments.map(
+                  appointment => (
+                    <AppointmentCard
+                      key={appointment._id}
+                      appointment={appointment}
+                      handleViewDetail={handleViewDetail}
+                      handleApprove={handleApprove}
+                      handleReject={handleReject}
+                    />
+                  ))}
               </div>
 
               {/* Pagination */}

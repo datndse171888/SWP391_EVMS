@@ -21,5 +21,9 @@ export const AppointmentApi = {
 
   updateAppointmentStatus: (appointmentId: string, request: UpdateAppointmentStatusRequest) => {
     return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/status`, request);
+  },
+
+  cancelAppointment: (appointmentId: string) => {
+    return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/cancel`);
   }
 };

@@ -112,8 +112,8 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full overflow-hidden">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -156,10 +156,6 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                     </h3>
 
                                     <div className="space-y-3">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">ID lịch hẹn</label>
-                                            <p className="text-gray-900 font-mono">{appointment._id}</p>
-                                        </div>
 
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Ngày & giờ hẹn</label>
@@ -297,7 +293,11 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
 
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500">Loại xe áp dụng</label>
-                                                <p className="text-gray-900">{service.vehicleCategory}</p>
+                                                <p className="text-gray-900">{
+                                                    service.vehicleCategory === 'CAR' ? 'Ô tô điện' :
+                                                        service.vehicleCategory === 'MOTOBIKE' ? 'Xe máy điện' :
+                                                            'Xe đạp điện'
+                                                }</p>
                                             </div>
                                         </div>
                                     </div>

@@ -158,7 +158,7 @@ export async function getServicePackageById(req: Request, res: Response) {
   try {
     const item = await ServicePackage.findById(req.params.id).populate('services').lean();
     if (!item) return res.status(404).json({ message: 'Không tìm thấy gói dịch vụ' });
-    return res.json({ servicePackage: item });
+    return res.json(item);
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
