@@ -12,8 +12,8 @@ export async function technicianSubroleMiddleware(req: Request, res: Response, n
     if (!req.user || req.user.role !== 'technician') return next();
     if (req.user.technicianRole === 'leader' || req.user.technicianRole === 'member') return next();
     const tech = await Technician.findOne({ userID: req.user.id }).lean();
-    if (tech?.role === 'leader' || tech?.role === 'member') {
-      req.user.technicianRole = tech.role;
+    if (tech && 'role' in tech && (tech.role === 'leader' || tech.role === 'member')) {
+      req.user.technicianRole = tech.role as 'leader' | 'member';
     }
     return next();
   } catch {

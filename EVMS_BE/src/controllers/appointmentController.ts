@@ -51,6 +51,177 @@ export async function createAppointment(req: Request, res: Response) {
       return res.status(400).json({ message: 'bookingDate không hợp lệ' });
     }
 
+    // ============================================
+    // KIỂM TRA TRÙNG LỊCH VÀ TECHNICIANS
+    // ============================================
+
+    // 1. Kiểm tra user đã đặt lịch cho slot này chưa
+    // Tính thời gian bắt đầu và kết thúc của appointment để check overlap chính xác
+    const appointmentStart = new Date(parsedBookingDate);
+    
+    // Get duration để tính appointment end time
+    let duration = 60; // Default, sẽ được update sau
+    if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
+      const { Service } = await import('../models/Service.js');
+      const service = await Service.findById(serviceID).select('duration').lean();
+      if (service && 'duration' in service && typeof service.duration === 'number') {
+        duration = service.duration;
+      }
+    } else if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const servicePackage = await ServicePackage.findById(servicePackageID).select('duration').lean();
+      if (servicePackage && 'duration' in servicePackage && typeof servicePackage.duration === 'number') {
+        duration = servicePackage.duration;
+      }
+    }
+    
+    const appointmentEnd = new Date(appointmentStart);
+    appointmentEnd.setMinutes(appointmentEnd.getMinutes() + duration);
+    
+    // Check for existing appointments that overlap with this time slot
+    const existingAppointments = await Appointment.find({
+      userID: new mongoose.Types.ObjectId(userID),
+      status: {
+        $nin: ['cancelled', 'completed']
+      }
+    })
+      .select('bookingDate serviceID servicePackageID')
+      .lean();
+
+    // Check overlap với từng existing appointment
+    for (const existing of existingAppointments) {
+      let existingDuration = 60; // default
+      if (existing.serviceID) {
+        const { Service } = await import('../models/Service.js');
+        const service = await Service.findById(existing.serviceID).select('duration').lean();
+        if (service && 'duration' in service && typeof service.duration === 'number') {
+          existingDuration = service.duration;
+        }
+      } else if (existing.servicePackageID) {
+        const { ServicePackage } = await import('../models/ServicePackage.js');
+        const pkg = await ServicePackage.findById(existing.servicePackageID).select('duration').lean();
+        if (pkg && 'duration' in pkg && typeof pkg.duration === 'number') {
+          existingDuration = pkg.duration;
+        }
+      }
+      
+      const existingStart = new Date(existing.bookingDate);
+      const existingEnd = new Date(existingStart);
+      existingEnd.setMinutes(existingEnd.getMinutes() + existingDuration);
+      
+      // Check overlap: existing starts before this ends AND existing ends after this starts
+      if (existingStart < appointmentEnd && existingEnd > appointmentStart) {
+        return res.status(400).json({ 
+          message: 'Bạn đã đặt lịch cho khung giờ này rồi. Vui lòng chọn khung giờ khác.' 
+        });
+      }
+    }
+
+    // 2. Xác định vehicleCategory và duration (đã lấy duration ở trên, chỉ cần lấy vehicleCategory)
+    let vehicleCategory: 'CAR' | 'MOTOBIKE' | 'BICYCLE' = 'CAR';
+
+    // Lấy vehicleCategory từ vehicleID
+    if (vehicleID && mongoose.Types.ObjectId.isValid(vehicleID)) {
+      const { Vehicle } = await import('../models/Vehicle.js');
+      const vehicle = await Vehicle.findById(vehicleID).select('vehicleCategory').lean();
+      if (vehicle && vehicle.vehicleCategory) {
+        vehicleCategory = vehicle.vehicleCategory;
+      }
+    }
+
+    // 3. Xác định số lượng technicians cần thiết (duration đã được tính ở bước 1)
+    const requiredTechnicians = {
+      CAR: { leader: 1, support: 2 },
+      MOTOBIKE: { leader: 1, support: 1 },
+      BICYCLE: { leader: 1, support: 1 }
+    };
+    const required = requiredTechnicians[vehicleCategory];
+
+    // 4. Tính thời gian kết thúc của appointment (đã tính ở trên)
+    // appointmentStart và appointmentEnd đã được tính ở bước 1
+
+    // 5. Tìm tất cả appointments overlap với khoảng thời gian này
+    const overlappingAppointments = await Appointment.find({
+      bookingDate: {
+        $lt: appointmentEnd // Appointment bắt đầu trước khi appointment này kết thúc
+      },
+      status: {
+        $nin: ['cancelled', 'completed']
+      }
+    })
+      .select('bookingDate serviceID servicePackageID technicianLeaderID technicianSupport1ID technicianSupport2ID')
+      .lean();
+
+    // Lọc appointments thực sự overlap (tính duration của từng appointment)
+    const actualOverlappingAppointments = [];
+    for (const apt of overlappingAppointments) {
+      let aptDuration = 60; // default
+      if (apt.serviceID) {
+        const { Service } = await import('../models/Service.js');
+        const service = await Service.findById(apt.serviceID).select('duration').lean();
+        if (service && 'duration' in service && typeof service.duration === 'number') {
+          aptDuration = service.duration;
+        }
+      } else if (apt.servicePackageID) {
+        const { ServicePackage } = await import('../models/ServicePackage.js');
+        const pkg = await ServicePackage.findById(apt.servicePackageID).select('duration').lean();
+        if (pkg && 'duration' in pkg && typeof pkg.duration === 'number') {
+          aptDuration = pkg.duration;
+        }
+      }
+
+      const aptStart = new Date(apt.bookingDate);
+      const aptEnd = new Date(aptStart);
+      aptEnd.setMinutes(aptEnd.getMinutes() + aptDuration);
+
+      // Check overlap: apt starts before this ends AND apt ends after this starts
+      if (aptStart < appointmentEnd && aptEnd > appointmentStart) {
+        actualOverlappingAppointments.push(apt);
+      }
+    }
+
+    // 6. Đếm technicians đã được assign trong các appointments overlap
+    const assignedLeaders = new Set<string>();
+    const assignedSupports = new Set<string>();
+
+    actualOverlappingAppointments.forEach(apt => {
+      if (apt.technicianLeaderID) assignedLeaders.add(String(apt.technicianLeaderID));
+      if (apt.technicianSupport1ID) assignedSupports.add(String(apt.technicianSupport1ID));
+      if (apt.technicianSupport2ID) assignedSupports.add(String(apt.technicianSupport2ID));
+    });
+
+    // 7. Lấy tất cả active technicians (user không bị disabled)
+    const allTechnicians = await Technician.find().lean();
+    const allUserIDs = allTechnicians.map(t => t.userID).filter(Boolean);
+    const activeUsers = await User.find({ 
+      _id: { $in: allUserIDs },
+      isDisabled: false 
+    }).select('_id').lean();
+    
+    const activeUserIDs = new Set(activeUsers.map(u => String(u._id)));
+    
+    const activeLeaders = allTechnicians.filter(t => 
+      t.role === 'leader' && t.userID && activeUserIDs.has(String(t.userID))
+    );
+    const activeSupports = allTechnicians.filter(t => 
+      t.role === 'member' && t.userID && activeUserIDs.has(String(t.userID))
+    );
+
+    // 8. Tính số technicians available
+    const availableLeaders = activeLeaders.length - assignedLeaders.size;
+    const availableSupports = activeSupports.length - assignedSupports.size;
+
+    // 9. Kiểm tra có đủ technicians không
+    if (availableLeaders < required.leader || availableSupports < required.support) {
+      return res.status(400).json({ 
+        message: `Không còn đủ kỹ thuật viên cho khung giờ này. Hiện có ${availableLeaders} leader và ${availableSupports} support khả dụng.` 
+      });
+    }
+
+    // ============================================
+    // TẠO APPOINTMENT
+    // ============================================
+
     const appointment = await Appointment.create({
       userID: new mongoose.Types.ObjectId(userID),
       vehicleID: toObjectIdOrUndefined(vehicleID),

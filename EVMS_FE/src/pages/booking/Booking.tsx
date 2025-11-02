@@ -63,19 +63,12 @@ const Booking: React.FC = () => {
         }));
     };
 
-    const handleBookingComplete = async () => {
-        try {
-            const response = await AppointmentApi.createAppointment(formData);
-            const data: AppointmentResponse = response.data;
-            console.log('Appointment created successfully:', data);
-            // Show success message or redirect
-            showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 3000, () => {
-                navigate('/customer/appointments');
-            });
-        } catch (error) {
-            showAlert('error', 'Đặt lịch thất bại. Vui lòng thử lại sau.');
-            return;
-        }
+    const handleBookingComplete = () => {
+        // Appointment đã được tạo thành công trong Confirmation component
+        // Chỉ cần hiển thị thông báo và redirect
+        showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 3000, () => {
+            navigate('/customer/appointments');
+        });
     };
 
     const renderStep = () => {
@@ -109,6 +102,7 @@ const Booking: React.FC = () => {
                     <DateTime
                         formData={formData}
                         setFormData={setFormData}
+                        vehicleCategory={vehicleCategory}
                         onNext={() => {
                             setStep(4);
                             console.log('Form Data after DateTime:', formData);

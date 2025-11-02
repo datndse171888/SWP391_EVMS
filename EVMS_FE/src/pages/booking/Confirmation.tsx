@@ -114,6 +114,12 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   };
 
   const handleConfirmBooking = async () => {
+    // Prevent double submit
+    if (isSubmitting) {
+      console.warn('[Confirmation] Already submitting, ignoring duplicate request');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Validate formData before sending
@@ -143,9 +149,16 @@ const Confirmation: React.FC<ConfirmationProps> = ({
       const data: AppointmentResponse = response.data;
       console.log('Appointment created successfully:', data);
 
-      // Close modal and complete booking
+      // Close modal first
       setShowConfirmModal(false);
-      onComplete();
+      
+      // Show success message before calling onComplete
+      showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 2000);
+      
+      // Complete booking (will redirect)
+      setTimeout(() => {
+        onComplete();
+      }, 500);
 
     } catch (error: any) {
       console.error('Error creating appointment:', error);

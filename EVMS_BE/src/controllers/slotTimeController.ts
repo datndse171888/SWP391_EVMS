@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { SlotTime } from '../models/SlotTime.js';
 import { Technician } from '../models/Technician.js';
 import { Appointment } from '../models/Appointment.js';
+import { User } from '../models/User.js';
 
 // Get Available Slot Times API
 export async function getAvailableSlotTimes(req: Request, res: Response) {
@@ -79,7 +81,7 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
     const required = requiredTechnicians[vehicleCategory];
 
     // Get all available slots in the day
-    const slotTimes = await SlotTime.find({
+    let slotTimes = await SlotTime.find({
       status: 'available',
       startTime: {
         $gte: startOfDay,
@@ -92,57 +94,144 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       .sort({ startTime: 1 })
       .lean();
 
-    // Get active technicians (user not disabled)
-    const [activeLeaders, activeSupports] = await Promise.all([
-      Technician.find({ role: 'leader' })
-        .populate({
-          path: 'userID',
-          select: 'isDisabled',
-          match: { isDisabled: false }
-        })
-        .lean(),
-      Technician.find({ role: 'member' })
-        .populate({
-          path: 'userID',
-          select: 'isDisabled',
-          match: { isDisabled: false }
-        })
-        .lean()
-    ]);
+    // If no slots exist in database, create default hourly slots for the day
+    if (slotTimes.length === 0) {
+      console.log(`[SlotTime] No slots found in DB for ${dateParam}, creating default slots`);
+      const defaultSlots = [];
+      const baseDate = new Date(dateParam + 'T00:00:00');
+      
+      for (let hour = 7; hour <= 16; hour++) {
+        if (hour === 12) continue; // Skip 12:00 (lunch break)
+        
+        const slotStart = new Date(baseDate);
+        slotStart.setHours(hour, 0, 0, 0);
+        
+        const slotEnd = new Date(slotStart);
+        slotEnd.setHours(hour + 1, 0, 0, 0);
+        
+        // Only create slots for future times
+        const now = new Date();
+        if (slotStart >= now) {
+          defaultSlots.push({
+            _id: new mongoose.Types.ObjectId(),
+            technicianID: new mongoose.Types.ObjectId(), // Dummy ID - not used
+            startTime: slotStart,
+            endTime: slotEnd,
+            status: 'available',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            __v: 0
+          } as any); // Type assertion to bypass Mongoose type checking for default slots
+        }
+      }
+      console.log(`[SlotTime] Created ${defaultSlots.length} default slots`);
+      slotTimes = defaultSlots;
+    } else {
+      console.log(`[SlotTime] Found ${slotTimes.length} slots in DB for ${dateParam}`);
+    }
 
-    // Filter only technicians with active users
-    const activeLeadersCount = activeLeaders.filter(tech => tech.userID).length;
-    const activeSupportsCount = activeSupports.filter(tech => tech.userID).length;
+    // Get active technicians (user not disabled)
+    const allTechnicians = await Technician.find().lean();
+    const allUserIDs = allTechnicians.map(t => t.userID).filter(Boolean);
+    const activeUsers = await User.find({ 
+      _id: { $in: allUserIDs },
+      isDisabled: false 
+    }).select('_id').lean();
+    
+    const activeUserIDs = new Set(activeUsers.map(u => String(u._id)));
+    
+    const activeLeaders = allTechnicians.filter(t => 
+      t.role === 'leader' && t.userID && activeUserIDs.has(String(t.userID))
+    );
+    const activeSupports = allTechnicians.filter(t => 
+      t.role === 'member' && t.userID && activeUserIDs.has(String(t.userID))
+    );
+
+    const activeLeadersCount = activeLeaders.length;
+    const activeSupportsCount = activeSupports.length;
+    
+    console.log(`[SlotTime] Active technicians: ${activeLeadersCount} leaders, ${activeSupportsCount} supports`);
+    console.log(`[SlotTime] Required for ${vehicleCategory}: ${required.leader} leaders, ${required.support} supports`);
+    
+    // If we don't have enough technicians at all, return empty immediately
+    if (activeLeadersCount < required.leader || activeSupportsCount < required.support) {
+      console.warn(`[SlotTime] ⚠️ Not enough technicians! Have ${activeLeadersCount}/${required.leader} leaders, ${activeSupportsCount}/${required.support} supports`);
+      return res.status(200).json([]);
+    }
+
+    // Get current user ID from token
+    const currentUserID = req.user?.id;
+
+    // Get all active appointments that could potentially overlap with slots in this day
+    // Query appointments that start before end of day (could overlap with slots)
+    const now = new Date();
+    const allAppointments = await Appointment.find({
+      bookingDate: {
+        $lt: endOfDay // Appointment starts before end of day
+      },
+      status: {
+        $nin: ['cancelled', 'completed']
+      }
+    })
+      .select('userID bookingDate serviceID servicePackageID technicianLeaderID technicianSupport1ID technicianSupport2ID')
+      .lean();
+
+    // Get duration from services and packages
+    const { Service } = await import('../models/Service.js');
+    const { ServicePackage } = await import('../models/ServicePackage.js');
 
     // Filter slots that have enough technicians available
     const availableSlots = [];
 
     for (const slot of slotTimes) {
-      // Get appointments in this slot time range (not cancelled or completed)
-      const appointments = await Appointment.find({
-        bookingDate: {
-          $gte: slot.startTime,
-          $lt: slot.endTime
-        },
-        status: {
-          $nin: ['cancelled', 'completed']
+      // Find appointments that overlap with this slot
+      const overlappingAppointments = [];
+      
+      for (const apt of allAppointments) {
+        const appointmentStart = new Date(apt.bookingDate);
+        
+        // Get duration from service or service package
+        let duration = 60; // Default 1 hour in minutes
+        if (apt.serviceID) {
+          const service = await Service.findById(apt.serviceID).select('duration').lean();
+          if (service && 'duration' in service && typeof service.duration === 'number') {
+            duration = service.duration;
+          }
+        } else if (apt.servicePackageID) {
+          const pkg = await ServicePackage.findById(apt.servicePackageID).select('duration').lean();
+          if (pkg && 'duration' in pkg && typeof pkg.duration === 'number') {
+            duration = pkg.duration;
+          }
         }
-      }).select('technicianLeaderID technicianSupport1ID technicianSupport2ID').lean();
+        
+        // Calculate appointment end time
+        const appointmentEnd = new Date(appointmentStart);
+        appointmentEnd.setMinutes(appointmentEnd.getMinutes() + duration);
+        
+        // Check overlap: appointment starts before slot ends AND appointment ends after slot starts
+        if (appointmentStart < slot.endTime && appointmentEnd > slot.startTime) {
+          overlappingAppointments.push(apt);
+        }
+      }
 
-      // Count assigned technicians
+      // Check if current user has already booked this slot
+      const userHasBooked = currentUserID && overlappingAppointments.some(apt => {
+        return String(apt.userID) === String(currentUserID);
+      });
+
+      // Skip slot if user has already booked it
+      if (userHasBooked) {
+        continue;
+      }
+
+      // Count assigned technicians from overlapping appointments
       const assignedLeaders = new Set<string>();
       const assignedSupports = new Set<string>();
 
-      appointments.forEach(apt => {
-        if (apt.technicianLeaderID) {
-          assignedLeaders.add(String(apt.technicianLeaderID));
-        }
-        if (apt.technicianSupport1ID) {
-          assignedSupports.add(String(apt.technicianSupport1ID));
-        }
-        if (apt.technicianSupport2ID) {
-          assignedSupports.add(String(apt.technicianSupport2ID));
-        }
+      overlappingAppointments.forEach(apt => {
+        if (apt.technicianLeaderID) assignedLeaders.add(String(apt.technicianLeaderID));
+        if (apt.technicianSupport1ID) assignedSupports.add(String(apt.technicianSupport1ID));
+        if (apt.technicianSupport2ID) assignedSupports.add(String(apt.technicianSupport2ID));
       });
 
       // Calculate available technicians
@@ -166,6 +255,7 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       }
     }
 
+    console.log(`[SlotTime] Returning ${availableSlots.length} available slots for ${dateParam}, vehicleCategory: ${vehicleCategory}`);
     return res.status(200).json(availableSlots);
 
   } catch (error) {

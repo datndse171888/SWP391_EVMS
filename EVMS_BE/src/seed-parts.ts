@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Part } from './src/models/Part.js';
+import { Part } from './models/Part.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

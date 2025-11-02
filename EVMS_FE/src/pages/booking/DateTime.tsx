@@ -5,10 +5,12 @@ import { Button } from '../../components/ui/Button'
 import type { CreateAppointmentRequest } from '../../types/Appoitment'
 import { formatDateTime } from '../../utils/DataFormat';
 import { Input } from '../../components/ui/Input';
+import { SlotTimeApi } from '../../api/SlotTimeApi';
 
 interface DateTimeProps {
   formData: CreateAppointmentRequest;
   setFormData: React.Dispatch<React.SetStateAction<CreateAppointmentRequest>>;
+  vehicleCategory?: 'CAR' | 'MOTOBIKE' | 'BICYCLE';
   onNext: () => void;
   onPrevious: () => void;
 }
@@ -22,6 +24,7 @@ interface TimeSlot {
 const DateTime: React.FC<DateTimeProps> = ({
   formData,
   setFormData,
+  vehicleCategory = 'CAR',
   onNext,
   onPrevious
 }) => {
@@ -30,9 +33,14 @@ const DateTime: React.FC<DateTimeProps> = ({
   // UseStates & Variables
   // ================================
 
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString());
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [unavailableTimes, setUnavailableTimes] = useState<string[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
 
   // Time slots from 07:00 to 20:00 (1-hour intervals)
   const timeSlots: TimeSlot[] = [
@@ -68,26 +76,103 @@ const DateTime: React.FC<DateTimeProps> = ({
   }, [formData.bookingDate]);
 
   useEffect(() => {
-    if (selectedDate) {
-      fetchUnavailableTimes(selectedDate);
+    if (selectedDate && vehicleCategory) {
+      fetchAvailableSlots(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, vehicleCategory]);
 
-  const fetchUnavailableTimes = async (date: string) => {
+  const fetchAvailableSlots = async (date: string) => {
+    setIsLoadingSlots(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await AppointmentApi.getUnavailableTimes(date);
+      console.log('[DateTime] Fetching slots for:', { date, vehicleCategory });
+      const response = await SlotTimeApi.getAvailableSlotTimes({
+        date: date,
+        vehicleCategory: vehicleCategory
+      });
 
-      // Mock API call - simulate some unavailable times
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[DateTime] API Response:', response);
+      console.log('[DateTime] Response data:', response.data);
+      const availableSlotsData = response.data || [];
+      console.log('[DateTime] Available slots count:', availableSlotsData.length);
+      
+      // Convert available slots to time strings
+      const allTimeStrings = timeSlots.map(slot => slot.time); // ['07:00', '08:00', ...]
+      const availableTimeStrings: string[] = [];
 
-      // Mock unavailable times (simulating existing appointments)
-      const mockUnavailable = ['09:00:00', '14:00:00', '16:00:00'];
-      setUnavailableTimes(mockUnavailable);
+      allTimeStrings.forEach(timeSlot => {
+        const [hour, minute] = timeSlot.split(':').map(Number);
+        
+        // Check if any available slot starts at this exact hour
+        const hasMatchingSlot = availableSlotsData.some(slot => {
+          try {
+            const slotStartTime = new Date(slot.startTime);
+            const slotYear = slotStartTime.getFullYear();
+            const slotMonth = slotStartTime.getMonth();
+            const slotDay = slotStartTime.getDate();
+            const slotHour = slotStartTime.getHours();
+            const slotMinute = slotStartTime.getMinutes();
+            
+            // Parse our date
+            const [ourYear, ourMonth, ourDay] = date.split('-').map(Number);
+            
+            // Compare: same date AND same hour AND minute is 0
+            const dateMatches = slotYear === ourYear && 
+                              slotMonth === ourMonth - 1 && // Month is 0-indexed
+                              slotDay === ourDay;
+            const hourMatches = slotHour === hour && slotMinute === 0;
+            
+            const matches = dateMatches && hourMatches;
+            
+            // Debug first slot
+            if (timeSlot === '07:00' && availableSlotsData.length > 0) {
+              console.log(`[DateTime] Matching ${timeSlot}:`, {
+                slotISO: slot.startTime,
+                slotLocal: slotStartTime.toLocaleString('vi-VN'),
+                slotDate: `${slotYear}-${slotMonth + 1}-${slotDay}`,
+                ourDate: date,
+                slotHour,
+                ourHour: hour,
+                dateMatches,
+                hourMatches,
+                matches
+              });
+            }
+            
+            return matches;
+          } catch (error) {
+            console.error(`[DateTime] Error parsing slot ${slot.startTime}:`, error);
+            return false;
+          }
+        });
+
+        if (hasMatchingSlot) {
+          availableTimeStrings.push(timeSlot);
+          console.log(`[DateTime] ✅ ${timeSlot} matched`);
+        } else if (availableSlotsData.length > 0) {
+          console.log(`[DateTime] ❌ ${timeSlot} no match`);
+        }
+      });
+
+      setAvailableSlots(availableTimeStrings);
+      
+      // Find unavailable times (time slots not in available slots)
+      const unavailable = allTimeStrings.filter(time => {
+        return !availableTimeStrings.includes(time);
+      });
+      
+      // Convert unavailable times to HH:mm:ss format
+      const unavailableTimesFull = unavailable.map(time => `${time}:00`);
+      setUnavailableTimes(unavailableTimesFull);
 
     } catch (error) {
-      console.error('Error fetching unavailable times:', error);
-      setUnavailableTimes([]);
+      console.error('Error fetching available slot times:', error);
+      setAvailableSlots([]);
+      // Mark all slots as unavailable if API fails
+      const allTimeStrings = timeSlots.map(slot => slot.time);
+      const unavailableTimesFull = allTimeStrings.map(time => `${time}:00`);
+      setUnavailableTimes(unavailableTimesFull);
+    } finally {
+      setIsLoadingSlots(false);
     }
   };
 
@@ -103,7 +188,10 @@ const DateTime: React.FC<DateTimeProps> = ({
   };
 
   const isTimeAvailable = (timeValue: string): boolean => {
-    if (!selectedDate) return false;
+    if (!selectedDate || !vehicleCategory) return false;
+
+    // Show loading state while fetching - disable all during loading
+    if (isLoadingSlots) return false;
 
     const now = new Date();
     const selectedDateTime = new Date(`${selectedDate}T${timeValue}`);
@@ -111,7 +199,18 @@ const DateTime: React.FC<DateTimeProps> = ({
     // Cannot select past times
     if (selectedDateTime <= now) return false;
 
-    // Cannot select if time is in unavailable list
+    // Only allow slots that are explicitly in the available list from API
+    if (availableSlots.length === 0) {
+      return false; // No slots available from API
+    }
+
+    // Check if this time slot is in the available list
+    const timeString = timeValue.split(':').slice(0, 2).join(':'); // Convert '07:00:00' to '07:00'
+    if (!availableSlots.includes(timeString)) {
+      return false; // Not in available list
+    }
+
+    // Cannot select if time is in unavailable list (double check)
     if (unavailableTimes.includes(timeValue)) return false;
 
     return true;
@@ -268,6 +367,11 @@ const DateTime: React.FC<DateTimeProps> = ({
               <div className="text-center py-8 text-gray-500">
                 <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>Vui lòng chọn ngày trước</p>
+              </div>
+            ) : isLoadingSlots ? (
+              <div className="text-center py-8 text-gray-500">
+                <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300 animate-spin" />
+                <p>Đang tải khung giờ khả dụng...</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">

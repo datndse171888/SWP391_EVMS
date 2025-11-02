@@ -9,6 +9,7 @@ export interface IPart extends Document {
   partNumber?: string;
   price: number;
   status: PartStatus;
+  category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories';
   warrantyPeriod?: number; // months or km, see warrantyCondition
   warrantyCondition?: string; // e.g., "tháng/km"
   createdAt: Date;
