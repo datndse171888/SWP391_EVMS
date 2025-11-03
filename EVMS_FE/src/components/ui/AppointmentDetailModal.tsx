@@ -13,18 +13,19 @@ import { VehicleApi } from '../../api/VehicleApi';
 import { formatDate, formatPrice, formatTime } from '../../utils/DataFormat';
 import { Loading } from '../Loading';
 import { UserApi } from '../../api/UserApi';
-import type { CheckingResponse } from '../../types/DataResponse';
 
 interface AppointmentDetailModalProps {
     appointment: AppointmentResponse;
     isOpen: boolean;
     onClose: () => void;
+    varient: 'staff' | 'user';
 }
 
 const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
     appointment,
     isOpen,
-    onClose
+    onClose,
+    varient
 }) => {
     // ================================
     // States
@@ -56,9 +57,11 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
         setError(null);
 
         try {
-            const userResponse = await UserApi.getById(appointment.userID);
-            const userData: CheckingResponse<UserResponse> = userResponse.data;
-            setUser(userData.data);
+            if (varient === 'staff') {
+                const userResponse = await UserApi.getById(appointment.userID);
+                const userData: UserResponse = userResponse.data;
+                setUser(userData);
+            }
 
             const vehicleResponse = await VehicleApi.getVehicleById(appointment.vehicleID);
             const vehicleData: VehicleResponse = vehicleResponse.data;
@@ -210,8 +213,8 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             </div>
 
                                             <div>
-                                                <label className="text-sm font-medium text-gray-500">Tên đăng nhập</label>
-                                                <p className="text-gray-900">{user.userName}</p>
+                                                <label className="text-sm font-medium text-gray-500">Giới tính</label>
+                                                <p className="text-gray-900">{user.gender}</p>
                                             </div>
                                         </div>
                                     </div>

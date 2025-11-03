@@ -12,7 +12,7 @@ export const AppointmentApi = {
   },
 
   getAppointmentByMe: () => {
-    return api.get<AppointmentResponse>('/appointments/me');
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
   getAppointmentByUserId: (userId: string) => {

@@ -484,6 +484,7 @@ const ManageAppointment: React.FC = () => {
             setShowDetailModal(false);
             setSelectedAppointment(null);
           }}
+          varient="staff"
         />
       )}
     </div>

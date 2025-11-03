@@ -1,3 +1,4 @@
+// src/components/ui/AppointmentCard.tsx - Updated
 import React, { useEffect, useState } from 'react'
 import type { AppointmentResponse, AppointmentStatus } from '../../types/Appoitment';
 import { Calendar, Car, Clock, Package, User, Wrench } from 'lucide-react';
@@ -11,35 +12,37 @@ import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { VehicleApi } from '../../api/VehicleApi';
 import { UserApi } from '../../api/UserApi';
-import type { CheckingResponse } from '../../types/DataResponse';
+import { getStatusColor, getStatusLabel, randomColor } from '../../utils/Appointment';
 
 interface AppointmentCardProps {
     appointment: AppointmentResponse;
     handleViewDetail: (appointment: AppointmentResponse) => void;
-    handleApprove: (appointmentId: string) => void;
-    handleReject: (appointmentId: string) => void;
+    handleApprove?: (appointmentId: string) => void;
+    handleReject?: (appointmentId: string) => void;
+    handleCancel?: (appointmentId: string) => void;
+    variant?: 'staff' | 'user'; // New prop to determine which variant to show
 }
 
 export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     appointment,
     handleViewDetail,
     handleApprove,
-    handleReject
+    handleReject,
+    handleCancel,
+    variant
 }) => {
-
-    //===================================
+    // ===================================
     // States & Variables
-    //===================================
+    // ===================================
 
     const [user, setUser] = useState<UserResponse>();
     const [service, setService] = useState<ServiceResponse>();
     const [servicePackage, setServicePackage] = useState<ServicePackageResponse>();
     const [vehicle, setVehicle] = useState<VehicleResponse>();
 
-
-    //===================================
+    // ===================================
     // Effects
-    //===================================
+    // ===================================
 
     useEffect(() => {
         fetchAppointmentDetails();
@@ -47,9 +50,12 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
     const fetchAppointmentDetails = async () => {
         try {
-            const userResponse = await UserApi.getById(appointment.userID);
-            const userData: CheckingResponse<UserResponse> = userResponse.data;
-            setUser(userData.data);
+            // For staff variant, fetch user details
+            if (variant === 'staff') {
+                const userResponse = await UserApi.getById(appointment.userID);
+                const userData: UserResponse = userResponse.data;
+                setUser(userData);
+            }
 
             const vehicleResponse = await VehicleApi.getVehicleById(appointment.vehicleID);
             const vehicleData: VehicleResponse = vehicleResponse.data;
@@ -69,41 +75,20 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         }
     };
 
-    const getStatusColor = (status: AppointmentStatus) => {
-        const colors = {
-            pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            confirmed: 'bg-green-100 text-green-800 border-green-200',
-            in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
-            completed: 'bg-gray-100 text-gray-800 border-gray-200',
-            cancelled: 'bg-red-100 text-red-800 border-red-200',
-            no_show: 'bg-purple-100 text-purple-800 border-purple-200'
-        };
-        return colors[status] || colors.pending;
+    // ===================================
+    // Helper Functions
+    // ===================================
+
+    const canCancelAppointment = () => {
+        return variant === 'user' &&
+            appointment.status !== 'in_progress' &&
+            appointment.status !== 'cancelled' &&
+            appointment.status !== 'completed';
     };
 
-    const getStatusLabel = (status: AppointmentStatus) => {
-        const labels = {
-            pending: 'Chờ xác nhận',
-            confirmed: 'Đã xác nhận',
-            in_progress: 'Đang thực hiện',
-            completed: 'Hoàn thành',
-            cancelled: 'Đã hủy',
-            no_show: 'Không đến'
-        };
-        return labels[status] || status;
-    };
-
-    const cardColors = [
-        'bg-blue-50 border-blue-200',
-        'bg-green-50 border-green-200',
-        'bg-pink-50 border-pink-200',
-        'bg-purple-50 border-purple-200',
-        'bg-yellow-50 border-yellow-200',
-        'bg-indigo-50 border-indigo-200'
-    ];
-
-    const randomColor = cardColors[Math.floor(Math.random() * cardColors.length)];
-
+    // ===================================
+    // Render
+    // ===================================
 
     return (
         <div key={appointment._id} className={`${randomColor} border-2 rounded-lg p-4 hover:shadow-md transition-all duration-300`}>
@@ -114,8 +99,17 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         <User className="w-4 h-4" />
                     </div>
                     <div>
-                        <p className="text-xs text-gray-600">User:</p>
-                        <p className="text-xs text-gray-600">{user?.fullName}</p>
+                        {variant === 'staff' ? (
+                            <>
+                                <p className="text-xs text-gray-600">User:</p>
+                                <p className="text-xs text-gray-600">{user?.fullName}</p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xs text-gray-600">Mã:</p>
+                                <p className="text-xs text-gray-600 font-mono">#{appointment._id.slice(-8)}</p>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -141,24 +135,25 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 {appointment.servicePackageID && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Package className="w-4 h-4 mr-2 text-gray-400" />
-                        {servicePackage?.name && servicePackage.name.length > 25
-                            ? `${servicePackage.name.substring(0, 30)}...`
-                            : servicePackage?.name}
+                        <span className="truncate">
+                            {servicePackage?.name && servicePackage.name.length > 25
+                                ? `${servicePackage.name.substring(0, 40)} ...`
+                                : servicePackage?.name}
+                        </span>
                     </div>
                 )}
 
                 {appointment.serviceID && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Wrench className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>Dịch vụ: {service?.name}</span>
+                        <span className="truncate">Dịch vụ: {service?.name}</span>
                     </div>
                 )}
-
 
                 {vehicle && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Car className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>Xe: {vehicle?.brand}</span>
+                        <span>Xe: {vehicle?.brand} - {vehicle?.plateNumber}</span>
                     </div>
                 )}
             </div>
@@ -174,13 +169,14 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     Chi tiết
                 </Button>
 
-                {appointment.status === 'pending' && (
+                {/* Staff actions for pending appointments */}
+                {variant === 'staff' && appointment.status === 'pending' && (
                     <div className="flex space-x-2">
                         <Button
                             type="button"
                             variant="primary"
                             size="sm"
-                            onClick={() => handleApprove(appointment._id)}
+                            onClick={() => handleApprove?.(appointment._id)}
                         >
                             Duyệt
                         </Button>
@@ -188,14 +184,26 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => handleReject(appointment._id)}
+                            onClick={() => handleReject?.(appointment._id)}
                         >
                             Từ chối
                         </Button>
                     </div>
                 )}
+
+                {/* User cancel action for specific statuses */}
+                {variant === 'user' && canCancelAppointment()
+                    && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCancel?.(appointment._id)}
+                        >
+                            Hủy hẹn
+                        </Button>
+                    )}
             </div>
         </div>
     );
 };
-
