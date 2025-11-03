@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -24,6 +24,9 @@ appointmentRouter.patch('/:id/cancel', authMiddleware, cancelAppointment);
 
 // Assign technician to appointment (admin/staff only)
 appointmentRouter.patch('/:id/assign-technician', authMiddleware, assignTechnician);
+
+// Update appointment status (admin/staff/technician)
+appointmentRouter.patch('/:id/status', authMiddleware, updateAppointmentStatus);
 
 // Get available technicians (admin/staff only)
 appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
