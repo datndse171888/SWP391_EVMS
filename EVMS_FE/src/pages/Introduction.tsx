@@ -99,18 +99,18 @@ const services = [
 
   const teamMembers = [
     {
-      name: "Sarah Johnson",
-      role: "Lead EV Technician", 
+      name: "Nguyễn Thị Hương",
+      role: "Kỹ Sư Kỹ Thuật Chính",
       experience: "12+ năm trong hệ thống xe điện"
     },
     {
-      name: "Michael Chen",
-      role: "Battery Specialist",
+      name: "Trần Minh Tuấn",
+      role: "Chuyên Gia Pin",
       experience: "Chuyên gia về công nghệ pin lithium-ion"
     },
     {
-      name: "Emily Rodriguez",
-      role: "Service Manager",
+      name: "Phạm Văn Hùng",
+      role: "Quản Lý Dịch Vụ",
       experience: "Xuất sắc trong hoạt động và dịch vụ khách hàng"
     }
   ];
