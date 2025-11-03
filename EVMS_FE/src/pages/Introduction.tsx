@@ -164,16 +164,6 @@ const services = [
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-6 justify-start animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
               <button
-                className="px-10 py-4 rounded-lg font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:shadow-2xl hover:scale-110 animate-glow"
-                style={{
-                  backgroundColor: '#f6ae2d',
-                  color: '#014091',
-                  fontFamily: 'Inter, sans-serif'
-                }}
-              >
-                🗓️
-              </button>
-              <button
                 className="px-10 py-4 rounded-lg text-white font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:shadow-2xl border-2 border-white flex items-center justify-center space-x-2 hover:scale-110 hover:bg-white/20 backdrop-blur-sm"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
