@@ -1,7 +1,8 @@
+import { Eye, EyeOff } from 'lucide-react';
 import React, { useState, useEffect } from 'react'
 
 interface InputProps {
-    type: "text" | "password" | "email" | "tel" | "number";
+    type: "text" | "password" | "email" | "tel" | "number" | "date";
     id?: string;
     name: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -10,8 +11,10 @@ interface InputProps {
     height?: number;
     label: string;
     value?: string | number;
-    disabled?: boolean; 
-    required?: boolean; 
+    disabled?: boolean;
+    required?: boolean;
+    min?: string | number;
+    max?: string | number;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -26,9 +29,12 @@ export const Input: React.FC<InputProps> = ({
     value,
     disabled = false,
     required = false,
+    min,
+    max,
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const [hasValue, setHasValue] = useState(!!value);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Update hasValue when value prop changes
     useEffect(() => {
@@ -61,7 +67,7 @@ export const Input: React.FC<InputProps> = ({
             className={`relative ${width ? `w-${width}` : ''} ${height ? `h-${height}` : ''}`}
         >
             <input
-                type={type}
+                type={showPassword ? 'text' : type}
                 name={name}
                 id={id || name}
                 value={value || ''}
@@ -71,6 +77,8 @@ export const Input: React.FC<InputProps> = ({
                 placeholder={isFocused ? placeholder : ''}
                 disabled={disabled}
                 required={required}
+                min={min}
+                max={max}
                 className={`
                     w-full px-3 pt-5 pb-2 
                     border border-orange-1 
@@ -102,6 +110,14 @@ export const Input: React.FC<InputProps> = ({
                 {label}
                 {required && !disabled && <span className="text-red-500 ml-1">*</span>}
             </label>
+            {type === 'password' && <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                style={{ marginTop: '2px' }} // Adjust based on your Input component's label height
+            >
+                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+            </button>}
         </div>
     )
 }

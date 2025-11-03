@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Loading } from '../../components/Loading';
 import { Select } from '../../components/ui/Select';
 import type { CreateAppointmentRequest } from '../../types/Appoitment';
+import { useAlert } from '../../hooks/useAlert';
 
 interface VehicleProps {
   formData: CreateAppointmentRequest;
@@ -48,6 +49,8 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   const [error, setError] = useState<string>('');
 
+  const { showAlert, AlertComponent } = useAlert();
+
   const vehicleCategoryOptions = [
     { value: 'CAR', label: 'Ô tô điện' },
     { value: 'MOTOBIKE', label: 'Xe máy điện' },
@@ -61,6 +64,7 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   useEffect(() => {
     getVehicleOfUser();
+    handleVehicleSelect('new');
   }, []);
 
   const getVehicleOfUser = async () => {
@@ -111,17 +115,22 @@ const Vehicle: React.FC<VehicleProps> = ({
   };
 
   const isNewVehicleValid = () => {
-    return newVehicleData.VIN.trim() !== '' &&
+    const baseValid =
+      newVehicleData.vehicleCategory &&
       newVehicleData.plateNumber.trim() !== '' &&
       newVehicleData.brand.trim() !== '' &&
       newVehicleData.year > 1950 &&
       newVehicleData.mileage >= 0 &&
-      newVehicleData.batteryCapacity > 0;
+      newVehicleData.batteryCapacity >= 0;
+    if (newVehicleData.vehicleCategory === 'CAR') {
+      return baseValid && newVehicleData.VIN?.trim().length === 17;
+    }
+    return baseValid;
   };
 
   const createNewVehicle = async () => {
     if (!isNewVehicleValid()) {
-      alert('Vui lòng điền đầy đủ thông tin xe');
+      showAlert('error', 'Vui lòng điền đầy đủ thông tin xe hợp lệ trước khi tạo.');
       return null;
     }
 
@@ -130,16 +139,27 @@ const Vehicle: React.FC<VehicleProps> = ({
       const response = await VehicleApi.createVehicle(newVehicleData);
       const data: CheckingResponse<VehicleResponse> = response.data;
 
+      console.log('[Vehicle] Create vehicle response:', response);
+      console.log('[Vehicle] Response data:', data);
+
       if (data.success && data.data) {
         // Add new vehicle to list
         setVehicles(prev => [...prev, data.data]);
         setSelectedVehicle(data.data);
+        setShowNewVehicleForm(false);
+        showAlert('success', 'Tạo xe thành công!');
         return data.data._id;
+      } else {
+        const errorMessage = data.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+        showAlert('error', errorMessage);
+        setError(errorMessage);
+        return null;
       }
-      return null;
     } catch (error: any) {
       console.error('Error creating vehicle:', error);
-      setError('Đã có lỗi xảy ra khi tạo xe mới');
+      const errorMessage = error.response?.data?.message || error.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+      showAlert('error', errorMessage);
+      setError(errorMessage);
       return null;
     } finally {
       setIsCreating(false);
@@ -153,7 +173,7 @@ const Vehicle: React.FC<VehicleProps> = ({
     if (selectedVehicle) {
       // Use existing vehicle
       vehicleId = selectedVehicle._id;
-      vehicleCategory = selectedVehicle.vehicleType;
+      vehicleCategory = selectedVehicle.vehicleCategory;
     } else if (showNewVehicleForm && isNewVehicleValid()) {
       // Create new vehicle
       vehicleId = await createNewVehicle();
@@ -166,12 +186,13 @@ const Vehicle: React.FC<VehicleProps> = ({
         ...prev,
         vehicleID: vehicleId
       }));
+
       if (vehicleCategory) {
         setVehicleCategory(vehicleCategory);
       }
       onNext();
     } else {
-      alert('Vui lòng chọn xe hoặc điền đầy đủ thông tin xe mới');
+      showAlert('error', 'Vui lòng chọn hoặc tạo xe hợp lệ trước khi tiếp tục.');
     }
   };
 
@@ -200,7 +221,6 @@ const Vehicle: React.FC<VehicleProps> = ({
 
       {/* Vehicle Selection */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Chọn xe của bạn</h3>
 
         {isLoading ? (
           <Loading />
@@ -216,8 +236,7 @@ const Vehicle: React.FC<VehicleProps> = ({
                 ...vehicles.map((vehicle) => ({
                   value: vehicle._id,
                   label: `${vehicle.brand} - ${vehicle.plateNumber} (${vehicle.year})`
-                })),
-
+                }))
               ]}
             />
           </div>
@@ -240,7 +259,7 @@ const Vehicle: React.FC<VehicleProps> = ({
                 value={selectedVehicle?.VIN || newVehicleData.VIN}
                 onChange={(e) => !selectedVehicle && handleNewVehicleChange('VIN', e.target.value)}
                 disabled={!!selectedVehicle}
-                required={!selectedVehicle}
+                required={!selectedVehicle && newVehicleData.vehicleCategory === 'CAR'}
                 placeholder="Nhập số VIN (17 ký tự)"
               />
             </div>
@@ -396,6 +415,8 @@ const Vehicle: React.FC<VehicleProps> = ({
           Tiếp theo
         </Button>
       </div>
+
+      {AlertComponent}
     </>
   );
 };

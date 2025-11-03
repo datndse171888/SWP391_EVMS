@@ -9,6 +9,7 @@ export interface IPart extends Document {
   partNumber?: string;
   price: number;
   status: PartStatus;
+  category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories';
   warrantyPeriod?: number; // months or km, see warrantyCondition
   warrantyCondition?: string; // e.g., "tháng/km"
   createdAt: Date;
@@ -23,6 +24,7 @@ const PartSchema = new Schema<IPart>(
     partNumber: { type: String, trim: true },
     price: { type: Number, required: true, min: 0 },
     status: { type: String, enum: ['active', 'inactive', 'hidden'], default: 'active', index: true },
+    category: { type: String, enum: ['tires', 'oil', 'filters', 'brakes', 'electrical', 'cooling', 'suspension', 'transmission', 'accessories'], required: true, index: true },
     warrantyPeriod: { type: Number, min: 0 },
     warrantyCondition: { type: String, trim: true },
   },

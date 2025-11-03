@@ -7,6 +7,17 @@ export interface DataResponse<T> {
 
 export interface CheckingResponse<T> {
     success: boolean;
-    message: string;
+    message?: string;
     data: T;
+}
+
+export interface FilteredDataResponse<T> {
+    data: T[];
+    filters: Object;
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
 }

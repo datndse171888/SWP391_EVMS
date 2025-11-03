@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth, type User } from "../../contexts/AuthContext";
-import axios from "axios";
-import { Eye, EyeOff, Edit } from "lucide-react";
+import { Eye, EyeOff, Edit, CheckCircle, XCircle, Info, X } from "lucide-react";
 import { authApi } from "../../api/AuthApi";
+import { compressImage } from "../../api/UploadApi";
 
 
 export default function StaffProfile() {
@@ -26,7 +26,19 @@ export default function StaffProfile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user: authUser } = useAuth();
+  const { user: authUser, updateUser } = useAuth();
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  // Show toast notification
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000); // Auto hide after 3 seconds
+  };
 
   // API function to update user account
   const updateAccountApi = async (userId: string, data: Partial<User>) => {
@@ -113,65 +125,109 @@ export default function StaffProfile() {
     const userId = user?.id || (authUser && authUser.id);
     
     if (!userId) {
-      alert("Không tìm thấy thông tin người dùng!");
+      showToast('error', "Không tìm thấy thông tin người dùng!");
       return;
     }
 
     // Validate file
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      alert('Chỉ chấp nhận file JPG, PNG, WEBP');
+      showToast('error', 'Chỉ chấp nhận file JPG, PNG, WEBP');
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File không được quá 2MB');
-      return;
-    }
-
-    // Create preview
-    setAvatarPreview(URL.createObjectURL(file));
-
-    // Upload to server
+    const startTime = performance.now();
     setIsUploadingAvatar(true);
+
     try {
-      // Upload to server using axios (consistent with project)
+      // Step 1: Compress image - optimized for avatar (smaller size = faster upload)
+      console.log(`📸 Starting compression... Original: ${(file.size / 1024).toFixed(2)}KB`);
+      const compressionStart = performance.now();
+      const compressedFile = await compressImage(file, 400, 400, 0.5, 150); // Optimized for avatar
+      const compressionTime = ((performance.now() - compressionStart) / 1000).toFixed(2);
+      const compressedSizeKB = (compressedFile.size / 1024).toFixed(2);
+      console.log(`✅ Compression done in ${compressionTime}s: ${compressedSizeKB}KB (${((1 - compressedFile.size / file.size) * 100).toFixed(1)}% reduction)`);
+
+      // Create preview from compressed file
+      setAvatarPreview(URL.createObjectURL(compressedFile));
+
+      // Step 2: Upload to Cloudinary using fetch API (no timeout limit)
+      console.log(`📤 Starting upload to Cloudinary...`);
+      const uploadStart = performance.now();
       const formData = new FormData();
-      formData.append("image", file);
-      
-      const token = localStorage.getItem("accessToken");
+      formData.append('image', compressedFile);
+
+      const baseUrl = import.meta.env.VITE_BASE_API_URL || 'http://localhost:4000/api';
+      const token = localStorage.getItem('accessToken');
       
       if (!token) {
-        alert("Vui lòng đăng nhập lại!");
+        showToast('error', "Vui lòng đăng nhập lại!");
+        setIsUploadingAvatar(false);
         return;
       }
-    
-      const response = await axios.post(
-        "http://localhost:4000/api/uploads/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-          timeout: 30000, // 30 seconds timeout
-        }
-      );
-      
-      if (response.data && response.data.imageUrl) {
-        // Update user's photoUrl
-        await updateAccountApi(userId, { photoURL: response.data.imageUrl });
-        
-        // Update local user state
-        setUser((prev) => (prev ? { ...prev, photoURL: response.data.imageUrl } : null));
-        setEditData((prev) => ({ ...prev, photoURL: response.data.imageUrl }));
-        
-        alert("Cập nhật ảnh đại diện thành công!");
-      } else {
-        alert("Không nhận được URL ảnh từ server!");
+
+      const uploadResponse = await fetch(`${baseUrl}/uploads/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type for FormData, browser will set it automatically with boundary
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed: ${uploadResponse.status}`);
       }
-    } catch {
-      alert("Không thể cập nhật ảnh đại diện!");
+
+      const uploadData = await uploadResponse.json();
+      const uploadTime = ((performance.now() - uploadStart) / 1000).toFixed(2);
+      console.log(`✅ Upload done in ${uploadTime}s`);
+
+      if (!uploadData.imageUrl) {
+        throw new Error('No imageUrl in response');
+      }
+
+      // Step 3: Update profile
+      console.log(`💾 Updating profile...`);
+      const updateStart = performance.now();
+      await updateAccountApi(userId, { photoURL: uploadData.imageUrl });
+      const updateTime = ((performance.now() - updateStart) / 1000).toFixed(2);
+      console.log(`✅ Profile updated in ${updateTime}s`);
+
+      // Fetch updated profile to ensure we have latest data
+      try {
+        const profileResponse = await authApi.getProfile();
+        const updatedProfile = profileResponse.data?.data?.user || profileResponse.data?.user || profileResponse.data;
+        if (updatedProfile) {
+          setUser(updatedProfile as User);
+          setEditData(updatedProfile as User);
+          // Update auth context so StaffLayout also gets updated avatar
+          updateUser({ photoURL: uploadData.imageUrl });
+        } else {
+          // Fallback: Update local state if profile fetch fails
+          setUser((prev) => (prev ? { ...prev, photoURL: uploadData.imageUrl } : null));
+          setEditData((prev) => ({ ...prev, photoURL: uploadData.imageUrl }));
+          updateUser({ photoURL: uploadData.imageUrl });
+        }
+      } catch (profileError) {
+        console.warn("Failed to fetch updated profile, using uploaded image URL:", profileError);
+        // Fallback: Update local state if profile fetch fails
+        setUser((prev) => (prev ? { ...prev, photoURL: uploadData.imageUrl } : null));
+        setEditData((prev) => ({ ...prev, photoURL: uploadData.imageUrl }));
+        updateUser({ photoURL: uploadData.imageUrl });
+      }
+
+      const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      console.log(`🎉 Total time: ${totalTime}s (Compress: ${compressionTime}s, Upload: ${uploadTime}s, Update: ${updateTime}s)`);
+      
+      // Show success feedback
+      showToast('success', 'Cập nhật ảnh đại diện thành công!');
+      setAvatarPreview(null);
+    } catch (error: unknown) {
+      console.error("❌ Error uploading avatar:", error);
+      const errorMsg = error instanceof Error ? error.message : "Không thể tải ảnh lên. Vui lòng thử lại!";
+      showToast('error', errorMsg);
       setAvatarPreview(null);
     } finally {
       setIsUploadingAvatar(false);
@@ -213,13 +269,19 @@ export default function StaffProfile() {
                         src={
                           avatarPreview ||
                           user?.photoURL ||
-                          "https://i.pravatar.cc/150?img=3"
+                          authUser?.photoURL ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || authUser?.fullName || user?.userName || authUser?.userName || 'Staff')}&background=014091&color=fff`
                         }
                         alt="avatar"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to generated avatar if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || authUser?.fullName || user?.userName || authUser?.userName || 'Staff')}&background=014091&color=fff`;
+                        }}
                       />
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
                       <svg
                         className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-all duration-300"
                         fill="none"
@@ -515,6 +577,63 @@ export default function StaffProfile() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-[60] px-6 py-4 rounded-xl shadow-2xl text-white text-base font-medium transition-all duration-300 flex items-center gap-3 min-w-[300px] max-w-md ${
+            toast.type === "success"
+              ? "bg-gradient-to-r from-green-500 to-green-600"
+              : toast.type === "error"
+              ? "bg-gradient-to-r from-red-500 to-red-600"
+              : "bg-gradient-to-r from-blue-500 to-blue-600"
+          } animate-slide-in-right`}
+          style={{
+            animation: "slideInRight 0.3s ease-out",
+          }}
+        >
+          {/* Icon */}
+          <div className="flex-shrink-0">
+            {toast.type === "success" ? (
+              <CheckCircle className="w-6 h-6" />
+            ) : toast.type === "error" ? (
+              <XCircle className="w-6 h-6" />
+            ) : (
+              <Info className="w-6 h-6" />
+            )}
+          </div>
+          
+          {/* Message */}
+          <div className="flex-1">
+            <p className="text-white font-semibold">{toast.message}</p>
+          </div>
+          
+          {/* Close button */}
+          <button
+            onClick={() => setToast(null)}
+            className="flex-shrink-0 hover:bg-white/20 rounded-full p-1 transition-colors"
+            aria-label="Close notification"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in-right {
+          animation: slideInRight 0.3s ease-out;
+        }
+      `}</style>
     </>
   );
 }

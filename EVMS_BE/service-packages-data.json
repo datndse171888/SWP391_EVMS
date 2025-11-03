@@ -1,0 +1,207 @@
+[
+  {
+    "name": "Gói Bảo dưỡng Cơ bản Xe Ô tô Điện",
+    "description": "Gói dịch vụ bảo dưỡng cơ bản cho xe ô tô điện, bao gồm kiểm tra và vệ sinh",
+    "vehicleCategory": "CAR",
+    "price": 3500000,
+    "duration": 240,
+    "discount": 5,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc473",
+      "690565c301c8c368d54cc477",
+      "690565c301c8c368d54cc475"
+    ]
+  },
+  {
+    "name": "Gói Sửa chữa Hệ thống Xe Ô tô Điện",
+    "description": "Gói dịch vụ sửa chữa hệ thống sạc và điện cho xe ô tô điện",
+    "vehicleCategory": "CAR",
+    "price": 3200000,
+    "duration": 210,
+    "discount": 8,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc474",
+      "690565c301c8c368d54cc475"
+    ]
+  },
+  {
+    "name": "Gói Thay thế và Bảo dưỡng Xe Ô tô Điện",
+    "description": "Gói dịch vụ thay thế linh kiện và bảo dưỡng toàn diện xe ô tô điện",
+    "vehicleCategory": "CAR",
+    "price": 5500000,
+    "duration": 165,
+    "discount": 10,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc476",
+      "690565c301c8c368d54cc478"
+    ]
+  },
+  {
+    "name": "Gói Nâng cấp và Bảo dưỡng Xe Ô tô Điện",
+    "description": "Gói dịch vụ nâng cấp phần mềm và bảo dưỡng điều hòa xe ô tô điện",
+    "vehicleCategory": "CAR",
+    "price": 3000000,
+    "duration": 150,
+    "discount": 7,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc479",
+      "690565c301c8c368d54cc47b"
+    ]
+  },
+  {
+    "name": "Gói Premium Xe Ô tô Điện",
+    "description": "Gói dịch vụ cao cấp bao gồm thay pin và thay màn hình cảm ứng",
+    "vehicleCategory": "CAR",
+    "price": 13000000,
+    "duration": 300,
+    "discount": 12,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc472",
+      "690565c301c8c368d54cc47a"
+    ]
+  },
+  {
+    "name": "Gói Bảo dưỡng Cơ bản Xe Máy Điện",
+    "description": "Gói dịch vụ bảo dưỡng cơ bản cho xe máy điện",
+    "vehicleCategory": "MOTOBIKE",
+    "price": 1550000,
+    "duration": 170,
+    "discount": 5,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc47d",
+      "690565c301c8c368d54cc483",
+      "690565c301c8c368d54cc481",
+      "690565c301c8c368d54cc482"
+    ]
+  },
+  {
+    "name": "Gói Sửa chữa Hệ thống Xe Máy Điện",
+    "description": "Gói dịch vụ sửa chữa hệ thống sạc và phanh xe máy điện",
+    "vehicleCategory": "MOTOBIKE",
+    "price": 1500000,
+    "duration": 135,
+    "discount": 7,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc47e",
+      "690565c301c8c368d54cc480"
+    ]
+  },
+  {
+    "name": "Gói Thay thế Linh kiện Xe Máy Điện",
+    "description": "Gói dịch vụ thay thế pin và lốp xe máy điện",
+    "vehicleCategory": "MOTOBIKE",
+    "price": 2600000,
+    "duration": 90,
+    "discount": 8,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc47c",
+      "690565c301c8c368d54cc47f"
+    ]
+  },
+  {
+    "name": "Gói Sửa chữa Điều khiển Xe Máy Điện",
+    "description": "Gói dịch vụ sửa chữa hệ thống điều khiển và ắc quy xe máy điện",
+    "vehicleCategory": "MOTOBIKE",
+    "price": 1700000,
+    "duration": 150,
+    "discount": 6,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc484",
+      "690565c301c8c368d54cc485"
+    ]
+  },
+  {
+    "name": "Gói Premium Xe Máy Điện",
+    "description": "Gói dịch vụ cao cấp bao gồm thay pin, lốp và bảo dưỡng toàn diện",
+    "vehicleCategory": "MOTOBIKE",
+    "price": 4600000,
+    "duration": 270,
+    "discount": 10,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc47c",
+      "690565c301c8c368d54cc47f",
+      "690565c301c8c368d54cc480",
+      "690565c301c8c368d54cc47d",
+      "690565c301c8c368d54cc47e"
+    ]
+  },
+  {
+    "name": "Gói Bảo dưỡng Cơ bản Xe Đạp Điện",
+    "description": "Gói dịch vụ bảo dưỡng cơ bản cho xe đạp điện",
+    "vehicleCategory": "BICYCLE",
+    "price": 750000,
+    "duration": 105,
+    "discount": 5,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc487",
+      "690565c301c8c368d54cc48b",
+      "690565c301c8c368d54cc48d"
+    ]
+  },
+  {
+    "name": "Gói Sửa chữa Hệ thống Xe Đạp Điện",
+    "description": "Gói dịch vụ sửa chữa hệ thống sạc và phanh xe đạp điện",
+    "vehicleCategory": "BICYCLE",
+    "price": 850000,
+    "duration": 90,
+    "discount": 6,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc488",
+      "690565c301c8c368d54cc48a"
+    ]
+  },
+  {
+    "name": "Gói Thay thế Linh kiện Xe Đạp Điện",
+    "description": "Gói dịch vụ thay thế pin và lốp xe đạp điện",
+    "vehicleCategory": "BICYCLE",
+    "price": 1900000,
+    "duration": 65,
+    "discount": 8,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc486",
+      "690565c301c8c368d54cc489"
+    ]
+  },
+  {
+    "name": "Gói Sửa chữa Mô tơ Xe Đạp Điện",
+    "description": "Gói dịch vụ sửa chữa mô tơ và điều khiển tay xe đạp điện",
+    "vehicleCategory": "BICYCLE",
+    "price": 1400000,
+    "duration": 135,
+    "discount": 7,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc48e",
+      "690565c301c8c368d54cc48f"
+    ]
+  },
+  {
+    "name": "Gói Premium Xe Đạp Điện",
+    "description": "Gói dịch vụ cao cấp bao gồm thay pin, sửa mô tơ và bảo dưỡng toàn diện",
+    "vehicleCategory": "BICYCLE",
+    "price": 3100000,
+    "duration": 240,
+    "discount": 10,
+    "status": "active",
+    "services": [
+      "690565c301c8c368d54cc486",
+      "690565c301c8c368d54cc48e",
+      "690565c301c8c368d54cc488",
+      "690565c301c8c368d54cc487",
+      "690565c301c8c368d54cc48c"
+    ]
+  }
+]

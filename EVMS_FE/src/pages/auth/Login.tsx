@@ -7,11 +7,14 @@ import loginBackground from '../../assets/images/login_background.jpg'
 import { useAuth } from '../../contexts/AuthContext';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
+import { useAlert } from '../../hooks/useAlert';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, loginWithGoogle, isLoading, user } = useAuth();
   const [error, setError] = useState<string>('');
+
+  const { showAlert, AlertComponent } = useAlert();
 
   const [account, setAccount] = useState<AccountLogin>({
     email: '',
@@ -41,8 +44,7 @@ export const Login: React.FC = () => {
     }
   }, [user, isLoading, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async () => {
     setError('');
 
     try {
@@ -53,6 +55,7 @@ export const Login: React.FC = () => {
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+      showAlert('error', errorMessage);
       setError(errorMessage);
     }
   };
@@ -90,6 +93,7 @@ export const Login: React.FC = () => {
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat`}
       style={{ backgroundImage: `url(${loginBackground})` }}>
+      {AlertComponent}
       <div className="w-full max-w-md">
         {/* Blur container with light background */}
         <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>
@@ -98,7 +102,7 @@ export const Login: React.FC = () => {
             <p className="text-gray-600">Kết nối mọi sự kiện - Khởi tạo trải nghiệm</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6" method='GET'>
+          <div className="space-y-6">
             {/* Username Input */}
             <div>
               <Input
@@ -139,11 +143,12 @@ export const Login: React.FC = () => {
                 size="lg"
                 type="submit"
                 disabled={isLoading}
+                onClick={handleLogin}
               >
                 {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
             </div>
-          </form>
+          </div>
 
           {/* Or divider and Google Login Button */}
           <div className="mt-4">

@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, updateAppointmentStatus } from '../controllers/appointmentController.js';
-import { createVehicleConditionReport, getReportsByAppointment } from '../controllers/vehicleConditionReportController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -14,6 +13,9 @@ appointmentRouter.get('/', authMiddleware, listAppointments);
 // List my appointments (current user)
 appointmentRouter.get('/me', authMiddleware, listMyAppointments);
 
+// Get appointments by user ID
+appointmentRouter.get('/user/:userId', authMiddleware, getAppointmentsByUserId);
+
 // Get appointment by id
 appointmentRouter.get('/:id', authMiddleware, getAppointmentById);
 
@@ -25,12 +27,5 @@ appointmentRouter.patch('/:id/assign-technician', authMiddleware, assignTechnici
 
 // Get available technicians (admin/staff only)
 appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
-
-// Update appointment status (admin/staff/technician only)
-appointmentRouter.patch('/:id/status', authMiddleware, updateAppointmentStatus);
-
-// Vehicle Condition Reports for specific appointment
-appointmentRouter.post('/:appointmentId/reports', authMiddleware, createVehicleConditionReport);
-appointmentRouter.get('/:appointmentId/reports', authMiddleware, getReportsByAppointment);
 
 

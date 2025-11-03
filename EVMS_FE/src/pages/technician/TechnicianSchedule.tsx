@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Days of week
@@ -191,6 +192,7 @@ const mockAppointments: AppointmentData[] = [
 
 const TechnicianSchedule: React.FC = () => {
   const [weekIndex, setWeekIndex] = useState(0);
+  const navigate = useNavigate();
   const [shift, setShift] = useState<'all' | 'morning' | 'afternoon'>('all');
   const [selectedStatus, setSelectedStatus] = useState('Tất cả');
   const [appointments] = useState(mockAppointments);
@@ -203,8 +205,7 @@ const TechnicianSchedule: React.FC = () => {
 
   // Handle appointment click
   const handleAppointmentClick = (appointmentId: string) => {
-    // Navigate to appointment detail
-    console.log('Click appointment:', appointmentId);
+    navigate(`/technician/appointments/${appointmentId}`);
   };
 
   return (

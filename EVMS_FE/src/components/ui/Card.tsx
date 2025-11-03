@@ -1,7 +1,7 @@
 import { Check, Clock } from "lucide-react";
 import type { ServiceResponse } from "../../types/Service";
 import type { ServicePackageResponse } from "../../types/ServicePackage";
-import type { VehicleCategory } from "../../types/Vehicle";
+import { formatDuration, formatPrice } from "../../utils/DataFormat";
 
 
 // =======================================
@@ -12,54 +12,25 @@ interface ServiceCardProps {
   service: ServiceResponse;
   isSelected: boolean;
   onSelect: () => void;
-  vehicleCategory: VehicleCategory;
 }
 
 // Service Card Component
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, onSelect, vehicleCategory }) => {
-  const getServicePrice = () => {
-    if (typeof service.pricing === 'number') {
-      return service.pricing;
-    }
-    if (Array.isArray(service.pricing)) {
-      const categoryPricing = service.pricing.find(p => p.category === vehicleCategory);
-      return categoryPricing?.price || 0;
-    }
-    return 0;
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
-  };
-
-  const formatDuration = (duration: number) => {
-    if (duration >= 60) {
-      const hours = Math.floor(duration / 60);
-      const minutes = duration % 60;
-      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    }
-    return `${duration}m`;
-  };
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, onSelect }) => {
 
   return (
-    <div 
-      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
-        isSelected 
-          ? 'border-orange-500 bg-orange-50 shadow-lg' 
+    <div
+      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${isSelected
+          ? 'border-orange-500 bg-orange-50 shadow-lg'
           : 'border-gray-200 hover:border-orange-300'
-      }`}
+        }`}
       onClick={onSelect}
     >
       {/* Selection Circle */}
       <div className="absolute top-4 right-4">
-        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-          isSelected
+        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
             ? 'border-orange-500 bg-orange-500'
             : 'border-gray-300 bg-white hover:border-orange-300'
-        }`}>
+          }`}>
           {isSelected && (
             <Check className="w-4 h-4 text-white" />
           )}
@@ -71,7 +42,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, o
         <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
           {service.name}
         </h3>
-        
+
         <p className="text-gray-600 text-sm mb-4 line-clamp-3">
           {service.description}
         </p>
@@ -81,10 +52,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, o
             <Clock className="w-4 h-4 mr-1" />
             <span>{formatDuration(service.duration)}</span>
           </div>
-          
+
           <div className="text-right">
             <span className="text-xl font-bold text-orange-600">
-              {formatPrice(getServicePrice())}
+              {formatPrice(service.price)}
             </span>
           </div>
         </div>
@@ -146,21 +117,19 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
   };
 
   return (
-    <div 
-      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
-        isSelected 
-          ? 'border-orange-500 bg-orange-50 shadow-lg' 
+    <div
+      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${isSelected
+          ? 'border-orange-500 bg-orange-50 shadow-lg'
           : 'border-gray-200 hover:border-orange-300'
-      }`}
+        }`}
       onClick={onSelect}
     >
       {/* Selection Circle */}
       <div className="absolute top-4 right-4">
-        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-          isSelected
+        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
             ? 'border-orange-500 bg-orange-500'
             : 'border-gray-300 bg-white hover:border-orange-300'
-        }`}>
+          }`}>
           {isSelected && (
             <Check className="w-4 h-4 text-white" />
           )}
@@ -207,7 +176,7 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
             <Clock className="w-4 h-4 mr-1" />
             <span>{formatDuration(servicePackage.duration)}</span>
           </div>
-          
+
           <div className="text-right">
             {getDiscountAmount() > 0 && (
               <div className="text-sm text-gray-500 line-through">

@@ -45,8 +45,8 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
     setError(null);
 
     try {
-      const serviceResponse = await ServiceApi.getServiceByVehicleCategory(vehicleCategory);
-      const servicePackageResponse = await ServicePackageApi.getAllServicePackagesByVehicleCategory(vehicleCategory);
+      const serviceResponse = await ServiceApi.getService(vehicleCategory);
+      const servicePackageResponse = await ServicePackageApi.getServicePackage(vehicleCategory);
 
       const serviceData: DataResponse<ServiceResponse> = serviceResponse.data;
       const servicePackageData: DataResponse<ServicePackageResponse> = servicePackageResponse.data;
@@ -143,10 +143,10 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {servicePackages.map((pkg) => (
               <ServicePackageCard
-                key={pkg.name}
+                key={pkg._id}
                 servicePackage={pkg}
-                isSelected={selectedId === pkg.name && selectedType === 'package'}
-                onSelect={() => handlePackageSelect(pkg.name)}
+                isSelected={selectedId === pkg._id && selectedType === 'package'}
+                onSelect={() => handlePackageSelect(pkg._id)}
               />
             ))}
           </div>
@@ -165,7 +165,6 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
                 service={service}
                 isSelected={selectedId === service._id && selectedType === 'service'}
                 onSelect={() => handleServiceSelect(service._id)}
-                vehicleCategory={vehicleCategory}
               />
             ))}
           </div>
@@ -180,7 +179,7 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
             <span className="text-blue-800 font-medium">
               Đã chọn: {selectedType === 'package' ? 'Gói dịch vụ' : 'Dịch vụ'} -
               {selectedType === 'package'
-                ? servicePackages.find(p => p.name === selectedId)?.name
+                ? servicePackages.find(p => p._id === selectedId)?.name
                 : services.find(s => s._id === selectedId)?.name
               }
             </span>

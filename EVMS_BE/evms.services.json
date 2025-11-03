@@ -1,0 +1,300 @@
+[{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc472"
+  },
+  "name": "Thay pin xe ô tô điện",
+  "price": 5000000,
+  "vehicleCategory": "CAR",
+  "duration": 120,
+  "description": "Thay thế pin xe ô tô điện chính hãng, bảo hành 12 tháng"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc473"
+  },
+  "name": "Bảo dưỡng định kỳ xe ô tô điện",
+  "price": 1500000,
+  "vehicleCategory": "CAR",
+  "duration": 90,
+  "description": "Kiểm tra toàn bộ hệ thống, vệ sinh, bảo dưỡng định kỳ"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc474"
+  },
+  "name": "Sửa chữa hệ thống sạc xe ô tô điện",
+  "price": 2000000,
+  "vehicleCategory": "CAR",
+  "duration": 150,
+  "description": "Sửa chữa, thay thế hệ thống sạc và phụ kiện sạc"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc475"
+  },
+  "name": "Kiểm tra và sửa hệ thống điện xe ô tô",
+  "price": 1200000,
+  "vehicleCategory": "CAR",
+  "duration": 60,
+  "description": "Kiểm tra hệ thống điện, sửa chữa các lỗi liên quan"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc476"
+  },
+  "name": "Thay lốp xe ô tô điện",
+  "price": 2500000,
+  "vehicleCategory": "CAR",
+  "duration": 45,
+  "description": "Thay lốp chính hãng, cân bằng và điều chỉnh áp suất"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc477"
+  },
+  "name": "Vệ sinh và bảo vệ ngoại thất xe ô tô điện",
+  "price": 800000,
+  "vehicleCategory": "CAR",
+  "duration": 90,
+  "description": "Rửa xe, đánh bóng, phủ ceramic bảo vệ sơn"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc478"
+  },
+  "name": "Sửa chữa phanh xe ô tô điện",
+  "price": 3000000,
+  "vehicleCategory": "CAR",
+  "duration": 120,
+  "description": "Kiểm tra, sửa chữa hoặc thay thế hệ thống phanh"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc479"
+  },
+  "name": "Cài đặt và nâng cấp phần mềm xe ô tô điện",
+  "price": 1000000,
+  "vehicleCategory": "CAR",
+  "duration": 60,
+  "description": "Cập nhật firmware, phần mềm điều khiển hệ thống"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47a"
+  },
+  "name": "Thay thế màn hình cảm ứng xe ô tô điện",
+  "price": 8000000,
+  "vehicleCategory": "CAR",
+  "duration": 180,
+  "description": "Thay thế màn hình cảm ứng trung tâm bị hỏng"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47b"
+  },
+  "name": "Bảo dưỡng hệ thống điều hòa xe ô tô điện",
+  "price": 2000000,
+  "vehicleCategory": "CAR",
+  "duration": 90,
+  "description": "Vệ sinh, nạp gas, kiểm tra hệ thống điều hòa"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47c"
+  },
+  "name": "Thay pin xe máy điện",
+  "price": 2000000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 60,
+  "description": "Thay pin xe máy điện chính hãng, bảo hành 12 tháng"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47d"
+  },
+  "name": "Bảo dưỡng định kỳ xe máy điện",
+  "price": 500000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 45,
+  "description": "Kiểm tra toàn bộ, vệ sinh, tra dầu, bảo dưỡng định kỳ"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47e"
+  },
+  "name": "Sửa chữa hệ thống sạc xe máy điện",
+  "price": 800000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 90,
+  "description": "Sửa chữa bộ sạc, thay dây sạc, kiểm tra cổng sạc"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc47f"
+  },
+  "name": "Thay lốp xe máy điện",
+  "price": 600000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 30,
+  "description": "Thay lốp xe máy điện, cân chỉnh và kiểm tra áp suất"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc480"
+  },
+  "name": "Sửa chữa phanh xe máy điện",
+  "price": 700000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 45,
+  "description": "Kiểm tra, điều chỉnh hoặc thay thế má phanh"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc481"
+  },
+  "name": "Kiểm tra và sửa hệ thống điện xe máy điện",
+  "price": 400000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 60,
+  "description": "Kiểm tra hệ thống điện, sửa chữa các lỗi liên quan"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc482"
+  },
+  "name": "Thay thế đèn xe máy điện",
+  "price": 300000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 20,
+  "description": "Thay thế đèn pha, đèn hậu, đèn xi nhan"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc483"
+  },
+  "name": "Vệ sinh và bảo dưỡng khung xe máy điện",
+  "price": 350000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 45,
+  "description": "Vệ sinh khung xe, kiểm tra và bôi trơn các khớp nối"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc484"
+  },
+  "name": "Sửa chữa hệ thống tay ga xe máy điện",
+  "price": 500000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 60,
+  "description": "Kiểm tra, sửa chữa hoặc thay thế tay ga điện"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc485"
+  },
+  "name": "Bảo dưỡng và thay thế ắc quy xe máy điện",
+  "price": 1200000,
+  "vehicleCategory": "MOTOBIKE",
+  "duration": 90,
+  "description": "Kiểm tra, bảo dưỡng hoặc thay thế ắc quy nếu cần"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc486"
+  },
+  "name": "Thay pin xe đạp điện",
+  "price": 1500000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 45,
+  "description": "Thay pin xe đạp điện chính hãng, bảo hành 12 tháng"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc487"
+  },
+  "name": "Bảo dưỡng định kỳ xe đạp điện",
+  "price": 300000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 30,
+  "description": "Kiểm tra tổng thể, vệ sinh, tra dầu, bảo dưỡng định kỳ"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc488"
+  },
+  "name": "Sửa chữa hệ thống sạc xe đạp điện",
+  "price": 500000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 60,
+  "description": "Sửa chữa bộ sạc, thay dây sạc cho xe đạp điện"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc489"
+  },
+  "name": "Thay lốp xe đạp điện",
+  "price": 400000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 20,
+  "description": "Thay lốp xe đạp điện, kiểm tra và điều chỉnh áp suất"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48a"
+  },
+  "name": "Sửa chữa phanh xe đạp điện",
+  "price": 350000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 30,
+  "description": "Điều chỉnh hoặc thay thế má phanh, kiểm tra dây phanh"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48b"
+  },
+  "name": "Kiểm tra hệ thống điện xe đạp điện",
+  "price": 250000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 45,
+  "description": "Kiểm tra hệ thống điện, mô tơ, điều khiển"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48c"
+  },
+  "name": "Thay thế đèn xe đạp điện",
+  "price": 150000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 15,
+  "description": "Thay thế đèn pha, đèn hậu cho xe đạp điện"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48d"
+  },
+  "name": "Bảo dưỡng và tra dầu xích xe đạp điện",
+  "price": 200000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 30,
+  "description": "Vệ sinh xích, tra dầu bôi trơn, điều chỉnh độ căng xích"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48e"
+  },
+  "name": "Sửa chữa mô tơ xe đạp điện",
+  "price": 1000000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 90,
+  "description": "Kiểm tra, sửa chữa hoặc thay thế mô tơ điện"
+},
+{
+  "_id": {
+    "$oid": "690565c301c8c368d54cc48f"
+  },
+  "name": "Thay thế điều khiển tay xe đạp điện",
+  "price": 400000,
+  "vehicleCategory": "BICYCLE",
+  "duration": 45,
+  "description": "Thay thế bộ điều khiển tay ga, đèn, còi"
+}]

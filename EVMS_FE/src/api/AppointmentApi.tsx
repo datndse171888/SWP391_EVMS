@@ -1,24 +1,29 @@
-import type { AppointmentStatus, CreateAppointmentRequest, CreateAppointmentResponse, UpdateAppointmentStatusRequest } from "../types/Appoitment";
+import type { AppointmentResponse, AppointmentStatus, CreateAppointmentRequest, UpdateAppointmentStatusRequest } from "../types/Appoitment";
+import type { FilteredDataResponse } from "../types/DataResponse";
 import { api } from "../utils/Axios";
 
 export const AppointmentApi = {
   createAppointment: (data: CreateAppointmentRequest) => {
-    return api.post<CreateAppointmentResponse>('/appointments ', data);
+    return api.post<AppointmentResponse>('/appointments', data);
   },
 
-  getAppointmentsByStatus: (status: AppointmentStatus) => {
-    return api.get<CreateAppointmentResponse>(`/appointments?status=${status}`);
+  getAllAppointments: (status?: AppointmentStatus) => {
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments' + (status ? `?status=${status}` : ''));
   },
 
   getAppointmentByMe: () => {
-    return api.get<CreateAppointmentResponse>('/appointments/me');
+    return api.get<AppointmentResponse>('/appointments/me');
   },
 
   getAppointmentByUserId: (userId: string) => {
-    return api.get<CreateAppointmentResponse>(`/appointments?userId=${userId}&sort=bookingDate&order=desc`);
+    return api.get<AppointmentResponse>(`/appointments/user/${userId}?sort=bookingDate&order=desc`);
   },
 
   updateAppointmentStatus: (appointmentId: string, request: UpdateAppointmentStatusRequest) => {
-    return api.patch<CreateAppointmentResponse>(`/appointments/${appointmentId}/status`, request);
+    return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/status`, request);
+  },
+
+  cancelAppointment: (appointmentId: string) => {
+    return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/cancel`);
   }
 };

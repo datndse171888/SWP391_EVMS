@@ -30,9 +30,26 @@ export const Services: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetchServices({ page: currentPage, limit, search: searchTerm })
+      const res = await fetchServices({ 
+        page: currentPage, 
+        limit, 
+        search: searchTerm,
+        vehicleCategory: selectedVehicleType || undefined
+      })
       if (res?.success) {
-        setServices(res.data.services || [])
+        const serviceList = res.data.services || [];
+        // Log để debug
+        console.log(`Page ${currentPage}: Loaded ${serviceList.length} services, Total: ${res.data.pagination?.totalItems || 0}`);
+        console.log('Service IDs:', serviceList.map(s => s._id));
+        
+        // Kiểm tra duplicate
+        const ids = serviceList.map(s => s._id);
+        const uniqueIds = new Set(ids);
+        if (ids.length !== uniqueIds.size) {
+          console.warn('Duplicate services detected!', ids.filter((id, idx) => ids.indexOf(id) !== idx));
+        }
+        
+        setServices(serviceList);
         const pagination: ServicesResponsePagination = res.data.pagination
         setTotalPages(pagination?.totalPages || 1)
       } else {
@@ -46,17 +63,20 @@ export const Services: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, limit, searchTerm])
+  }, [currentPage, limit, searchTerm, selectedVehicleType])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  console.log(services)
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
-    loadData()
+  }
+
+  const handleVehicleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedVehicleType(e.target.value)
+    setCurrentPage(1) // Reset về trang 1 khi thay đổi filter
   }
 
   const truncate = (text?: string, maxLen: number = 120) => {
@@ -125,14 +145,10 @@ export const Services: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/services/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (!response.ok) {
+      const response = await ServiceApi.deleteService(id);
+
+      if (!response.status) {
         throw new Error('Failed to delete service');
       }
 
@@ -188,13 +204,13 @@ export const Services: React.FC = () => {
             <div className="sm:w-48">
               <select
                 value={selectedVehicleType}
-                onChange={(e) => setSelectedVehicleType(e.target.value)}
+                onChange={handleVehicleTypeChange}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent bg-white"
               >
-                <option value="">Tất cả loại xe</option>
-                <option value="electric_bike">Xe đạp điện</option>
-                <option value="electric_motorcycle">Xe máy điện</option>
-                <option value="electric_car">Xe ô tô điện</option>
+                 <option value="">Tất cả loại xe</option>
+                <option value="BICYCLE">Xe đạp điện</option>
+                <option value="MOTOBIKE">Xe máy điện</option>
+                <option value="CAR">Xe ô tô điện</option>
               </select>
             </div>
             <button
@@ -228,17 +244,17 @@ export const Services: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Dịch vụ</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Thời lượng</th>
-                      {/* <th className="text-left py-4 px-6 text-gray-600 font-semibold">CAR</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">BICYCLE</th>
-                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">MOTOBIKE</th> */}
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Loại xe</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hành động</th>
 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {services.map((svc) => (
-                      <tr key={svc._id} className="hover:bg-gray-50 transition-colors duration-200">
+                    {services.map((svc, index) => {
+                      // Ensure unique key - use _id with index as fallback
+                      const uniqueKey = svc._id || `service-${index}-${svc.name}`;
+                      return (
+                      <tr key={uniqueKey} className="hover:bg-gray-50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-blue-0 flex items-center justify-center shadow-md overflow-hidden">
@@ -288,7 +304,7 @@ export const Services: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(String(svc._id), svc.name)}
+                              onClick={() => handleDelete(svc._id, svc.name)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >
@@ -299,7 +315,8 @@ export const Services: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

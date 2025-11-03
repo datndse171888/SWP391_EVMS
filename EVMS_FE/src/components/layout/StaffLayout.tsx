@@ -120,10 +120,26 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
             {/* Avatar */}
             <Link
               to="/staff/profile"
-              className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:from-blue-600 hover:to-blue-800 transition-all duration-200 cursor-pointer"
+              className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center transition-all duration-200 cursor-pointer ring-2 ring-white hover:ring-blue-300"
               title={sidebarExpanded ? '' : 'Hồ sơ cá nhân'}
             >
-              {user?.fullName?.charAt(0) || user?.userName?.charAt(0) || 'S'}
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user?.fullName || user?.userName || 'Staff'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to generated avatar if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    const name = user?.fullName || user?.userName || 'Staff';
+                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=014091&color=fff`;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-semibold text-sm">
+                  {user?.fullName?.charAt(0) || user?.userName?.charAt(0) || 'S'}
+                </div>
+              )}
             </Link>
             
             {/* Logout Button */}

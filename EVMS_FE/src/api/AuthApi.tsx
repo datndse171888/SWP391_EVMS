@@ -1,4 +1,4 @@
-import type { AccountLogin, ForgotPasswordRequest, LoginResponse, ResetPasswordRequest } from "../types/Account";
+import type { AccountLogin, ForgotPasswordRequest, LoginResponse, ResetPasswordRequest, UserResponse } from "../types/Account";
 import type { AccountRegister } from "../types/Account";
 import { api } from "../utils/Axios";
 
@@ -13,7 +13,7 @@ export const authApi = {
   },
 
   register: (userData: AccountRegister) => {
-    return api.post('/auth/register', userData);
+    return api.post<UserResponse>('/auth/register', userData);
   },
 
   logout: () => {
@@ -32,7 +32,13 @@ export const authApi = {
     photoURL?: string;
     gender?: string;
   }) => {
-    return api.put('/auth/profile', userData);
+    return api.put<{
+      success: boolean;
+      message: string;
+      data: {
+        user: UserResponse;
+      };
+    }>('/auth/profile', userData);
   },
 
   updateUser: (userId: string, userData: {
@@ -57,6 +63,14 @@ export const authApi = {
 
   resetPassword: (data: ResetPasswordRequest) => {
     return api.post('/auth/reset-password', data);
+  },
+
+  checkOtp: (verifyCode: string) => {
+    return api.post<{ success: boolean; message: string }>('/auth/check-otp', { verifyCode });
+  },
+
+  sendOtp: (email: string, userName: string) => {
+    return api.post<{ success: boolean; message: string }>('/auth/send-new-verify-email', { email, userName });
   },
 };
 

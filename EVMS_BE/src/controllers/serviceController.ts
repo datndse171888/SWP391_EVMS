@@ -3,16 +3,21 @@ import { Service } from '../models/Service.js';
 
 export async function createService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status } = req.body;
-    if (!name || price === undefined || duration === undefined) {
-      return res.status(400).json({ message: 'Thiếu name, price hoặc duration' });
+    const { name, price, duration, description, image, status, vehicleCategory } = req.body;
+    if (!name || price === undefined || duration === undefined || !vehicleCategory) {
+      return res.status(400).json({ message: 'Thiếu name, price, duration hoặc vehicleCategory' });
     }
 
     if (typeof price !== 'number' || price < 0) {
       return res.status(400).json({ message: 'Price phải là số không âm' });
     }
 
-    const created = await Service.create({ name, price, duration, description, image, status });
+    const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+    if (!validVehicleCategories.includes(vehicleCategory)) {
+      return res.status(400).json({ message: 'vehicleCategory không hợp lệ (CAR | BICYCLE | MOTOBIKE)' });
+    }
+
+    const created = await Service.create({ name, price, duration, description, image, status, vehicleCategory });
     return res.status(201).json({ message: 'Tạo dịch vụ thành công', service: created });
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -36,7 +41,7 @@ export async function getServices(req: Request, res: Response) {
     if (vehicleCategory) filter.vehicleCategory = vehicleCategory;
 
     const [items, total] = await Promise.all([
-      Service.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Service.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Service.countDocuments(filter),
     ]);
     return res.json({ items, page, limit, total });
@@ -57,15 +62,21 @@ export async function getServiceById(req: Request, res: Response) {
 
 export async function updateService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status } = req.body;
+    const { name, price, duration, description, image, status, vehicleCategory } = req.body;
     
     if (price !== undefined && (typeof price !== 'number' || price < 0)) {
       return res.status(400).json({ message: 'Price phải là số không âm' });
     }
+    if (vehicleCategory !== undefined) {
+      const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
+      if (!validVehicleCategories.includes(vehicleCategory)) {
+        return res.status(400).json({ message: 'vehicleCategory không hợp lệ (CAR | BICYCLE | MOTOBIKE)' });
+      }
+    }
 
     const updated = await Service.findByIdAndUpdate(
       req.params.id,
-      { name, price, duration, description, image, status },
+      { name, price, duration, description, image, status, vehicleCategory },
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
@@ -91,27 +102,19 @@ export async function getServicesByVehicleCategory(req: Request, res: Response) 
       });
     }
 
-    // Tìm services có pricing cho vehicleCategory này
-    const filter: any = { 
-      'pricing.category': vehicleCategory,
-      status 
-    };
+    // Tìm services theo vehicleCategory (model mới)
+    const filter: any = { vehicleCategory };
+    // Note: Service model doesn't have status field, so we skip status filter
 
     const services = await Service.find(filter)
       .sort({ createdAt: -1 })
       .lean();
 
-    // Lọc và format pricing để chỉ hiển thị price cho vehicleCategory này
-    const formattedServices = services.map(service => ({
-      ...service,
-      pricing: service.pricing.find((p: any) => p.category === vehicleCategory)?.price || 0
-    }));
-
     return res.json({ 
       message: `Lấy danh sách dịch vụ cho ${vehicleCategory} thành công`,
       data: {
-        services: formattedServices,
-        count: formattedServices.length,
+        services,
+        count: services.length,
         vehicleCategory
       }
     });

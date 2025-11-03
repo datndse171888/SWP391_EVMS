@@ -7,7 +7,8 @@ import {
   AdminRoute,
   StaffRoute,
   TechnicianRoute,
-  CustomerRoute
+  CustomerRoute,
+  PrivateRoute
 } from './components/auth/ProtectedRoute'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { StaffLayout } from './components/layout/StaffLayout'
@@ -16,14 +17,13 @@ import { Dashboard } from './pages/admin/Dashboard'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
-import { Parts } from './pages/admin/Parts'
+import { Parts as AdminParts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
 import Service from './pages/service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
-import ProfileView from './pages/user/UserProfile'
 import StaffDashboard from './pages/staff/StaffDashboard';
 import { BikeService } from './pages/service/BikeService';
 import { CarService } from './pages/service/CarService';
@@ -33,8 +33,16 @@ import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
 import Booking from './pages/booking/Booking'
+import PartsPage from './pages/Parts'
+import PartDetail from './pages/PartDetail'
+import TechniciansPage from './pages/Technicians'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import TechnicianSchedule from './pages/technician/TechnicianSchedule';
+import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
+import TechnicianProfile from './pages/technician/TechnicianProfile';
+import Profile from './pages/user/Profile';
+import FeedbackPage from './pages/user/FeedBack';
+import AppointmentHistory from './pages/user/AppointmentHistory';
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -53,7 +61,11 @@ export const Router: React.FC = () => {
           <Route path="/carService" element={<CarService />} />
           <Route path="/bikeService" element={<BikeService />} />
           <Route path="/motoService" element={<MotoService />} />
+          <Route path="/parts" element={<PartsPage />} />
+          <Route path="/part/:id" element={<PartDetail />} />
+          <Route path="/technicians" element={<TechniciansPage />} />
           <Route path='/booking' element={<Booking />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -61,7 +73,16 @@ export const Router: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
-        <Route path="/profile" element={<ProfileView />} />
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Profile />
+          </PrivateRoute>
+        } />
+        <Route path="/appointment-history" element={
+          <PrivateRoute>
+            <AppointmentHistory />
+          </PrivateRoute>
+        } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
@@ -74,7 +95,7 @@ export const Router: React.FC = () => {
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
-              <Parts />
+              <AdminParts />
             </AdminLayout>
           </AdminRoute>
         } />
@@ -123,6 +144,8 @@ export const Router: React.FC = () => {
               <Routes>
                 <Route path="dashboard" element={<TechnicianDashboard />} />
                 <Route path="schedule" element={<TechnicianSchedule />} />
+                <Route path="profile" element={<TechnicianProfile />} />
+                <Route path="appointments/:id" element={<AppointmentWorkspace />} />
                 <Route path="*" element={<Navigate to="/technician/dashboard" replace />} />
               </Routes>
             </TechnicianLayout>
