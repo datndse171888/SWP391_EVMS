@@ -12,6 +12,8 @@ import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { VehicleApi } from '../../api/VehicleApi';
 import { formatDate, formatPrice, formatTime } from '../../utils/DataFormat';
 import { Loading } from '../Loading';
+import { UserApi } from '../../api/UserApi';
+import type { CheckingResponse } from '../../types/DataResponse';
 
 interface AppointmentDetailModalProps {
     appointment: AppointmentResponse;
@@ -54,7 +56,10 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
         setError(null);
 
         try {
-            //   const userResponse = await authApi.
+            const userResponse = await UserApi.getById(appointment.userID);
+            const userData: CheckingResponse<UserResponse> = userResponse.data;
+            setUser(userData.data);
+
             const vehicleResponse = await VehicleApi.getVehicleById(appointment.vehicleID);
             const vehicleData: VehicleResponse = vehicleResponse.data;
             setVehicle(vehicleData);

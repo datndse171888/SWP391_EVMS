@@ -7,7 +7,7 @@ export interface DataResponse<T> {
 
 export interface CheckingResponse<T> {
     success: boolean;
-    message: string;
+    message?: string;
     data: T;
 }
 
