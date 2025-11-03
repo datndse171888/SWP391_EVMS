@@ -959,16 +959,120 @@ const ManageAppointment: React.FC = () => {
       </div>
 
       {/* Detail Modal */}
-      {selectedAppointment && (
-        <AppointmentDetailModal
-          appointment={selectedAppointment}
-          isOpen={showDetailModal}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedAppointment(null);
-          }}
-          varient="staff"
-        />
+      {showDetailModal && selectedAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-semibold">
+                  {selectedAppointment.customerName?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-gray-900">{selectedAppointment.customerName}</div>
+                  <div className="text-sm text-gray-600">{selectedAppointment.customerPhone}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Loại lịch hẹn</div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {selectedAppointment.kind === 'package' ? 'Gói dịch vụ' : 'Dịch vụ lẻ'}
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Loại xe</div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {selectedAppointment.vehicleCategory === 'CAR'
+                      ? 'Ô tô'
+                      : selectedAppointment.vehicleCategory === 'MOTOBIKE'
+                      ? 'Xe máy'
+                      : selectedAppointment.vehicleCategory === 'BICYCLE'
+                      ? 'Xe đạp'
+                      : '—'}
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4 md:col-span-2">
+                  <div className="text-xs text-gray-500">Mô tả</div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">{selectedAppointment.descriptionText || '—'}</div>
+                  {selectedAppointment.detailText && (
+                    <div className="mt-2 text-sm text-gray-600">{selectedAppointment.detailText}</div>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Ngày hẹn</div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">{selectedAppointment.appointmentDate}</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Giờ hẹn</div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">{selectedAppointment.appointmentTime}</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Trạng thái</div>
+                  <div className="mt-2">{getStatusBadge(selectedAppointment.status)}</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-xs text-gray-500">Thẻ</div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {(selectedAppointment.tags || []).length > 0 ? (
+                      selectedAppointment.tags.map((t) => (
+                        <span key={t} className="px-2 py-0.5 bg-white border rounded-full text-xs text-gray-700">{t}</span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-600">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+              {selectedAppointment.status === 'pending' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleConfirmAppointment(selectedAppointment.id);
+                      setShowDetailModal(false);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900"
+                  >
+                    Xác nhận
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRejectAppointment(selectedAppointment.id);
+                      setShowDetailModal(false);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Từ chối
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
