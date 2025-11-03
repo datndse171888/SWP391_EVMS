@@ -320,4 +320,21 @@ export async function getCertificates(req: Request, res: Response) {
   }
 }
 
+export async function getUserById(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'ID không hợp lệ' });
+    }
+    const user = await User.findById(userId).select('-passwordHash').lean();
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error('Lỗi khi lấy thông tin người dùng:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy thông tin người dùng' });
+  }
+}
+
 // Technician-specific APIs have been moved to technicianController.ts
