@@ -10,6 +10,8 @@ import type { VehicleResponse } from '../../types/Vehicle';
 import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { VehicleApi } from '../../api/VehicleApi';
+import { UserApi } from '../../api/UserApi';
+import type { CheckingResponse } from '../../types/DataResponse';
 
 interface AppointmentCardProps {
     appointment: AppointmentResponse;
@@ -45,7 +47,10 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
     const fetchAppointmentDetails = async () => {
         try {
-            //   const userResponse = await authApi.
+            const userResponse = await UserApi.getById(appointment.userID);
+            const userData: CheckingResponse<UserResponse> = userResponse.data;
+            setUser(userData.data);
+
             const vehicleResponse = await VehicleApi.getVehicleById(appointment.vehicleID);
             const vehicleData: VehicleResponse = vehicleResponse.data;
             setVehicle(vehicleData);
@@ -110,7 +115,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     </div>
                     <div>
                         <p className="text-xs text-gray-600">User:</p>
-                        <p className="text-xs text-gray-600">{user?.fullName || 'Cao Thượng Thế'}</p>
+                        <p className="text-xs text-gray-600">{user?.fullName}</p>
                     </div>
                 </div>
 
