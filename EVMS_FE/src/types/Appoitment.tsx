@@ -1,4 +1,4 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled' | 'no_show';
 
 export interface CreateAppointmentRequest {
     userID: string;

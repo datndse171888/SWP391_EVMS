@@ -15,6 +15,10 @@ export const AppointmentApi = {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
+  getTodayAwaitingPayment: () => {
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/today/awaiting-payment');
+  },
+
   getAppointmentByUserId: (userId: string) => {
     return api.get<AppointmentResponse>(`/appointments/user/${userId}?sort=bookingDate&order=desc`);
   },

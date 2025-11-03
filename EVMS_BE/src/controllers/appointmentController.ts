@@ -409,6 +409,32 @@ export async function listAppointments(req: Request, res: Response) {
   }
 }
 
+// List today's appointments with status awaiting_payment (admin/staff)
+export async function listTodayAwaitingPayment(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    const docs = await Appointment.find({
+      status: 'awaiting_payment',
+      bookingDate: { $gte: start, $lte: end }
+    }).sort({ bookingDate: 1 });
+
+    return res.json({ data: docs, pagination: { total: docs.length } });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 export async function listMyAppointments(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });

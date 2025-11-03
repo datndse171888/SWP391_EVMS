@@ -28,7 +28,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'],
+      enum: ['pending', 'confirmed', 'in_progress', 'awaiting_payment', 'completed', 'cancelled', 'no_show'],
       default: 'pending',
       index: true,
     },

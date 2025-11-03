@@ -44,7 +44,7 @@ interface Appointment {
 }
 
 const ManageAppointment: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'>('pending');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'confirmed' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled'>('pending');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
@@ -300,6 +300,7 @@ const ManageAppointment: React.FC = () => {
   const pendingAppointments = filterAppointments(appointments.filter(apt => apt.status === 'pending'));
   const confirmedAppointments = filterAppointments(appointments.filter(apt => apt.status === 'confirmed'));
   const inProgressAppointments = filterAppointments(appointments.filter(apt => apt.status === 'in_progress'));
+  const awaitingPaymentAppointments = filterAppointments(appointments.filter(apt => apt.status === 'awaiting_payment'));
   const cancelledAppointments = filterAppointments(appointments.filter(apt => apt.status === 'cancelled'));
   const completedAppointments = filterAppointments(appointments.filter(apt => apt.status === 'completed'));
   const allAppointments = filterAppointments(appointments);
@@ -317,6 +318,8 @@ const ManageAppointment: React.FC = () => {
         return inProgressAppointments;
       case 'cancelled':
         return cancelledAppointments;
+      case 'awaiting_payment':
+        return awaitingPaymentAppointments;
       case 'completed':
         return completedAppointments;
       default:
@@ -367,6 +370,7 @@ const ManageAppointment: React.FC = () => {
       cancelled: { text: 'Đã hủy', color: 'bg-pink-100 text-pink-800' },
       no_show: { text: 'Không đến', color: 'bg-gray-100 text-gray-800' },
       rejected: { text: 'Đã từ chối', color: 'bg-red-100 text-red-800' },
+      awaiting_payment: { text: 'Chờ thanh toán', color: 'bg-orange-100 text-orange-800' },
     };
     const config = statusConfig[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>{config.text}</span>;
@@ -547,7 +551,7 @@ const ManageAppointment: React.FC = () => {
     };
     
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-3">
+      <div className="bg-white rounded-lg border border-gray-200 p-2">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-800">Lịch hẹn</h3>
           {selectedDate && (
@@ -601,7 +605,7 @@ const ManageAppointment: React.FC = () => {
               <button
                 key={day}
                 onClick={() => handleDateClick(day)}
-                className={`h-6 w-6 text-xs rounded-full hover:bg-yellow-100 transition-colors ${
+                className={`h-5 w-5 text-[10px] rounded-full hover:bg-yellow-100 transition-colors ${
                   isSelected 
                     ? 'bg-yellow-500 text-white' 
                     : isToday 
@@ -732,7 +736,7 @@ const ManageAppointment: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3 pb-8">
+    <div className="space-y-3" style={{ paddingTop: 6, paddingBottom: 6, paddingLeft: 6, paddingRight: 6 }}>
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-1">
           {/* Main Content Area */}
@@ -793,36 +797,6 @@ const ManageAppointment: React.FC = () => {
                 >
                   Đã xác nhận ({confirmedAppointments.length})
                 </button>
-                <button
-                  onClick={() => setSelectedTab('in_progress')}
-                  className={`py-1 px-1 border-b-2 font-medium text-xs whitespace-nowrap max-w-[180px] truncate ${
-                    selectedTab === 'in_progress'
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Đang tiến hành ({inProgressAppointments.length})
-                </button>
-                <button
-                  onClick={() => setSelectedTab('completed')}
-                  className={`py-1 px-1 border-b-2 font-medium text-xs whitespace-nowrap max-w-[180px] truncate ${
-                    selectedTab === 'completed'
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Hoàn thành ({completedAppointments.length})
-                </button>
-                <button
-                  onClick={() => setSelectedTab('cancelled')}
-                  className={`py-1 px-1 border-b-2 font-medium text-xs whitespace-nowrap max-w-[180px] truncate ${
-                    selectedTab === 'cancelled'
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Đã hủy ({cancelledAppointments.length})
-                </button>
               </nav>
             </div>
 
@@ -878,7 +852,7 @@ const ManageAppointment: React.FC = () => {
 
         {/* Right Sidebar - Filters */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm p-3">
+          <div className="bg-white rounded-lg shadow-sm p-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-800">Filters</h2>
               <button
@@ -896,12 +870,12 @@ const ManageAppointment: React.FC = () => {
             </div>
 
             {/* Calendar */}
-            <div className="mb-4 pb-4 border-b border-gray-200">
+            <div className="mb-2 pb-2">
               <Calendar />
             </div>
 
             {/* Kind Filter */}
-            <div className="mb-4 pb-4 border-b border-gray-200">
+            <div className="mb-2 pb-2 border-b border-gray-200">
               <h3 className="text-base font-bold text-gray-800 mb-3">Loại lịch hẹn</h3>
               <div className="space-y-2">
                 {[
@@ -927,8 +901,38 @@ const ManageAppointment: React.FC = () => {
               </div>
             </div>
 
+            {/* Status Filter */}
+            <div className="mb-2 pb-2 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-800 mb-3">Trạng thái</h3>
+              <div className="space-y-2">
+                {([
+                  { key: 'in_progress', label: 'Đang tiến hành' },
+                  { key: 'awaiting_payment', label: 'Chờ thanh toán' },
+                  { key: 'completed', label: 'Hoàn thành' },
+                  { key: 'cancelled', label: 'Đã hủy' },
+                  { key: 'no_show', label: 'Không đến' },
+                ] as const).map((st) => (
+                  <label key={st.key} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.includes(st.key as unknown as AppointmentStatus)}
+                      onChange={() => {
+                        setSelectedStatuses((prev) =>
+                          prev.includes(st.key as unknown as AppointmentStatus)
+                            ? prev.filter((x) => x !== (st.key as unknown as AppointmentStatus))
+                            : [...prev, st.key as unknown as AppointmentStatus]
+                        )
+                      }}
+                      className="mr-3 w-4 h-4 bg-gray-100 border border-gray-300 rounded-full appearance-none checked:bg-orange-200 focus:ring-orange-500 focus:ring-2"
+                    />
+                    <span className="text-sm text-gray-700">{st.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Vehicle Type Filter */}
-            <div className="mb-4">
+            <div className="mb-2">
               <h3 className="text-base font-bold text-gray-800 mb-3">Loại xe</h3>
               <div className="space-y-2">
                 {[

@@ -32,6 +32,7 @@ import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
+import BookingPage from './pages/staff/BookingPage';
 import Booking from './pages/booking/Booking'
 import PartsPage from './pages/Parts'
 import PartDetail from './pages/PartDetail'
@@ -130,6 +131,7 @@ export const Router: React.FC = () => {
                 <Route path="customers" element={<ChatWithCustomer />} />
                 <Route path="appointments" element={<ManageAppointment />} />
                 <Route path="parts" element={<ManagePart />} />
+                <Route path="booking" element={<BookingPage />} />
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
               </Routes>
