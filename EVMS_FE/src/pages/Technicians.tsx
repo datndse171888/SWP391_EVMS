@@ -30,86 +30,86 @@ interface TeamMember {
 const teamMembers: TeamMember[] = [
   {
     id: 1,
-    name: 'Dr. Sarah Chen',
-    role: 'Director of Operations',
-    email: 'sarah.chen@evservice.com',
-    phone: '+1 (555) 123-4567',
+    name: 'Nguyễn Văn An',
+    role: 'Giám đốc Vận hành',
+    email: 'nguyenvanan@evservice.com',
+    phone: '+84 (0) 123-4567',
     image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'EV Systems Architecture & Battery Technology',
+    specialization: 'Kiến trúc hệ thống xe điện & Công nghệ pin',
     certificates: [
-      { name: 'Certified EV Technician Level 3', issuer: 'International EV Association', year: 2023 },
-      { name: 'Advanced Battery Management Systems', issuer: 'Tesla Institute', year: 2022 },
-      { name: 'ISO 9001 Quality Management', issuer: 'ISO Certification Board', year: 2021 },
+      { name: 'Kỹ thuật viên xe điện được chứng nhận cấp 3', issuer: 'Hiệp hội xe điện quốc tế', year: 2023 },
+      { name: 'Hệ thống quản lý pin nâng cao', issuer: 'Viện Tesla', year: 2022 },
+      { name: 'Quản lý chất lượng ISO 9001', issuer: 'Hội đồng chứng nhận ISO', year: 2021 },
     ],
   },
   {
     id: 2,
-    name: 'Michael Rodriguez',
-    role: 'Chief Technical Engineer',
-    email: 'michael.r@evservice.com',
-    phone: '+1 (555) 234-5678',
+    name: 'Trần Minh Tuấn',
+    role: 'Kỹ sư kỹ thuật chính',
+    email: 'tranminhuan@evservice.com',
+    phone: '+84 (0) 234-5678',
     image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'High Voltage Systems & Diagnostics',
+    specialization: 'Hệ thống điện áp cao & Chẩn đoán',
     certificates: [
-      { name: 'Master EV Technician Certification', issuer: 'National Institute for Automotive Service Excellence', year: 2023 },
-      { name: 'High Voltage Safety Specialist', issuer: 'EV Safety Council', year: 2022 },
-      { name: 'Advanced Powertrain Diagnostics', issuer: 'Automotive Training Institute', year: 2021 },
+      { name: 'Chứng chỉ kỹ thuật viên xe điện chính', issuer: 'Viện quốc gia về dịch vụ ô tô xuất sắc', year: 2023 },
+      { name: 'Chuyên gia an toàn điện áp cao', issuer: 'Hội đồng an toàn xe điện', year: 2022 },
+      { name: 'Chẩn đoán hệ thống truyền động nâng cao', issuer: 'Viện đào tạo ô tô', year: 2021 },
     ],
   },
   {
     id: 3,
-    name: 'Emily Thompson',
-    role: 'Service Manager',
-    email: 'emily.t@evservice.com',
-    phone: '+1 (555) 345-6789',
+    name: 'Phạm Thị Hương',
+    role: 'Quản lý dịch vụ',
+    email: 'phamhuong@evservice.com',
+    phone: '+84 (0) 345-6789',
     image: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Customer Relations & Quality Assurance',
+    specialization: 'Quan hệ khách hàng & Đảm bảo chất lượng',
     certificates: [
-      { name: 'Certified Service Manager', issuer: 'Professional Service Association', year: 2023 },
-      { name: 'Six Sigma Green Belt', issuer: 'American Society for Quality', year: 2022 },
-      { name: 'EV Customer Service Excellence', issuer: 'EV Training Academy', year: 2021 },
+      { name: 'Quản lý dịch vụ được chứng nhận', issuer: 'Hiệp hội dịch vụ chuyên nghiệp', year: 2023 },
+      { name: 'Dây chuyền xanh Six Sigma', issuer: 'Hiệp hội Mỹ về chất lượng', year: 2022 },
+      { name: 'Dịch vụ khách hàng xe điện xuất sắc', issuer: 'Học viện đào tạo xe điện', year: 2021 },
     ],
   },
   {
     id: 4,
-    name: 'David Park',
-    role: 'Senior Battery Specialist',
-    email: 'david.p@evservice.com',
-    phone: '+1 (555) 456-7890',
+    name: 'Lê Văn Hùng',
+    role: 'Chuyên gia pin cấp cao',
+    email: 'levanhuong@evservice.com',
+    phone: '+84 (0) 456-7890',
     image: 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Battery Health & Energy Storage Systems',
+    specialization: 'Sức khỏe pin & Hệ thống lưu trữ năng lượng',
     certificates: [
-      { name: 'Certified Battery Systems Engineer', issuer: 'Battery Technology Institute', year: 2023 },
-      { name: 'Lithium-Ion Safety Certification', issuer: 'International Battery Association', year: 2022 },
-      { name: 'Energy Storage Management', issuer: 'Clean Energy Academy', year: 2021 },
+      { name: 'Kỹ sư hệ thống pin được chứng nhận', issuer: 'Viện công nghệ pin', year: 2023 },
+      { name: 'Chứng chỉ an toàn Lithium-Ion', issuer: 'Hiệp hội pin quốc tế', year: 2022 },
+      { name: 'Quản lý lưu trữ năng lượng', issuer: 'Học viện năng lượng sạch', year: 2021 },
     ],
   },
   {
     id: 5,
-    name: 'Jessica Martinez',
-    role: 'Electrical Systems Lead',
-    email: 'jessica.m@evservice.com',
-    phone: '+1 (555) 567-8901',
+    name: 'Đỗ Thị Linh',
+    role: 'Trưởng nhóm hệ thống điện',
+    email: 'dothilinh@evservice.com',
+    phone: '+84 (0) 567-8901',
     image: 'https://images.pexels.com/photos/762020/pexels-photo-762020.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Power Electronics & Charging Infrastructure',
+    specialization: 'Điện tử công suất & Cơ sở hạ tầng sạc',
     certificates: [
-      { name: 'Certified Electrical Engineer', issuer: 'Institute of Electrical Engineers', year: 2023 },
-      { name: 'EV Charging Systems Specialist', issuer: 'ChargePoint Institute', year: 2022 },
-      { name: 'Power Electronics Advanced', issuer: 'Technical University Consortium', year: 2021 },
+      { name: 'Kỹ sư điện được chứng nhận', issuer: 'Viện kỹ sư điện', year: 2023 },
+      { name: 'Chuyên gia hệ thống sạc xe điện', issuer: 'Viện ChargePoint', year: 2022 },
+      { name: 'Điện tử công suất nâng cao', issuer: 'Liên minh đại học kỹ thuật', year: 2021 },
     ],
   },
   {
     id: 6,
-    name: 'Robert Kim',
-    role: 'Diagnostic Systems Expert',
-    email: 'robert.k@evservice.com',
-    phone: '+1 (555) 678-9012',
+    name: 'Hoàng Văn Kiên',
+    role: 'Chuyên gia hệ thống chẩn đoán',
+    email: 'hoangkien@evservice.com',
+    phone: '+84 (0) 678-9012',
     image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Advanced Diagnostics & Software Systems',
+    specialization: 'Chẩn đoán nâng cao & Hệ thống phần mềm',
     certificates: [
-      { name: 'Master Diagnostic Technician', issuer: 'Automotive Diagnostic Association', year: 2023 },
-      { name: 'OEM Software Certification', issuer: 'Multiple EV Manufacturers', year: 2022 },
-      { name: 'CAN Bus & Network Analysis', issuer: 'Vehicle Network Institute', year: 2021 },
+      { name: 'Kỹ thuật viên chẩn đoán chính', issuer: 'Hiệp hội chẩn đoán ô tô', year: 2023 },
+      { name: 'Chứng chỉ phần mềm OEM', issuer: 'Nhiều nhà sản xuất xe điện', year: 2022 },
+      { name: 'Phân tích mạng CAN Bus', issuer: 'Viện mạng xe', year: 2021 },
     ],
   },
 ];
@@ -138,34 +138,34 @@ function TeamPage() {
 
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">
-            Why Choose Our Certified Team?
+            Tại sao chọn đội ngũ được chứng nhận của chúng tôi?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-6 bg-emerald-50 rounded-xl">
               <Award className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Industry-Leading Certifications
+                Chứng chỉ hàng đầu ngành
               </h3>
               <p className="text-slate-600">
-                Our technicians hold the highest certifications from recognized automotive and EV institutions.
+                Các kỹ thuật viên của chúng tôi sở hữu những chứng chỉ cao nhất từ các tổ chức ô tô và xe điện được công nhận.
               </p>
             </div>
             <div className="text-center p-6 bg-blue-50 rounded-xl">
               <Shield className="w-12 h-12 text-blue-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Safety First Approach
+                Tiếp cận ưu tiên an toàn
               </h3>
               <p className="text-slate-600">
-                Specialized training in high-voltage systems ensures your vehicle and our team stay safe.
+                Đào tạo chuyên biệt về hệ thống điện áp cao đảm bảo xe của bạn và đội ngũ của chúng tôi luôn an toàn.
               </p>
             </div>
             <div className="text-center p-6 bg-slate-50 rounded-xl">
               <Mail className="w-12 h-12 text-slate-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Always Available
+                Luôn sẵn sàng phục vụ
               </h3>
               <p className="text-slate-600">
-                Our team is ready to assist with your questions and service needs at any time.
+                Đội ngũ của chúng tôi sẵn sàng hỗ trợ các câu hỏi và nhu cầu dịch vụ của bạn bất kỳ lúc nào.
               </p>
             </div>
           </div>
@@ -175,11 +175,11 @@ function TeamPage() {
           <div className="inline-flex items-center space-x-6 bg-white px-8 py-4 rounded-xl shadow-md border border-slate-200">
             <div className="flex items-center text-slate-700">
               <Phone className="w-5 h-5 mr-2 text-emerald-600" />
-              <span className="font-medium">General Inquiries: +1 (555) 000-0000</span>
+              <span className="font-medium">Thông tin chung: +84 (0) 000-0000</span>
             </div>
             <div className="flex items-center text-slate-700">
               <Mail className="w-5 h-5 mr-2 text-emerald-600" />
-              <span className="font-medium">info@evservice.com</span>
+              <span className="font-medium">info@evservice.vn</span>
             </div>
           </div>
         </div>
