@@ -503,6 +503,51 @@ export async function listMyAppointments(req: Request, res: Response) {
   }
 }
 
+// List appointments assigned to current technician
+export async function listMyAssignedAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'technician') {
+      return res.status(403).json({ message: 'Chỉ kỹ thuật viên được phép xem danh sách này' });
+    }
+
+    // Resolve technicianId from current user
+    const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
+    const technicianId = String(techDoc._id);
+
+    const params = parseListParams(req);
+    const filter = buildBaseFilter(params);
+    filter.$or = [
+      { technicianLeaderID: technicianId },
+      { technicianSupport1ID: technicianId },
+      { technicianSupport2ID: technicianId },
+    ];
+
+    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
+    const populates = buildPopulate(params.includeParam);
+
+    const skip = (params.page - 1) * params.limit;
+    const [total, docs] = await Promise.all([
+      Appointment.countDocuments(filter),
+      (() => {
+        let query = Appointment.find(filter)
+          .sort(params.sort)
+          .skip(skip)
+          .limit(params.limit);
+        if (select) query = query.select(select);
+        return query.populate(populates);
+      })(),
+    ]);
+
+    // Technician: trả thẳng mảng dữ liệu
+    return res.json(docs);
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 export async function getAppointmentById(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });

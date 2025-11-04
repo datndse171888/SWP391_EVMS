@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -15,6 +15,9 @@ appointmentRouter.get('/today/awaiting-payment', authMiddleware, listTodayAwaiti
 
 // List my appointments (current user)
 appointmentRouter.get('/me', authMiddleware, listMyAppointments);
+
+// List appointments assigned to current technician (or by technicianId for admin/staff)
+appointmentRouter.get('/technician/me', authMiddleware, listMyAssignedAppointments);
 
 // Get appointments by user ID
 appointmentRouter.get('/user/:userId', authMiddleware, getAppointmentsByUserId);
