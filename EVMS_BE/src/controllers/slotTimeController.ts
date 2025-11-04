@@ -4,6 +4,7 @@ import { SlotTime } from '../models/SlotTime.js';
 import { Technician } from '../models/Technician.js';
 import { Appointment } from '../models/Appointment.js';
 import { User } from '../models/User.js';
+import { selectTechniciansForSlot } from '../services/technicianAssignment.js';
 
 // Get Available Slot Times API
 export async function getAvailableSlotTimes(req: Request, res: Response) {
@@ -240,6 +241,20 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
 
       // Check if slot has enough technicians
       if (availableLeaders >= required.leader && availableSupports >= required.support) {
+        // Build active leaders/supports list with minimal fields
+        const activeLeadersList = activeLeaders.map(t => ({ _id: t._id as any, startDate: (t as any).startDate }));
+        const activeSupportsList = activeSupports.map(t => ({ _id: t._id as any, startDate: (t as any).startDate }));
+
+        // Select suggested technicians by weekly load fairness
+        const pick = await selectTechniciansForSlot({
+          startTime: new Date(slot.startTime),
+          endTime: new Date(slot.endTime),
+          vehicleCategory,
+          activeLeaders: activeLeadersList as any,
+          activeSupports: activeSupportsList as any,
+          overlappingAppointments
+        });
+
         availableSlots.push({
           _id: slot._id,
           startTime: slot.startTime,
@@ -250,8 +265,14 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
           availableTechnicians: {
             leaders: availableLeaders,
             supports: availableSupports
-          }
-        });
+          },
+          ...(pick.ok && {
+            suggestedTechnicians: {
+              leaders: pick.leaders,
+              supports: pick.supports
+            }
+          })
+        } as any);
       }
     }
 

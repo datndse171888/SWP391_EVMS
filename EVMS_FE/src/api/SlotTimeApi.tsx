@@ -11,6 +11,10 @@ export interface SlotTimeResponse {
     leaders: number;
     supports: number;
   };
+  suggestedTechnicians?: {
+    leaders: string[];
+    supports: string[];
+  };
 }
 
 export interface GetAvailableSlotTimesRequest {

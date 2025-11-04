@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
+import { selectTechniciansForSlot } from '../services/technicianAssignment.js';
 
 export async function createAppointment(req: Request, res: Response) {
   try {
@@ -218,6 +219,32 @@ export async function createAppointment(req: Request, res: Response) {
       });
     }
 
+    // 10. Tự động gán technician theo tiêu chí “ít việc nhất trong tuần” nếu FE không truyền
+    let autoLeaderId: string | undefined = undefined;
+    let autoSupport1Id: string | undefined = undefined;
+    let autoSupport2Id: string | undefined = undefined;
+
+    const missingAllProvided = !technicianLeaderID && !technicianSupport1ID && !technicianSupport2ID;
+    if (missingAllProvided) {
+      // Lấy danh sách active leaders/supports từ bước 7
+      const pick = await selectTechniciansForSlot({
+        startTime: appointmentStart,
+        endTime: appointmentEnd,
+        vehicleCategory,
+        activeLeaders: activeLeaders.map(t => ({ _id: t._id as any, startDate: (t as any).startDate })) as any,
+        activeSupports: activeSupports.map(t => ({ _id: t._id as any, startDate: (t as any).startDate })) as any,
+        overlappingAppointments: actualOverlappingAppointments as any,
+      });
+
+      if (!pick.ok) {
+        return res.status(400).json({ message: 'Không đủ kỹ thuật viên khả dụng để tự động gán cho lịch này' });
+      }
+
+      autoLeaderId = pick.leaders[0];
+      autoSupport1Id = pick.supports[0];
+      autoSupport2Id = required.support > 1 ? pick.supports[1] : undefined;
+    }
+
     // ============================================
     // TẠO APPOINTMENT
     // ============================================
@@ -225,9 +252,9 @@ export async function createAppointment(req: Request, res: Response) {
     const appointment = await Appointment.create({
       userID: new mongoose.Types.ObjectId(userID),
       vehicleID: toObjectIdOrUndefined(vehicleID),
-      technicianLeaderID: toObjectIdOrUndefined(technicianLeaderID),
-      technicianSupport1ID: toObjectIdOrUndefined(technicianSupport1ID),
-      technicianSupport2ID: toObjectIdOrUndefined(technicianSupport2ID),
+      technicianLeaderID: toObjectIdOrUndefined(technicianLeaderID || autoLeaderId),
+      technicianSupport1ID: toObjectIdOrUndefined(technicianSupport1ID || autoSupport1Id),
+      technicianSupport2ID: toObjectIdOrUndefined(technicianSupport2ID || autoSupport2Id),
       serviceID: toObjectIdOrUndefined(serviceID),
       servicePackageID: toObjectIdOrUndefined(servicePackageID),
       bookingDate: parsedBookingDate,
