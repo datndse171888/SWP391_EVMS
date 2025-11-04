@@ -18,6 +18,8 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
 
     const dateParam = req.query.date as string | undefined;
     const vehicleCategoryParam = req.query.vehicleCategory as string | undefined;
+    const serviceIdParam = (req.query.serviceId as string | undefined)?.trim();
+    const servicePackageIdParam = (req.query.servicePackageId as string | undefined)?.trim();
 
     // Date is required
     if (!dateParam) {
@@ -101,7 +103,7 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       const defaultSlots = [];
       const baseDate = new Date(dateParam + 'T00:00:00');
       
-      for (let hour = 7; hour <= 16; hour++) {
+      for (let hour = 7; hour <= 17; hour++) {
         if (hour === 12) continue; // Skip 12:00 (lunch break)
         
         const slotStart = new Date(baseDate);
@@ -129,6 +131,28 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       slotTimes = defaultSlots;
     } else {
       console.log(`[SlotTime] Found ${slotTimes.length} slots in DB for ${dateParam}`);
+    }
+
+    // Build quick lookup for continuous slot validation (1-hour slots, skip lunch 12:00 if not present)
+    const slotStartMsSet = new Set<number>(slotTimes.map(s => new Date(s.startTime).getTime()));
+    const lastSlotEndTime = slotTimes.length > 0
+      ? new Date(slotTimes[slotTimes.length - 1].endTime)
+      : new Date(endOfDay);
+
+    // Determine requested duration if provided (service or package)
+    let requestedDurationMinutes: number | undefined = undefined;
+    if (serviceIdParam) {
+      const { Service } = await import('../models/Service.js');
+      const svc = await Service.findById(serviceIdParam).select('duration').lean();
+      if (svc && 'duration' in svc && typeof svc.duration === 'number') {
+        requestedDurationMinutes = svc.duration;
+      }
+    } else if (servicePackageIdParam) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const pkg = await ServicePackage.findById(servicePackageIdParam).select('duration').lean();
+      if (pkg && 'duration' in pkg && typeof pkg.duration === 'number') {
+        requestedDurationMinutes = pkg.duration;
+      }
     }
 
     // Get active technicians (user not disabled)
@@ -177,7 +201,7 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       .select('userID bookingDate serviceID servicePackageID technicianLeaderID technicianSupport1ID technicianSupport2ID')
       .lean();
 
-    // Get duration from services and packages
+    // Get duration from services and packages for existing appointments
     const { Service } = await import('../models/Service.js');
     const { ServicePackage } = await import('../models/ServicePackage.js');
 
@@ -185,6 +209,50 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
     const availableSlots = [];
 
     for (const slot of slotTimes) {
+      // Compute requested end time for this slot based on requestedDurationMinutes (default 60 if not provided)
+      const reqDuration = typeof requestedDurationMinutes === 'number' && requestedDurationMinutes > 0
+        ? requestedDurationMinutes
+        : 60;
+      const requestedEndTime = new Date(slot.startTime);
+      requestedEndTime.setMinutes(requestedEndTime.getMinutes() + reqDuration);
+
+      // Lunch window 12:00 - 13:00
+      const lunchStart = new Date(selectedDate);
+      lunchStart.setHours(12, 0, 0, 0);
+      const lunchEnd = new Date(selectedDate);
+      lunchEnd.setHours(13, 0, 0, 0);
+
+      // Determine if span crosses lunch; if yes, add 60 minutes downtime
+      const crossesLunch = new Date(slot.startTime) < lunchStart && requestedEndTime > lunchStart;
+      const adjustedDuration = crossesLunch ? reqDuration + 60 : reqDuration;
+      const adjustedEndTime = new Date(slot.startTime);
+      adjustedEndTime.setMinutes(adjustedEndTime.getMinutes() + adjustedDuration);
+
+      // Reject if requested span exceeds working hours (stay within this day's available slots window)
+      if (adjustedEndTime > lastSlotEndTime) {
+        continue;
+      }
+
+      // Ensure continuous hourly slots exist for the entire span
+      // Allow exactly one gap at 12:00 when crossing lunch
+      const neededSlots = Math.ceil(adjustedDuration / 60);
+      let hasContinuous = true;
+      for (let i = 0; i < neededSlots; i++) {
+        const startMs = new Date(slot.startTime).getTime() + i * 60 * 60 * 1000;
+        const d = new Date(startMs);
+        const isLunchHour = d.getHours() === 12 && d.getMinutes() === 0;
+        if (isLunchHour && crossesLunch) {
+          // skip required presence at 12:00
+          continue;
+        }
+        if (!slotStartMsSet.has(startMs)) {
+          hasContinuous = false;
+          break;
+        }
+      }
+      if (!hasContinuous) {
+        continue;
+      }
       // Find appointments that overlap with this slot
       const overlappingAppointments = [];
       
@@ -209,8 +277,9 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
         const appointmentEnd = new Date(appointmentStart);
         appointmentEnd.setMinutes(appointmentEnd.getMinutes() + duration);
         
-        // Check overlap: appointment starts before slot ends AND appointment ends after slot starts
-        if (appointmentStart < slot.endTime && appointmentEnd > slot.startTime) {
+        // Check overlap against the requested span for new booking (adjusted for lunch):
+        // existing starts before adjustedEnd AND existing ends after requestedStart
+        if (appointmentStart < adjustedEndTime && appointmentEnd > slot.startTime) {
           overlappingAppointments.push(apt);
         }
       }
@@ -239,20 +308,26 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       const availableLeaders = activeLeadersCount - assignedLeaders.size;
       const availableSupports = activeSupportsCount - assignedSupports.size;
 
-      // Check if slot has enough technicians
+      // Check if slot has enough technicians for the whole requested span
       if (availableLeaders >= required.leader && availableSupports >= required.support) {
         // Build active leaders/supports list with minimal fields
         const activeLeadersList = activeLeaders.map(t => ({ _id: t._id as any, startDate: (t as any).startDate }));
         const activeSupportsList = activeSupports.map(t => ({ _id: t._id as any, startDate: (t as any).startDate }));
 
         // Select suggested technicians by weekly load fairness
+        const overlappingAppointmentsMinimal = overlappingAppointments.map((apt: any) => ({
+          technicianLeaderID: apt.technicianLeaderID,
+          technicianSupport1ID: apt.technicianSupport1ID,
+          technicianSupport2ID: apt.technicianSupport2ID,
+        }));
+
         const pick = await selectTechniciansForSlot({
           startTime: new Date(slot.startTime),
-          endTime: new Date(slot.endTime),
+          endTime: adjustedEndTime,
           vehicleCategory,
           activeLeaders: activeLeadersList as any,
           activeSupports: activeSupportsList as any,
-          overlappingAppointments
+          overlappingAppointments: overlappingAppointmentsMinimal
         });
 
         availableSlots.push({
@@ -265,6 +340,11 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
           availableTechnicians: {
             leaders: availableLeaders,
             supports: availableSupports
+          },
+          spanInfo: {
+            durationMinutes: reqDuration,
+            crossesLunch,
+            adjustedDurationMinutes: adjustedDuration
           },
           ...(pick.ok && {
             suggestedTechnicians: {

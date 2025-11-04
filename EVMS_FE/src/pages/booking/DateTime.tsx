@@ -6,6 +6,8 @@ import type { CreateAppointmentRequest } from '../../types/Appoitment'
 import { formatDateTime } from '../../utils/DataFormat';
 import { Input } from '../../components/ui/Input';
 import { SlotTimeApi } from '../../api/SlotTimeApi';
+import { ServiceApi } from '../../api/ServiceApi';
+import { ServicePackageApi } from '../../api/ServicePackageApi';
 
 interface DateTimeProps {
   formData: CreateAppointmentRequest;
@@ -41,6 +43,9 @@ const DateTime: React.FC<DateTimeProps> = ({
   const [unavailableTimes, setUnavailableTimes] = useState<string[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
+  const [serviceDurationMinutes, setServiceDurationMinutes] = useState<number | undefined>(undefined);
+  const requiredSlotsBase = Math.max(1, Math.ceil((serviceDurationMinutes || 60) / 60));
+  const [availabilityNote, setAvailabilityNote] = useState<string>('');
 
   // Time slots from 07:00 to 20:00 (1-hour intervals)
   const timeSlots: TimeSlot[] = [
@@ -52,7 +57,8 @@ const DateTime: React.FC<DateTimeProps> = ({
     { time: '13:00', value: '13:00:00', available: true },
     { time: '14:00', value: '14:00:00', available: true },
     { time: '15:00', value: '15:00:00', available: true },
-    { time: '16:00', value: '16:00:00', available: true }
+    { time: '16:00', value: '16:00:00', available: true },
+    { time: '17:00', value: '17:00:00', available: true }
   ];
 
   // ================================
@@ -75,11 +81,41 @@ const DateTime: React.FC<DateTimeProps> = ({
     }
   }, [formData.bookingDate]);
 
+  // Fetch duration of selected service or package
   useEffect(() => {
-    if (selectedDate && vehicleCategory) {
-      fetchAvailableSlots(selectedDate);
-    }
-  }, [selectedDate, vehicleCategory]);
+    let cancelled = false;
+    const run = async () => {
+      try {
+        if (formData.serviceID) {
+          const svcRes = await ServiceApi.getServiceById(formData.serviceID);
+          const minutes = Number((svcRes as any).data?.service?.duration ?? (svcRes as any).data?.duration);
+          if (!cancelled) setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+          return;
+        }
+        if (formData.servicePackageID) {
+          const pkgRes = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
+          const minutes = Number((pkgRes as any).data?.duration ?? (pkgRes as any).data?.servicePackage?.duration);
+          if (!cancelled) setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+          return;
+        }
+        // No selection yet
+        if (!cancelled) setServiceDurationMinutes(undefined);
+      } catch (e) {
+        console.error('[DateTime] Fetch duration error:', e);
+        if (!cancelled) setServiceDurationMinutes(undefined);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [formData.serviceID, formData.servicePackageID]);
+
+  useEffect(() => {
+    if (!selectedDate || !vehicleCategory) return;
+    // Chỉ fetch khi đã có ít nhất một trong serviceID/servicePackageID
+    // để backend tính đúng tổng thời lượng dịch vụ (có thể chiếm nhiều slot)
+    if (!formData.serviceID && !formData.servicePackageID) return;
+    fetchAvailableSlots(selectedDate);
+  }, [selectedDate, vehicleCategory, formData.serviceID, formData.servicePackageID]);
 
   const fetchAvailableSlots = async (date: string) => {
     setIsLoadingSlots(true);
@@ -87,7 +123,9 @@ const DateTime: React.FC<DateTimeProps> = ({
       console.log('[DateTime] Fetching slots for:', { date, vehicleCategory });
       const response = await SlotTimeApi.getAvailableSlotTimes({
         date: date,
-        vehicleCategory: vehicleCategory
+        vehicleCategory: vehicleCategory,
+        serviceId: formData.serviceID,
+        servicePackageId: formData.servicePackageID
       });
 
       console.log('[DateTime] API Response:', response);
@@ -95,63 +133,20 @@ const DateTime: React.FC<DateTimeProps> = ({
       const availableSlotsData = response.data || [];
       console.log('[DateTime] Available slots count:', availableSlotsData.length);
       
-      // Convert available slots to time strings
-      const allTimeStrings = timeSlots.map(slot => slot.time); // ['07:00', '08:00', ...]
-      const availableTimeStrings: string[] = [];
-
-      allTimeStrings.forEach(timeSlot => {
-        const [hour, minute] = timeSlot.split(':').map(Number);
-        
-        // Check if any available slot starts at this exact hour
-        const hasMatchingSlot = availableSlotsData.some(slot => {
-          try {
-            const slotStartTime = new Date(slot.startTime);
-            const slotYear = slotStartTime.getFullYear();
-            const slotMonth = slotStartTime.getMonth();
-            const slotDay = slotStartTime.getDate();
-            const slotHour = slotStartTime.getHours();
-            const slotMinute = slotStartTime.getMinutes();
-            
-            // Parse our date
-            const [ourYear, ourMonth, ourDay] = date.split('-').map(Number);
-            
-            // Compare: same date AND same hour AND minute is 0
-            const dateMatches = slotYear === ourYear && 
-                              slotMonth === ourMonth - 1 && // Month is 0-indexed
-                              slotDay === ourDay;
-            const hourMatches = slotHour === hour && slotMinute === 0;
-            
-            const matches = dateMatches && hourMatches;
-            
-            // Debug first slot
-            if (timeSlot === '07:00' && availableSlotsData.length > 0) {
-              console.log(`[DateTime] Matching ${timeSlot}:`, {
-                slotISO: slot.startTime,
-                slotLocal: slotStartTime.toLocaleString('vi-VN'),
-                slotDate: `${slotYear}-${slotMonth + 1}-${slotDay}`,
-                ourDate: date,
-                slotHour,
-                ourHour: hour,
-                dateMatches,
-                hourMatches,
-                matches
-              });
-            }
-            
-            return matches;
-          } catch (error) {
-            console.error(`[DateTime] Error parsing slot ${slot.startTime}:`, error);
-            return false;
-          }
-        });
-
-        if (hasMatchingSlot) {
-          availableTimeStrings.push(timeSlot);
-          console.log(`[DateTime] ✅ ${timeSlot} matched`);
-        } else if (availableSlotsData.length > 0) {
-          console.log(`[DateTime] ❌ ${timeSlot} no match`);
+      // Convert available slots to local hour strings (robust with timezone)
+      const apiHourSet = new Set<string>();
+      for (const s of availableSlotsData) {
+        try {
+          const dt = new Date(s.startTime);
+          const hh = String(dt.getHours()).padStart(2, '0');
+          const mm = String(dt.getMinutes()).padStart(2, '0');
+          apiHourSet.add(`${hh}:${mm}`);
+        } catch (e) {
+          console.warn('[DateTime] Skip invalid slot time:', s.startTime);
         }
-      });
+      }
+      const allTimeStrings = timeSlots.map(slot => slot.time);
+      const availableTimeStrings = allTimeStrings.filter(t => apiHourSet.has(t));
 
       setAvailableSlots(availableTimeStrings);
       
@@ -163,6 +158,15 @@ const DateTime: React.FC<DateTimeProps> = ({
       // Convert unavailable times to HH:mm:ss format
       const unavailableTimesFull = unavailable.map(time => `${time}:00`);
       setUnavailableTimes(unavailableTimesFull);
+
+      // Update availability note when no start time satisfies duration
+      if ((serviceDurationMinutes || 0) > 0 && availableTimeStrings.length === 0) {
+        const h = Math.floor((serviceDurationMinutes || 0) / 60);
+        const m = (serviceDurationMinutes || 0) % 60;
+        setAvailabilityNote(`Không có khung giờ đáp ứng liên tiếp ${requiredSlotsBase} slot cho dịch vụ ${h}h ${m}m. Vui lòng chọn giờ sớm hơn hoặc ngày khác.`);
+      } else {
+        setAvailabilityNote('');
+      }
 
     } catch (error) {
       console.error('Error fetching available slot times:', error);
@@ -216,6 +220,39 @@ const DateTime: React.FC<DateTimeProps> = ({
     return true;
   };
 
+  const crossesLunchFrom = (startValue: string): boolean => {
+    const minutes = Number(serviceDurationMinutes);
+    if (!selectedDate || !startValue || !Number.isFinite(minutes) || minutes <= 0) return false;
+    const start = new Date(`${selectedDate}T${startValue}`);
+    if (isNaN(start.getTime())) return false;
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + minutes);
+    const lunchStart = new Date(`${selectedDate}T12:00:00`);
+    const lunchEnd = new Date(`${selectedDate}T13:00:00`);
+    return start < lunchEnd && end > lunchStart;
+  };
+
+  // Tính danh sách slot sẽ bị chiếm (bỏ qua 12:00-13:00 nếu vượt trưa)
+  const getHighlightedTimes = (startValue?: string): string[] => {
+    const minutes = Number(serviceDurationMinutes ?? 60);
+    if (!selectedDate || !startValue || !Number.isFinite(minutes) || minutes <= 0) return [];
+    const slotsNeeded = Math.max(1, Math.ceil(minutes / 60));
+    const result: string[] = [];
+    let current = new Date(`${selectedDate}T${startValue}`);
+    for (let i = 0; i < slotsNeeded; i++) {
+      const hh = String(current.getHours()).padStart(2, '0');
+      result.push(`${hh}:00:00`);
+      // tăng 1 giờ, nếu sang 12:00 thì nhảy lên 13:00
+      current.setHours(current.getHours() + 1, 0, 0, 0);
+      if (current.getHours() === 12) {
+        current.setHours(13, 0, 0, 0);
+      }
+    }
+    return result;
+  };
+
+  const getRequiredSlotsForStart = (startValue?: string): number => getHighlightedTimes(startValue).length;
+
   const getTimeSlotClassName = (timeValue: string): string => {
     const baseClasses = 'flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 text-center';
 
@@ -224,14 +261,27 @@ const DateTime: React.FC<DateTimeProps> = ({
       return `${baseClasses} bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed`;
     }
 
+    // Selected span: highlight các slot bị chiếm; bỏ qua 12:00 nếu vượt trưa
+    if (selectedTime) {
+      const idx = timeSlots.findIndex(s => s.value === selectedTime);
+      const thisIdx = timeSlots.findIndex(s => s.value === timeValue);
+      if (idx < 0 || thisIdx < 0) {
+        // Fallback if not found
+        return `${baseClasses} bg-white border-gray-300 text-gray-700`;
+      }
+      const highlightedTimes = new Set(getHighlightedTimes(selectedTime));
+      if (highlightedTimes.has(timeValue)) {
+        // First slot = solid; trailing reserved slots = outlined orange for dễ nhìn
+        if (thisIdx === idx) {
+          return `${baseClasses} bg-orange-500 border-orange-500 text-white shadow-lg`;
+        }
+        return `${baseClasses} bg-orange-50 border-orange-400 text-orange-700`;
+      }
+    }
+
     if (!isTimeAvailable(timeValue)) {
       // Unavailable - disabled state
       return `${baseClasses} bg-red-50 border-red-200 text-red-400 cursor-not-allowed`;
-    }
-
-    if (selectedTime === timeValue) {
-      // Selected state
-      return `${baseClasses} bg-orange-500 border-orange-500 text-white shadow-lg transform scale-105`;
     }
 
     // Available state
@@ -350,6 +400,11 @@ const DateTime: React.FC<DateTimeProps> = ({
                 <p className="text-green-700 text-sm">
                   {formatDateTime(`${selectedDate}T${selectedTime}`).time}
                 </p>
+                {serviceDurationMinutes && (
+                  <p className="text-green-700 text-xs mt-1">
+                    Dịch vụ dự kiến: {Math.floor(serviceDurationMinutes / 60)}h {serviceDurationMinutes % 60}m • Yêu cầu {getRequiredSlotsForStart(selectedTime || undefined)} slot
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -374,8 +429,10 @@ const DateTime: React.FC<DateTimeProps> = ({
                 <p>Đang tải khung giờ khả dụng...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
-                {timeSlots.map((slot) => (
+              <>
+              <div className="mb-3 text-xs text-gray-500">Buổi sáng</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6">
+                {timeSlots.filter(s => parseInt(s.time.slice(0,2),10) <= 11).map((slot) => (
                   <button
                     key={slot.value}
                     type="button"
@@ -389,8 +446,32 @@ const DateTime: React.FC<DateTimeProps> = ({
                   </button>
                 ))}
               </div>
+              <div className="mb-3 text-xs text-gray-500">Buổi chiều</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+                {timeSlots.filter(s => parseInt(s.time.slice(0,2),10) >= 13).map((slot) => (
+                  <button
+                    key={slot.value}
+                    type="button"
+                    onClick={() => handleTimeSelect(slot.value)}
+                    disabled={!isTimeAvailable(slot.value)}
+                    className={`${getTimeSlotClassName(slot.value)} min-h-[60px]`}
+                  >
+                    <div className="w-full text-center">
+                      <div className="font-semibold text-base">{slot.time}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              </>
             )}
           </div>
+
+          {/* Availability note when duration exceeds end-of-day or crosses lunch */}
+          {availabilityNote && (
+            <div className="mt-3 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded px-3 py-2">
+              {availabilityNote}
+            </div>
+          )}
 
           {/* Legend */}
           <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
