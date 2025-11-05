@@ -15,6 +15,14 @@ export const AppointmentApi = {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
+  getAppointmentByTechnician: () => {
+    return api.get<AppointmentResponse[]>('/appointments/technician/me');
+  },
+
+  getAppointmentById: (appointmentId: string) => {
+    return api.get<AppointmentResponse>(`/appointments/${appointmentId}`);
+  },
+
   getTodayAwaitingPayment: () => {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/today/awaiting-payment');
   },

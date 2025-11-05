@@ -126,10 +126,11 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     <span>{formatDate(appointment.bookingDate)} lúc {formatTime(appointment.bookingDate)}</span>
                 </div>
 
-                <div className="flex items-center text-sm text-gray-600">
-                    <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                    <span>Tạo: {formatDate(appointment.createdAt)}</span>
-                </div>
+                {appointment.createdAt &&
+                    <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                        <span>Tạo: {formatDate(appointment.createdAt)}</span>
+                    </div>}
 
                 {/* Service/Package Info */}
                 {appointment.servicePackageID && (

@@ -17,6 +17,7 @@ const Header: React.FC = () => {
     { name: 'LINH KIỆN', path: '/parts' },
     { name: 'ĐỘI NGŨ KỸ THUẬT VIÊN', path: '/technicians' },
     { name: 'GIỚI THIỆU', path: '/introduction' },
+    { name: 'LIÊN HỆ', path: '/contact' },
   ];
 
   const isActive = (path: string) => {

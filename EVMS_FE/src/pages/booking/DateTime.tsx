@@ -120,7 +120,6 @@ const DateTime: React.FC<DateTimeProps> = ({
   const fetchAvailableSlots = async (date: string) => {
     setIsLoadingSlots(true);
     try {
-      console.log('[DateTime] Fetching slots for:', { date, vehicleCategory });
       const response = await SlotTimeApi.getAvailableSlotTimes({
         date: date,
         vehicleCategory: vehicleCategory,
@@ -128,10 +127,7 @@ const DateTime: React.FC<DateTimeProps> = ({
         servicePackageId: formData.servicePackageID
       });
 
-      console.log('[DateTime] API Response:', response);
-      console.log('[DateTime] Response data:', response.data);
       const availableSlotsData = response.data || [];
-      console.log('[DateTime] Available slots count:', availableSlotsData.length);
       
       // Convert available slots to local hour strings (robust with timezone)
       const apiHourSet = new Set<string>();
@@ -311,8 +307,8 @@ const DateTime: React.FC<DateTimeProps> = ({
     }
 
     // Create ISO string for bookingDate
-    const bookingDateTime = new Date(`${selectedDate}T${selectedTime}`);
-    const bookingDateString = bookingDateTime.toISOString();
+    const bookingDateTime = new Date(`${selectedDate}T${selectedTime}`);    
+    const bookingDateString = bookingDateTime.toISOString();    
 
     setFormData(prev => ({
       ...prev,

@@ -181,10 +181,11 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             </div>
                                         </div>
 
+                                        {appointment.createdAt && 
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Ngày tạo</label>
                                             <p className="text-gray-900">{formatDate(appointment.createdAt)}</p>
-                                        </div>
+                                        </div>}
                                     </div>
                                 </div>
 

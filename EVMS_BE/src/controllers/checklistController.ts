@@ -406,15 +406,7 @@ export async function getAllChecklistByAppointment(req: Request, res: Response) 
       items.find((item: any) => item.status === 'in_progress') ||
       items.find((item: any) => item.status === 'pending');
 
-    return res.json({
-      success: true,
-      data: {
-        items,
-        count: items.length,
-        stats,
-        currentTask: currentTask || null,
-      }
-    });
+    return res.json(items);
   } catch (error: any) {
     console.error('Error getting checklist by appointment:', error);
     return res.status(500).json({

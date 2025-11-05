@@ -69,30 +69,30 @@ const Confirmation: React.FC<ConfirmationProps> = ({
       }
 
       // Fetch service details
-        if (formData.serviceID) {
-          try {
-            const servicePromise = await ServiceApi.getServiceById(formData.serviceID);
-            // Backend returns { service: ServiceResponse }
-            const serviceResponse: ServiceResponse = (servicePromise.data as any).service || servicePromise.data;
-            setService(serviceResponse);
-          } catch (error) {
-            console.error('Error fetching service:', error);
-            showAlert('error', 'Không thể tải thông tin dịch vụ');
-          }
+      if (formData.serviceID) {
+        try {
+          const servicePromise = await ServiceApi.getServiceById(formData.serviceID);
+          // Backend returns { service: ServiceResponse }
+          const serviceResponse: ServiceResponse = (servicePromise.data as any).service || servicePromise.data;
+          setService(serviceResponse);
+        } catch (error) {
+          console.error('Error fetching service:', error);
+          showAlert('error', 'Không thể tải thông tin dịch vụ');
         }
+      }
 
       // Fetch service package details
-        if (formData.servicePackageID) {
-          try {
-            const servicePackagePromise = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
-            // Backend returns { servicePackage: ServicePackageResponse }
-            const servicePackageResponse: ServicePackageResponse = (servicePackagePromise.data as any).servicePackage || servicePackagePromise.data;
-            setServicePackage(servicePackageResponse);
-          } catch (error) {
-            console.error('Error fetching service package:', error);
-            showAlert('error', 'Không thể tải thông tin gói dịch vụ');
-          }
+      if (formData.servicePackageID) {
+        try {
+          const servicePackagePromise = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
+          // Backend returns { servicePackage: ServicePackageResponse }
+          const servicePackageResponse: ServicePackageResponse = (servicePackagePromise.data as any).servicePackage || servicePackagePromise.data;
+          setServicePackage(servicePackageResponse);
+        } catch (error) {
+          console.error('Error fetching service package:', error);
+          showAlert('error', 'Không thể tải thông tin gói dịch vụ');
         }
+      }
 
       //   await Promise.all();
 
@@ -151,14 +151,9 @@ const Confirmation: React.FC<ConfirmationProps> = ({
 
       // Close modal first
       setShowConfirmModal(false);
-      
-      // Show success message before calling onComplete
-      showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 2000);
-      
+
       // Complete booking (will redirect)
-      setTimeout(() => {
-        onComplete();
-      }, 500);
+      onComplete();
 
     } catch (error: any) {
       console.error('Error creating appointment:', error);

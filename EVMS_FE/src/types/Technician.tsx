@@ -1,3 +1,5 @@
+export type Role = 'leader' | 'member';
+
 export interface TechnicianInfo {
   id: string
   introduction: string
@@ -12,4 +14,11 @@ export interface TechnicianCertificate {
   status: string
   note: string
   certificateImage: string
+}
+
+export interface TechnicianResponse {
+  _id: string;
+  userID: string;
+  description?: string;
+  role: Role;
 }

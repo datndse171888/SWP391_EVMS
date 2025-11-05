@@ -67,7 +67,7 @@ const Booking: React.FC = () => {
         // Appointment đã được tạo thành công trong Confirmation component
         // Chỉ cần hiển thị thông báo và redirect
         showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 3000, () => {
-            navigate('/customer/appointments');
+            navigate('/appointment-history');
         });
     };
 
