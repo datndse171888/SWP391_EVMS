@@ -7,13 +7,13 @@ interface PartModalProps {
     onClose: () => void;
     onSave: (part: Partial<Part>) => void;
     part?: Part | null;
-    mode: 'create' | 'edit';
+    mode: 'create' | 'edit'| 'view';
 }
 
 export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, part, mode }: PartModalProps) => {
 
     const [formData, setFormData] = useState<Part>({
-        id: '',
+        _id: '',
         name: '',
         description: '',
         manufacturer: '',
@@ -45,7 +45,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
             });
         } else {
             setFormData({
-                id: '',
+                _id: '',
                 name: '',
                 description: '',
                 manufacturer: '',
@@ -134,8 +134,8 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
         // normalize numeric fields
         if (key === 'price') {
             const v = value === '' ? '' : parseFloat(value);
-            setFormData(prev => ({ ...prev, price: v as any }));
-            setErrors(prev => ({ ...prev, price: validateField('price', v) }));
+            setFormData(prev => ({ ...prev, [key]: v as any }));
+            setErrors(prev => ({ ...prev, [key]: validateField(key, v) }));
             return;
         }
         if (key === 'warrantyPeriod') {
@@ -169,7 +169,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
         }
 
         onSave({
-            id: formData.id,
+            _id: formData._id,
             name: formData.name.trim(),
             description: formData.description,
             manufacturer: formData.manufacturer,
@@ -178,6 +178,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
             status: formData.status,
             warrantyPeriod: Number(formData.warrantyPeriod),
             warrantyCondition: formData.warrantyCondition,
+            stockQuantity: formData.stockQuantity,
             createdAt: formData.createdAt,
             updatedAt: formData.updatedAt,
         });
@@ -260,9 +261,10 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             />
                             {errors.partNumber && <p className="text-red-600 text-sm mt-1">{errors.partNumber}</p>}
                         </div>
+                       
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Giá (VND) *
@@ -280,6 +282,8 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             />
                             {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
                         </div>
+
+                        
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
