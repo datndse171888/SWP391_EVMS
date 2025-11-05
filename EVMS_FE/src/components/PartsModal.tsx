@@ -13,7 +13,7 @@ interface PartModalProps {
 export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, part, mode }: PartModalProps) => {
 
     const [formData, setFormData] = useState<Part>({
-        _id: '',
+        id: '',
         name: '',
         description: '',
         manufacturer: '',
@@ -45,7 +45,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
             });
         } else {
             setFormData({
-                _id: '',
+                id: '',
                 name: '',
                 description: '',
                 manufacturer: '',

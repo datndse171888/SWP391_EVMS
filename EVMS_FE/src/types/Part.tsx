@@ -1,5 +1,5 @@
 export interface Part {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   manufacturer?: string;
