@@ -6,9 +6,10 @@ import { technicianSubroleMiddleware, technicianLeaderOnly, technicianAny } from
 
 export const checklistRouter = Router();
 
-// Query
-checklistRouter.get('/:id', getChecklistById);
-checklistRouter.get('/appointment/:appointmentId', getAllChecklistByAppointment);
+// Query - Support và Leader có thể xem
+// Lưu ý: Route cụ thể phải đặt trước route generic
+checklistRouter.get('/appointment/:appointmentId', authMiddleware, roleMiddleware(['technician']), technicianSubroleMiddleware, technicianAny, getAllChecklistByAppointment);
+checklistRouter.get('/:id', authMiddleware, roleMiddleware(['technician']), technicianSubroleMiddleware, technicianAny, getChecklistById);
 
 // Manage
 checklistRouter.post('/', authMiddleware, roleMiddleware(['technician']), technicianSubroleMiddleware, technicianLeaderOnly, createChecklist);
