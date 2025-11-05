@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+export type ChecklistStatus = 'pending' | 'completed' | 'skipped'; // pending = chưa làm, completed = đã làm, skipped = bỏ qua
 
 export interface IChecklist extends Document {
   appointmentID: mongoose.Types.ObjectId; // ref Appointment
@@ -42,7 +42,7 @@ const ChecklistSchema = new Schema<IChecklist>(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'in_progress', 'completed', 'skipped'],
+      enum: ['pending', 'completed', 'skipped'], // pending = chưa làm, completed = đã làm, skipped = bỏ qua
       default: 'pending',
       index: true,
     },
