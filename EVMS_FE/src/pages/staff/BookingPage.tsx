@@ -735,7 +735,9 @@ const BookingPage: React.FC = () => {
                     <>
                       <div className="text-xs font-medium text-gray-800">{vehicle.brand} • {categoryLabel}</div>
                       <div className="text-xs text-gray-600">Biển số: {vehicle.plateNumber}</div>
-                      <div className="text-xs text-gray-600">VIN: {vehicle.VIN}</div>
+                      {vehicle.VIN && (
+                        <div className="text-xs text-gray-600">VIN: {vehicle.VIN}</div>
+                      )}
                       <div className="text-xs text-gray-600">Năm: {vehicle.year} • Số km: {vehicle.mileage.toLocaleString('vi-VN')}</div>
                       <div className="text-xs text-gray-600">Dung lượng pin: {vehicle.batteryCapacity} Ah</div>
                       <div className="text-xs text-gray-600">Trạng thái: <span className={vehicle.status === 'active' ? 'text-green-600' : vehicle.status === 'maintenance' ? 'text-orange-600' : 'text-gray-600'}>{vehicle.status === 'active' ? 'Đang hoạt động' : vehicle.status === 'maintenance' ? 'Bảo trì' : vehicle.status === 'inactive' ? 'Không hoạt động' : 'Đã nghỉ'}</span></div>

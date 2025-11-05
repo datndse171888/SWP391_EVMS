@@ -239,10 +239,12 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                                 <p className="text-gray-900">{vehicle.plateNumber}</p>
                                             </div>
 
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-500">VIN</label>
-                                                <p className="text-gray-900 font-mono">{vehicle.VIN}</p>
-                                            </div>
+                                            {vehicle.VIN && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500">VIN</label>
+                                                    <p className="text-gray-900 font-mono">{vehicle.VIN}</p>
+                                                </div>
+                                            )}
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
