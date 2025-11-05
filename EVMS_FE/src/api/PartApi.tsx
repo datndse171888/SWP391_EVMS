@@ -41,7 +41,7 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
       manufacturer: obj.manufacturer as string,
       partNumber: obj.partNumber as string,
       price: obj.price as number,
-      status: ((obj.status as string) as 'active' | 'inactive' | 'hidden') ?? 'active',
+      status: ((obj.status as string) as 'active' | 'inactive') ?? 'active',
       warrantyPeriod: obj.warrantyPeriod as number,
       warrantyCondition: obj.warrantyCondition as string,
       createdAt: obj.createdAt as string,
@@ -74,13 +74,25 @@ interface CreatePartWithInventoryParams {
   manufacturer?: string
   partNumber?: string
   price: number
-  status?: 'active' | 'inactive' | 'hidden'
+  status?: 'active' | 'inactive'
   category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
   warrantyPeriod?: number
   warrantyCondition?: string
   // Inventory fields
   quantity?: number
   inventoryStatus?: 'in_stock' | 'low_stock' | 'out_of_stock'
+}
+
+interface UpdatePartParams {
+  name?: string
+  description?: string
+  manufacturer?: string
+  partNumber?: string
+  price?: number
+  status?: 'active' | 'inactive'
+  category?: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
+  warrantyPeriod?: number
+  warrantyCondition?: string
 }
 
 export const PartApi = {
@@ -94,10 +106,10 @@ export const PartApi = {
     return api.post('/parts', params)
   },
   createPartWithInventory: (params: CreatePartWithInventoryParams) => {
-    return api.post<{ message: string; part: Part; inventory: any }>('/parts/with-inventory', params)
+    return api.post<{ message: string; part: Part; inventory: unknown }>('/parts/with-inventory', params)
   },
-  updatePart: (id: string, params: Part) => {
-    return api.put(`/parts/${id}`, params)
+  updatePart: (id: string, params: UpdatePartParams) => {
+    return api.put<{ message: string; part: Part }>(`/parts/${id}`, params)
   },
   deletePart: (id: string) => {
     return api.delete(`/parts/${id}`)

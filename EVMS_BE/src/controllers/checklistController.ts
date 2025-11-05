@@ -9,6 +9,7 @@ interface ChecklistTask {
   taskName: string;
   description: string;
   note?: string;
+  technicianID?: string; // Optional: cho phép gán technician khi tạo task
 }
 
 export async function createChecklist(req: Request, res: Response) {
@@ -88,6 +89,13 @@ export async function createChecklist(req: Request, res: Response) {
       });
     }
 
+    // Lấy danh sách technicians trong appointment (leader + 2 supports)
+    const appointmentTechnicians = [
+      appointment.technicianLeaderID,
+      appointment.technicianSupport1ID,
+      appointment.technicianSupport2ID
+    ].filter((id): id is mongoose.Types.ObjectId => id != null);
+
     // Validation từng task
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
@@ -97,12 +105,36 @@ export async function createChecklist(req: Request, res: Response) {
           message: `Task ${i + 1}: Thiếu taskName hoặc description`
         });
       }
+
+      // Nếu có technicianID trong task, validate nó thuộc danh sách technicians của appointment
+      if (task.technicianID) {
+        if (!mongoose.Types.ObjectId.isValid(task.technicianID)) {
+          return res.status(400).json({
+            success: false,
+            message: `Task ${i + 1}: technicianID không hợp lệ`
+          });
+        }
+
+        const taskTechnicianId = new mongoose.Types.ObjectId(task.technicianID);
+        const isValidTechnician = appointmentTechnicians.some(
+          (techId) => techId.toString() === taskTechnicianId.toString()
+        );
+
+        if (!isValidTechnician) {
+          return res.status(400).json({
+            success: false,
+            message: `Task ${i + 1}: technicianID phải thuộc danh sách technicians của appointment (leader, support1, hoặc support2)`
+          });
+        }
+      }
     }
 
     // Tạo nhiều tasks cùng lúc
     const tasksToCreate = tasks.map((task) => ({
       appointmentID: new mongoose.Types.ObjectId(appointmentID),
-      technicianID: technicianID,
+      technicianID: task.technicianID 
+        ? new mongoose.Types.ObjectId(task.technicianID) 
+        : technicianID, // Nếu không có technicianID, mặc định gán cho leader
       taskName: task.taskName.trim(),
       description: task.description.trim(),
       note: task.note ? task.note.trim() : undefined,
@@ -139,21 +171,106 @@ export async function createChecklist(req: Request, res: Response) {
 
 export async function updateChecklist(req: Request, res: Response) {
   try {
+    // Kiểm tra authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    // Lấy technicianID từ token (user hiện tại phải là leader)
+    const technician = await Technician.findOne({ userID: req.user.id });
+    if (!technician) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy technician record cho user hiện tại'
+      });
+    }
+
+    if (technician.role !== 'leader') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ technician leader được cập nhật checklist'
+      });
+    }
+
     const { appointmentID, technicianID, taskName, description, note } = req.body as any;
     const existing: any = await Checklist.findById(req.params.id);
-    if (!existing) return res.status(404).json({ message: 'Không tìm thấy checklist' });
+    
+    if (!existing) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy checklist' 
+      });
+    }
 
-    existing.appointmentID = appointmentID ?? existing.appointmentID;
-    existing.technicianID = technicianID ?? existing.technicianID;
+    // Nếu cập nhật technicianID, validate nó thuộc appointment
+    if (technicianID) {
+      if (!mongoose.Types.ObjectId.isValid(technicianID)) {
+        return res.status(400).json({
+          success: false,
+          message: 'technicianID không hợp lệ'
+        });
+      }
+
+      const appointment = await Appointment.findById(existing.appointmentID);
+      if (!appointment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy appointment'
+        });
+      }
+
+      const appointmentTechnicians = [
+        appointment.technicianLeaderID,
+        appointment.technicianSupport1ID,
+        appointment.technicianSupport2ID
+      ].filter((id): id is mongoose.Types.ObjectId => id != null);
+
+      const newTechnicianId = new mongoose.Types.ObjectId(technicianID);
+      const isValidTechnician = appointmentTechnicians.some(
+        (techId) => techId && techId.toString() === newTechnicianId.toString()
+      );
+
+      if (!isValidTechnician) {
+        return res.status(400).json({
+          success: false,
+          message: 'technicianID phải thuộc danh sách technicians của appointment (leader, support1, hoặc support2)'
+        });
+      }
+
+      existing.technicianID = newTechnicianId;
+    }
+
+    existing.appointmentID = appointmentID ? new mongoose.Types.ObjectId(appointmentID) : existing.appointmentID;
     existing.taskName = taskName ?? existing.taskName;
     existing.description = description ?? existing.description;
-    existing.note = note ?? existing.note;
+    existing.note = note !== undefined ? note : existing.note;
 
     const updated = await existing.save();
-    if (!updated) return res.status(404).json({ message: 'Không tìm thấy checklist' });
-    return res.json({ message: 'Cập nhật checklist thành công', checklist: updated });
-  } catch (error) {
-    return res.status(500).json({ message: 'Lỗi máy chủ' });
+    
+    // Populate để trả về thông tin đầy đủ
+    const populatedTask = await Checklist.findById(updated._id)
+      .populate({
+        path: 'appointmentID',
+        select: 'userID vehicleID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID'
+      })
+      .populate({
+        path: 'technicianID',
+        select: 'userID role introduction experience'
+      })
+      .lean();
+
+    return res.json({ 
+      success: true,
+      message: 'Cập nhật checklist thành công', 
+      data: { checklist: populatedTask }
+    });
+  } catch (error: any) {
+    console.error('Error updating checklist:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Lỗi máy chủ',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 
@@ -161,10 +278,11 @@ export async function updateStatusChecklist(req: Request, res: Response) {
   try {
     const { status } = req.body as any;
     
-    if (!['pending', 'in_progress', 'completed', 'skipped'].includes(status)) {
+    // Chỉ có 3 status: pending (chưa làm), completed (đã làm), skipped (bỏ qua)
+    if (!['pending', 'completed', 'skipped'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Trạng thái không hợp lệ. Phải là: pending, in_progress, completed, hoặc skipped'
+        message: 'Trạng thái không hợp lệ. Phải là: pending (chưa làm), completed (đã làm), hoặc skipped (bỏ qua)'
       });
     }
 
@@ -178,15 +296,15 @@ export async function updateStatusChecklist(req: Request, res: Response) {
       });
     }
 
-    // Enforce forward-only transitions:
-    // pending -> in_progress -> completed; allow skipped from pending/in_progress
-    // Block any downgrade or completed->* transitions
+    // Enforce transitions:
+    // - pending -> completed hoặc skipped
+    // - completed -> không thể thay đổi
+    // - skipped -> có thể chuyển về pending hoặc completed
     const current = existing.status as string;
     const allowed: Record<string, Set<string>> = {
-      pending: new Set(['in_progress', 'skipped']),
-      in_progress: new Set(['completed', 'skipped']),
-      completed: new Set([]),
-      skipped: new Set([]),
+      pending: new Set(['completed', 'skipped']),
+      completed: new Set([]), // Không thể thay đổi sau khi completed
+      skipped: new Set(['pending', 'completed']), // Có thể un-skip
     };
 
     if (current === status) {
@@ -210,90 +328,167 @@ export async function updateStatusChecklist(req: Request, res: Response) {
     const now = new Date();
     
     // Cập nhật timestamps
-    if (status === 'in_progress' && !existing.startedAt) {
-      existing.startedAt = now;
-    }
     if (status === 'completed') {
       if (!existing.startedAt) existing.startedAt = now;
       existing.completedAt = now;
+    } else if (status === 'pending' && current === 'skipped') {
+      // Khi un-skip, reset timestamps
+      existing.startedAt = undefined;
+      existing.completedAt = undefined;
+    } else if (status === 'pending') {
+      // Nếu chuyển về pending, set startedAt khi bắt đầu làm
+      if (!existing.startedAt) existing.startedAt = now;
     }
 
     existing.status = status;
     const updated = await existing.save();
 
-    // Nếu task được đánh completed, tự động chuyển task tiếp theo sang in_progress
-    let nextTask = null;
-    if (status === 'completed') {
-      // Tìm task tiếp theo trong cùng appointment
-      // Lấy task pending đầu tiên sau task hiện tại (theo thứ tự createdAt)
-      const allTasks = await Checklist.find({
-        appointmentID: existing.appointmentID
-      })
-        .sort({ createdAt: 1 })
-        .select('_id status createdAt')
-        .lean();
-
-      // Tìm index của task hiện tại
-      const currentTaskIndex = allTasks.findIndex(
-        (task: any) => task._id.toString() === existing._id.toString()
-      );
-
-      // Tìm task pending đầu tiên sau task hiện tại
-      if (currentTaskIndex !== -1 && currentTaskIndex < allTasks.length - 1) {
-        const nextPendingTask = allTasks
-          .slice(currentTaskIndex + 1)
-          .find((task: any) => task.status === 'pending');
-
-        if (nextPendingTask) {
-          nextTask = await Checklist.findById(nextPendingTask._id);
-          if (nextTask) {
-            nextTask.status = 'in_progress';
-            nextTask.startedAt = new Date();
-            await nextTask.save();
-          }
-        }
-      }
-    }
-
     // Populate để trả về thông tin đầy đủ
     const populatedTask = await Checklist.findById(updated._id)
       .populate({
         path: 'appointmentID',
-        select: 'userID vehicleID bookingDate status'
+        select: 'userID vehicleID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID'
       })
       .populate({
         path: 'technicianID',
-        select: 'userID role introduction'
+        select: 'userID role introduction experience'
       })
       .lean();
-
-    let nextTaskPopulated = null;
-    if (nextTask) {
-      nextTaskPopulated = await Checklist.findById(nextTask._id)
-        .populate({
-          path: 'appointmentID',
-          select: 'userID vehicleID bookingDate status'
-        })
-        .populate({
-          path: 'technicianID',
-          select: 'userID role introduction'
-        })
-        .lean();
-    }
 
     return res.json({
       success: true,
       message: 'Cập nhật trạng thái checklist thành công',
       data: {
-        checklist: populatedTask,
-        nextTask: nextTaskPopulated,
-        message: nextTaskPopulated
-          ? 'Task tiếp theo đã được chuyển sang in_progress'
-          : 'Không còn task nào để chuyển tiếp'
+        checklist: populatedTask
       }
     });
   } catch (error: any) {
     console.error('Error updating checklist status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}
+
+export async function assignTechnicianToTask(req: Request, res: Response) {
+  try {
+    // Kiểm tra authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    // Lấy technicianID từ token (user hiện tại phải là leader)
+    const technician = await Technician.findOne({ userID: req.user.id });
+    if (!technician) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy technician record cho user hiện tại'
+      });
+    }
+
+    if (technician.role !== 'leader') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ technician leader được gán task cho technician'
+      });
+    }
+
+    const taskId = req.params.id;
+    const { technicianID } = req.body as { technicianID: string };
+
+    // Validation
+    if (!technicianID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu technicianID'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Task ID không hợp lệ'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(technicianID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'technicianID không hợp lệ'
+      });
+    }
+
+    // Tìm task
+    const task: any = await Checklist.findById(taskId);
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy task'
+      });
+    }
+
+    // Lấy appointment để kiểm tra danh sách technicians
+    const appointment = await Appointment.findById(task.appointmentID);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy appointment'
+      });
+    }
+
+    // Validate technicianID phải thuộc danh sách technicians của appointment
+    const appointmentTechnicians = [
+      appointment.technicianLeaderID,
+      appointment.technicianSupport1ID,
+      appointment.technicianSupport2ID
+    ].filter((id): id is mongoose.Types.ObjectId => id != null);
+
+    const newTechnicianId = new mongoose.Types.ObjectId(technicianID);
+    const isValidTechnician = appointmentTechnicians.some(
+      (techId) => techId && techId.toString() === newTechnicianId.toString()
+    );
+
+    if (!isValidTechnician) {
+      return res.status(400).json({
+        success: false,
+        message: 'technicianID phải thuộc danh sách technicians của appointment (leader, support1, hoặc support2)'
+      });
+    }
+
+    // Kiểm tra technician có tồn tại không
+    const assignedTechnician = await Technician.findById(newTechnicianId);
+    if (!assignedTechnician) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy technician'
+      });
+    }
+
+    // Cập nhật technicianID
+    task.technicianID = newTechnicianId;
+    const updated = await task.save();
+
+    // Populate để trả về thông tin đầy đủ
+    const populatedTask = await Checklist.findById(updated._id)
+      .populate({
+        path: 'appointmentID',
+        select: 'userID vehicleID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID'
+      })
+      .populate({
+        path: 'technicianID',
+        select: 'userID role introduction experience'
+      })
+      .lean();
+
+    return res.json({
+      success: true,
+      message: 'Gán technician cho task thành công',
+      data: { checklist: populatedTask }
+    });
+  } catch (error: any) {
+    console.error('Error assigning technician to task:', error);
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ',
@@ -396,25 +591,14 @@ export async function getAllChecklistByAppointment(req: Request, res: Response) 
     const stats = {
       total: items.length,
       pending: items.filter((item: any) => item.status === 'pending').length,
-      in_progress: items.filter((item: any) => item.status === 'in_progress').length,
       completed: items.filter((item: any) => item.status === 'completed').length,
       skipped: items.filter((item: any) => item.status === 'skipped').length,
     };
 
-    // Xác định task hiện tại đang làm (in_progress đầu tiên, hoặc pending đầu tiên nếu không có in_progress)
-    const currentTask =
-      items.find((item: any) => item.status === 'in_progress') ||
-      items.find((item: any) => item.status === 'pending');
+    // Xác định task hiện tại đang làm (pending đầu tiên)
+    const currentTask = items.find((item: any) => item.status === 'pending');
 
-    return res.json({
-      success: true,
-      data: {
-        items,
-        count: items.length,
-        stats,
-        currentTask: currentTask || null,
-      }
-    });
+    return res.json(items);
   } catch (error: any) {
     console.error('Error getting checklist by appointment:', error);
     return res.status(500).json({

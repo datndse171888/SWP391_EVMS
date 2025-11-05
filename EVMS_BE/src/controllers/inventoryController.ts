@@ -11,10 +11,33 @@ function calculateStatus(quantity: number): InventoryStatus {
   return 'in_stock';
 }
 
+// Helper function để giảm kho theo partID (dùng trong transaction)
+export async function decreaseInventoryByPartId(
+  partID: mongoose.Types.ObjectId,
+  decreaseBy: number,
+  session?: mongoose.ClientSession
+): Promise<{ inventory: any; success: boolean; message?: string }> {
+  const inventory = await Inventory.findOne({ partID }).session(session || null);
+  if (!inventory) {
+    return { inventory: null, success: false, message: 'Không tìm thấy tồn kho cho partID này' };
+  }
+  if (inventory.quantity < decreaseBy) {
+    return {
+      inventory: null,
+      success: false,
+      message: `Không đủ tồn kho. Tồn hiện tại: ${inventory.quantity}, yêu cầu: ${decreaseBy}`,
+    };
+  }
+  inventory.quantity -= decreaseBy;
+  inventory.status = calculateStatus(inventory.quantity);
+  await inventory.save({ session: session || undefined });
+  return { inventory, success: true };
+}
+
 export async function getInventories(req: Request, res: Response) {
   try {
     const page = Math.max(parseInt(String(req.query.page || '1'), 10), 1);
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '10'), 10), 1), 100);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '8'), 10), 1), 100);
     const partID = req.query.partID as string | undefined;
     const lowStock = req.query.lowStock === 'true';
     const status = req.query.status as InventoryStatus | undefined;
@@ -40,6 +63,63 @@ export async function getInventories(req: Request, res: Response) {
     ]);
 
     return res.json({ items, page, limit, total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+// Trả về danh sách tồn kho với đầy đủ thông tin Part (populate toàn bộ Part)
+export async function getInventoriesWithFullPart(req: Request, res: Response) {
+  try {
+    const page = Math.max(parseInt(String(req.query.page || '1'), 10), 1);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '8'), 10), 1), 100);
+    const partID = req.query.partID as string | undefined;
+    const lowStock = req.query.lowStock === 'true';
+    const status = req.query.status as InventoryStatus | undefined;
+
+    const filter: any = {};
+    if (partID) {
+      filter.partID = partID;
+    }
+    if (status) {
+      filter.status = status;
+    } else if (lowStock) {
+      filter.status = 'low_stock';
+    }
+
+    const [items, total] = await Promise.all([
+      Inventory.find(filter)
+        .populate('partID')
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Inventory.countDocuments(filter),
+    ]);
+
+    return res.json({ items, page, limit, total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+// Trả về toàn bộ tồn kho với đầy đủ Part, KHÔNG phân trang (dùng cho FE phân trang client-side)
+export async function getAllInventoriesWithFullPart(req: Request, res: Response) {
+  try {
+    const partID = req.query.partID as string | undefined;
+    const lowStock = req.query.lowStock === 'true';
+    const status = req.query.status as InventoryStatus | undefined;
+
+    const filter: any = {};
+    if (partID) filter.partID = partID;
+    if (status) filter.status = status; else if (lowStock) filter.status = 'low_stock';
+
+    const items = await Inventory.find(filter)
+      .populate('partID')
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return res.json({ items, total: items.length });
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
@@ -162,14 +242,22 @@ export async function updateInventoryQuantity(req: Request, res: Response) {
       return res.status(400).json({ message: 'Số lượng không thể âm' });
     }
 
+    // Lấy inventory hiện tại để kiểm tra chỉ được tăng
+    const existing = await Inventory.findById(req.params.id).populate('partID', 'name partNumber price status category');
+    if (!existing) {
+      return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
+    }
+
+    if (quantity < existing.quantity) {
+      return res.status(400).json({ message: 'Chỉ được tăng số lượng (không được giảm)' });
+    }
+
     // Tính status nếu không được cung cấp
     const calculatedStatus = status || calculateStatus(quantity);
 
-    const inventory = await Inventory.findByIdAndUpdate(
-      req.params.id,
-      { quantity, status: calculatedStatus },
-      { new: true, runValidators: true }
-    ).populate('partID', 'name partNumber price status category');
+    existing.quantity = quantity;
+    existing.status = calculatedStatus;
+    const inventory = await existing.save();
 
     if (!inventory) {
       return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
@@ -189,6 +277,39 @@ export async function deleteInventory(req: Request, res: Response) {
     }
     return res.json({ message: 'Xóa tồn kho thành công' });
   } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+
+// Giảm số lượng tồn kho theo số lượng giảm (decreaseBy)
+export async function decreaseInventoryQuantity(req: Request, res: Response) {
+  try {
+    const { decreaseBy } = req.body as { decreaseBy?: number };
+
+    if (decreaseBy === undefined || isNaN(Number(decreaseBy))) {
+      return res.status(400).json({ message: 'Thiếu hoặc sai decreaseBy' });
+    }
+    const delta = Math.floor(Number(decreaseBy));
+    if (delta <= 0) {
+      return res.status(400).json({ message: 'decreaseBy phải > 0' });
+    }
+
+    const existing = await Inventory.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
+    }
+
+    if (existing.quantity - delta < 0) {
+      return res.status(400).json({ message: 'Số lượng giảm vượt quá tồn hiện tại' });
+    }
+
+    existing.quantity = existing.quantity - delta;
+    existing.status = calculateStatus(existing.quantity);
+    const saved = await existing.save();
+
+    return res.json({ message: 'Giảm số lượng thành công', inventory: saved });
+  } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

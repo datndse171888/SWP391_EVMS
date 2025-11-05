@@ -8,6 +8,7 @@ import { Loading } from '../../components/Loading';
 import { Select } from '../../components/ui/Select';
 import type { CreateAppointmentRequest } from '../../types/Appoitment';
 import { useAlert } from '../../hooks/useAlert';
+import { validVIN } from '../../utils/Validation';
 
 interface VehicleProps {
   formData: CreateAppointmentRequest;
@@ -122,8 +123,8 @@ const Vehicle: React.FC<VehicleProps> = ({
       newVehicleData.year > 1950 &&
       newVehicleData.mileage >= 0 &&
       newVehicleData.batteryCapacity >= 0;
-    if (newVehicleData.vehicleCategory === 'CAR') {
-      return baseValid && newVehicleData.VIN?.trim().length === 17;
+    if (newVehicleData.vehicleCategory === 'CAR' && newVehicleData.VIN) {
+      return baseValid && validVIN(newVehicleData.VIN) !== '';
     }
     return baseValid;
   };
@@ -273,7 +274,7 @@ const Vehicle: React.FC<VehicleProps> = ({
               <Select
                 name="vehicleType"
                 label="Loại xe"
-                value={newVehicleData.vehicleCategory}
+                value={selectedVehicle?.vehicleCategory || newVehicleData.vehicleCategory}
                 onChange={(e) => !selectedVehicle && handleNewVehicleChange('vehicleCategory', e.target.value as VehicleCategory)}
                 disabled={!!selectedVehicle}
                 hiddenDefault={true}

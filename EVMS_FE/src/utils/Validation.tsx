@@ -29,3 +29,11 @@ export const validConfirmPassword = (password: string, confirmPassword: string):
     }
     return '';
 }
+
+export const validVIN = (vin: string): string => {
+    const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
+    if (!vinRegex.test(vin)) {
+        return 'VIN không hợp lệ. VIN phải có đúng 17 ký tự và không chứa các chữ cái I, O, Q.';
+    }
+    return '';
+}

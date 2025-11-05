@@ -127,19 +127,17 @@ const UsersTable: React.FC = () => {
                   </div>
                 </td>
                 <td className="py-4 px-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
                     user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
-                    user.role === 'technician' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      user.role === 'technician' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
                     {user.role}
                   </span>
                 </td>
                 <td className="py-4 px-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    user.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  }`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${user.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
                     {user.isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}
                   </span>
                 </td>
@@ -303,7 +301,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Người dùng"
-          value={String(Object.values(usersByRole).reduce((a,b)=>a+b,0) || '—')}
+          value={String(Object.values(usersByRole).reduce((a, b) => a + b, 0) || '—')}
           change="+8%"
           changeType="positive"
           icon="👥"
@@ -321,7 +319,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Linh kiện tồn kho"
-          value={String(partsLabels.reduce((s, l) => s + (partsByCategory[l]||0), 0) || '—')}
+          value={String(partsLabels.reduce((s, l) => s + (partsByCategory[l] || 0), 0) || '—')}
           change="-2%"
           changeType="negative"
           icon="📦"
@@ -333,25 +331,33 @@ export const Dashboard: React.FC = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Người dùng theo vai trò</h3>
+          <h3 className="text-sm font-semibold mb-10">Người dùng theo vai trò</h3>
           <Bar data={rolesData} options={{ responsive: true, plugins: { legend: { display: false }, title: { display: false } } }} />
         </div>
 
         <div className="bg-white rounded-2xl p-4 border shadow-sm">
           <h3 className="text-sm font-semibold mb-3">Trạng thái người dùng</h3>
-          <Doughnut data={statusData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+          <div className="flex items-center justify-center" style={{ height: 320 }}>
+            <div className="w-80 h-80">
+              <Doughnut data={statusData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Dịch vụ theo loại</h3>
+          <h3 className="text-sm font-semibold mb-10">Dịch vụ theo loại</h3>
           <Bar data={servicesData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Linh kiện theo danh mục</h3>
-          <Doughnut data={partsData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+          <h3 className="text-sm font-semibold mb-30">Linh kiện theo danh mục</h3>
+          <div className="flex items-center justify-center" style={{ height: 320 }}>
+            <div className="w-130 h-130">
+              <Doughnut data={partsData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border shadow-sm">

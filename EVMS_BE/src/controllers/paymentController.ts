@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Payment } from '../models/Payment.js';
 import { Appointment } from '../models/Appointment.js';
+import { Bill } from '../models/Bill.js';
 
 // PayOS SDK - Cần cài đặt: npm install @payos/node
 // import { PayOS } from '@payos/node';
@@ -132,58 +133,70 @@ export async function createPayOSPayment(req: Request, res: Response) {
 
 // Xác nhận thanh toán tiền mặt
 export async function confirmCashPayment(req: Request, res: Response) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const { appointmentId, amount, note } = req.body;
+    const { billId, note } = req.body as { billId?: string; note?: string };
 
-    if (!appointmentId || !amount) {
+    if (!billId) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin: appointmentId, amount',
+        message: 'Thiếu thông tin: billId',
       });
     }
 
-    // Validate appointment
-    const appointment = await Appointment.findById(appointmentId);
-    if (!appointment) {
+    // Tìm bill để lấy appointmentID và số tiền
+    const bill = await Bill.findById(billId).session(session);
+    if (!bill) {
+      await session.abortTransaction();
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy lịch hẹn',
+        message: 'Không tìm thấy hoá đơn',
       });
     }
 
-    // Validate amount
-    if (amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Số tiền phải lớn hơn 0',
-      });
-    }
+    const appointmentId = bill.appointmentID as unknown as string;
+    const amount = bill.totalAmount;
 
     // Tạo payment record
-    const payment = await Payment.create({
-      appointmentID: new mongoose.Types.ObjectId(appointmentId),
-      amount,
-      paymentMethod: 'CASH',
-      status: 'completed',
-      note,
-      completedAt: new Date(),
-    });
+    const payment = await Payment.create(
+      [
+        {
+          appointmentID: new mongoose.Types.ObjectId(appointmentId),
+          billID: bill._id,
+          amount,
+          paymentMethod: 'CASH',
+          status: 'completed',
+          note,
+          completedAt: new Date(),
+        },
+      ],
+      { session }
+    );
 
-    // Update appointment status to completed
-    appointment.status = 'completed';
-    await appointment.save();
+    // Update appointment status to completed (nếu tồn tại)
+    const appointment = await Appointment.findById(appointmentId).session(session);
+    if (appointment) {
+      appointment.status = 'completed';
+      await appointment.save({ session });
+    }
 
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: 'Thanh toán tiền mặt thành công',
-      data: payment,
+      data: payment[0],
     });
   } catch (error: any) {
+    await session.abortTransaction();
     console.error('Error confirming cash payment:', error);
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi xác nhận thanh toán',
     });
+  } finally {
+    session.endSession();
   }
 }
 

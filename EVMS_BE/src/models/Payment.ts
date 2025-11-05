@@ -5,61 +5,27 @@ export type PaymentStatus = 'pending' | 'completed' | 'cancelled' | 'failed';
 
 export interface IPayment extends Document {
   appointmentID: mongoose.Types.ObjectId; // ref Appointment
+  billID?: mongoose.Types.ObjectId; // ref Bill (optional cho PAYOS)
   amount: number;
   paymentMethod: PaymentMethod;
   status: PaymentStatus;
   paymentLinkId?: string; // PayOS payment link ID
-  payOSData?: {
-    code: string;
-    desc: string;
-    data?: any;
-  };
+  payOSData?: { code: string; desc: string; data?: any };
   note?: string;
   completedAt?: Date;
 }
 
 const PaymentSchema = new Schema<IPayment>(
   {
-    appointmentID: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: 'Appointment',
-      index: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    paymentMethod: {
-      type: String,
-      required: true,
-      enum: ['CASH', 'PAYOS'],
-      index: true,
-    },
-    status: {
-      type: String,
-      required: true,
-      enum: ['pending', 'completed', 'cancelled', 'failed'],
-      default: 'pending',
-      index: true,
-    },
-    paymentLinkId: {
-      type: String,
-      sparse: true,
-      index: true,
-    },
-    payOSData: {
-      code: String,
-      desc: String,
-      data: Schema.Types.Mixed,
-    },
-    note: {
-      type: String,
-    },
-    completedAt: {
-      type: Date,
-    },
+    appointmentID: { type: Schema.Types.ObjectId, required: true, ref: 'Appointment', index: true },
+    billID: { type: Schema.Types.ObjectId, ref: 'Bill', index: true, sparse: true },
+    amount: { type: Number, required: true, min: 0 },
+    paymentMethod: { type: String, required: true, enum: ['CASH', 'PAYOS'], index: true },
+    status: { type: String, required: true, enum: ['pending', 'completed', 'cancelled', 'failed'], default: 'pending', index: true },
+    paymentLinkId: { type: String, sparse: true, index: true },
+    payOSData: { code: String, desc: String, data: Schema.Types.Mixed },
+    note: { type: String },
+    completedAt: { type: Date },
   },
   { timestamps: true }
 );
