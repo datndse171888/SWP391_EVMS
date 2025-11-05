@@ -110,27 +110,48 @@ export async function createVehicleConditionReport(req: Request, res: Response) 
     }
 
     // Tạo vehicle condition report
-    const vehicleConditionReport = await VehicleConditionReport.create({
+    const reportData: any = {
       appointmentID: new mongoose.Types.ObjectId(appointmentID),
       technicianId: technicianId, // Đã là ObjectId rồi
       stage: stage,
-      details: details.trim(),
-      image: image ? image.trim() : undefined
-    });
+      details: details.trim()
+    };
+
+    // Chỉ thêm image nếu có
+    if (image && image.trim()) {
+      reportData.image = image.trim();
+    }
+
+    const vehicleConditionReport = await VehicleConditionReport.create(reportData);
 
     // Populate để trả về thông tin đầy đủ
     const populatedReport = await VehicleConditionReport.findById(vehicleConditionReport._id)
-      .populate('appointmentID', 'userID vehicleID bookingDate status')
-      .populate('technicianId', 'userID role')
+      .populate({
+        path: 'appointmentID',
+        select: 'userID vehicleID bookingDate status'
+      })
+      .populate({
+        path: 'technicianId',
+        select: 'userID role'
+      })
       .lean();
+
+    if (!populatedReport) {
+      return res.status(500).json({
+        success: false,
+        message: 'Không thể lấy thông tin báo cáo sau khi tạo'
+      });
+    }
 
     return res.status(201).json(populatedReport);
   } catch (error: any) {
     console.error('Error creating vehicle condition report:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: 'Lỗi máy chủ khi tạo báo cáo tình trạng xe',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

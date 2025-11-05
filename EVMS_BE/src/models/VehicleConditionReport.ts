@@ -7,8 +7,9 @@ export interface IVehicleConditionReport extends Document {
   technicianId: mongoose.Types.ObjectId; // ref Technician
   stage: VehicleConditionReportStage;
   details: string;
-  image: string;
+  image?: string; // Optional
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const VehicleConditionReportSchema = new Schema<IVehicleConditionReport>(
