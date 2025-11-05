@@ -209,7 +209,7 @@ const ManagePart: React.FC = () => {
       active: { text: 'Hoạt động', color: 'bg-blue-100 text-blue-800' },
       inactive: { text: 'Ngừng hoạt động', color: 'bg-gray-100 text-gray-800' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig];
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
@@ -590,6 +590,7 @@ const ManagePart: React.FC = () => {
     // Always show pagination if there are items
     if (currentData.length === 0) return null;
 
+    const totalPages = Math.ceil(currentData.length / itemsPerPage);
     const pageNumbers = [];
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
@@ -602,6 +603,12 @@ const ManagePart: React.FC = () => {
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
+
+
+
+
+
+
 
     return (
       <div className="flex items-center justify-between mt-3 p-2 bg-white rounded-lg border border-gray-200">
@@ -655,11 +662,10 @@ const ManagePart: React.FC = () => {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ${
-                currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
+              className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ${currentPage === page
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
             >
               {page}
             </button>
@@ -719,14 +725,14 @@ const ManagePart: React.FC = () => {
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-500">Giá:</span>
             <span className="text-sm font-bold" style={{ color: '#f6ae2d' }}>
-                {part.price.toLocaleString('vi-VN')}đ
-              </span>
-            </div>
+              {part.price.toLocaleString('vi-VN')}đ
+            </span>
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">Tồn kho:</span>
             <span className="text-xs font-medium text-gray-700">
               {part.stockQuantity || 0} sp
-              </span>
+            </span>
           </div>
         </div>
 
@@ -765,7 +771,7 @@ const ManagePart: React.FC = () => {
               <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
             </svg>
           </button>
-          
+
           <div className="flex space-x-1">
             <button 
               className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90"
@@ -873,7 +879,7 @@ const ManagePart: React.FC = () => {
               Quản lý kho linh kiện và phụ tùng
             </p>
           </div>
-          
+
           {/* Search Bar */}
           <div className="flex items-center space-x-3">
             <div className="relative">
@@ -888,7 +894,7 @@ const ManagePart: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            
+
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="px-3 py-1.5 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90"
@@ -968,21 +974,19 @@ const ManagePart: React.FC = () => {
           <nav className="flex space-x-4 border-b border-gray-200">
             <button
               onClick={() => setSelectedTab('inventory')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                selectedTab === 'inventory'
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'inventory'
                 ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Tất cả linh kiện ({filteredParts.length})
             </button>
             <button
               onClick={() => setSelectedTab('low-stock')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                selectedTab === 'low-stock'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'low-stock'
+                ? 'border-red-500 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Sắp hết hàng ({lowStockParts.length})
             </button>
@@ -991,13 +995,13 @@ const ManagePart: React.FC = () => {
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 selectedTab === 'active'
                 ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Đang hoạt động ({activeParts.length})
             </button>
           </nav>
-          
+
           {/* Filters on the right */}
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">

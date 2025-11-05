@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IVehicle extends Document {
   userID: mongoose.Types.ObjectId;
-  VIN: string;
+  VIN?: string; // Optional for MOTOBIKE and BICYCLE; required for CAR
   vehicleCategory: 'CAR' | 'BICYCLE' | 'MOTOBIKE';
   plateNumber: string;
   brand: string;
@@ -23,8 +23,11 @@ const VehicleSchema = new Schema<IVehicle>(
     },
     VIN: {
       type: String,
-      required: true,
+      // Required only for cars; optional for motobike and bicycle
+      required: function (this: any) { return this.vehicleCategory === 'CAR'; },
+      // Allow multiple documents without VIN by using sparse unique index
       unique: true,
+      sparse: true,
       uppercase: true,
       trim: true,
     },

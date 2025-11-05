@@ -14,7 +14,7 @@ export interface VehicleService {
 export interface VehicleResponse {
     _id: string;
     userID: UserIDObject;
-    VIN: string;
+    VIN?: string;
     vehicleCategory: VehicleCategory;
     plateNumber: string;
     brand: string;

@@ -8,8 +8,19 @@ export interface Part {
   status: 'active' | 'inactive' | 'hidden';
   warrantyPeriod?: number;
   warrantyCondition?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  stockQuantity?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-
+export interface PartUsage {
+  id: string;
+  appointmentID: string;
+  partID: string;
+  quantity: number;
+  priceAtUsage: number;
+  warrantyApplied: boolean;
+  note?: string;
+  warrantyExpiryDate?: string;
+  createdAt: string;
+}

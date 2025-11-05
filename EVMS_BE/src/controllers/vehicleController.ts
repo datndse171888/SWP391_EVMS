@@ -16,11 +16,19 @@ export async function createVehicle(req: Request, res: Response) {
       status = 'active'
     } = req.body;
 
-    // Validation bắt buộc
-    if (!VIN || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
+    // Validation bắt buộc (VIN chỉ bắt buộc với CAR)
+    if (!vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
       return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin bắt buộc: VIN, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
+        message: 'Thiếu thông tin bắt buộc: vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
+      });
+    }
+
+    // VIN chỉ bắt buộc khi là xe ô tô (CAR)
+    if (vehicleCategory === 'CAR' && (!VIN || typeof VIN !== 'string' || VIN.trim() === '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'VIN là bắt buộc đối với xe ô tô'
       });
     }
 
@@ -49,13 +57,15 @@ export async function createVehicle(req: Request, res: Response) {
       });
     }
 
-    // Kiểm tra VIN đã tồn tại
-    const existingVIN = await Vehicle.findOne({ VIN: VIN.toUpperCase() });
-    if (existingVIN) {
-      return res.status(400).json({
-        success: false,
-        message: 'VIN đã tồn tại trong hệ thống'
-      });
+    // Kiểm tra VIN đã tồn tại (chỉ khi có cung cấp VIN)
+    if (VIN && typeof VIN === 'string' && VIN.trim() !== '') {
+      const existingVIN = await Vehicle.findOne({ VIN: VIN.toUpperCase() });
+      if (existingVIN) {
+        return res.status(400).json({
+          success: false,
+          message: 'VIN đã tồn tại trong hệ thống'
+        });
+      }
     }
 
     // Kiểm tra biển số đã tồn tại
@@ -107,10 +117,9 @@ export async function createVehicle(req: Request, res: Response) {
       });
     }
 
-    // Tạo vehicle mới
-    const vehicle = await Vehicle.create({
+    // Tạo dữ liệu vehicle mới (VIN chỉ thêm khi có cung cấp)
+    const createPayload: any = {
       userID,
-      VIN: VIN.toUpperCase(),
       vehicleCategory,
       plateNumber: plateNumber.toUpperCase(),
       brand: brand.trim(),
@@ -118,7 +127,14 @@ export async function createVehicle(req: Request, res: Response) {
       mileage,
       batteryCapacity,
       status
-    });
+    };
+
+    if (VIN && typeof VIN === 'string' && VIN.trim() !== '') {
+      createPayload.VIN = VIN.toUpperCase();
+    }
+
+    // Tạo vehicle mới
+    const vehicle = await Vehicle.create(createPayload);
 
     // Populate thông tin user
     const populatedVehicle = await Vehicle.findById(vehicle._id)
