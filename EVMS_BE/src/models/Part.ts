@@ -22,7 +22,7 @@ const PartSchema = new Schema<IPart>(
     description: { type: String, trim: true },
     manufacturer: { type: String, trim: true },
     partNumber: { type: String, trim: true },
-    price: { type: Number, required: true, min: 0 },
+    price: { type: Number, required: true, min: 1000 },
     status: { type: String, enum: ['active', 'inactive', 'hidden'], default: 'active', index: true },
     category: { type: String, enum: ['tires', 'oil', 'filters', 'brakes', 'electrical', 'cooling', 'suspension', 'transmission', 'accessories'], required: true, index: true },
     warrantyPeriod: { type: Number, min: 0 },

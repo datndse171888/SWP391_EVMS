@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { PartApi } from '../../api/PartApi';
+import type { AxiosError } from 'axios';
 
 interface Part {
   id: string;
@@ -13,6 +15,19 @@ interface Part {
   stockQuantity?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface PartFormData {
+  name: string;
+  description: string;
+  manufacturer: string;
+  partNumber: string;
+  price: string;
+  status: 'active' | 'inactive' | 'hidden';
+  category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories';
+  warrantyPeriod: string;
+  warrantyCondition: string;
+  quantity: string;
 }
 
 interface PartUsage {
@@ -34,6 +49,22 @@ const ManagePart: React.FC = () => {
   const [filterManufacturer, setFilterManufacturer] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<PartFormData>({
+    name: '',
+    description: '',
+    manufacturer: '',
+    partNumber: '',
+    price: '',
+    status: 'active',
+    category: 'accessories',
+    warrantyPeriod: '',
+    warrantyCondition: '',
+    quantity: '0',
+  });
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof PartFormData, string>>>({});
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Mock data - thay thế bằng API calls
   const mockParts: Part[] = [
@@ -264,6 +295,281 @@ const ManagePart: React.FC = () => {
     }
   };
 
+  // Handle form input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (formErrors[name as keyof PartFormData]) {
+      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const errors: Partial<Record<keyof PartFormData, string>> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Tên linh kiện là bắt buộc';
+    }
+    
+    const priceValue = parseFloat(formData.price);
+    if (!formData.price || isNaN(priceValue) || priceValue < 1000) {
+      errors.price = 'Giá phải từ 1.000 VNĐ trở lên';
+    }
+    
+    const quantityValue = parseFloat(formData.quantity);
+    if (formData.quantity && (isNaN(quantityValue) || quantityValue < 0)) {
+      errors.quantity = 'Số lượng không thể âm';
+    }
+    
+    if (formData.warrantyPeriod && (!formData.warrantyCondition || !formData.warrantyCondition.trim())) {
+      errors.warrantyCondition = 'Cần nhập điều kiện bảo hành nếu có thời hạn bảo hành';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle form submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    console.log('[ManagePart] Form submission started');
+    console.log('[ManagePart] Form data:', formData);
+    
+    if (!validateForm()) {
+      console.log('[ManagePart] Form validation failed:', formErrors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // Prepare request data
+    const requestData = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      manufacturer: formData.manufacturer.trim() || undefined,
+      partNumber: formData.partNumber.trim() || undefined,
+      price: parseFloat(formData.price),
+      status: formData.status || 'active',
+      category: formData.category,
+      warrantyPeriod: formData.warrantyPeriod ? parseFloat(formData.warrantyPeriod) : undefined,
+      warrantyCondition: formData.warrantyCondition.trim() || undefined,
+      quantity: formData.quantity !== undefined && formData.quantity !== null && formData.quantity !== '' 
+        ? parseFloat(formData.quantity) 
+        : 0,
+    };
+    
+    console.log('[ManagePart] Submitting form with data:', requestData);
+    
+    try {
+      console.log('[ManagePart] Calling PartApi.createPartWithInventory with data:', requestData);
+      
+      const response = await PartApi.createPartWithInventory(requestData);
+      
+      console.log('[ManagePart] Response status:', response.status, response.statusText);
+      console.log('[ManagePart] Response data:', response.data);
+      
+      const result = response.data;
+      
+      console.log('[ManagePart] Success response:', result);
+      console.log('[ManagePart] Created part:', result.part);
+      console.log('[ManagePart] Created inventory:', result.inventory);
+      
+      // Reset form and close modal
+      setFormData({
+        name: '',
+        description: '',
+        manufacturer: '',
+        partNumber: '',
+        price: '',
+        status: 'active',
+        category: 'accessories',
+        warrantyPeriod: '',
+        warrantyCondition: '',
+        quantity: '0',
+      });
+      setFormErrors({});
+      setIsAddModalOpen(false);
+      
+      console.log('[ManagePart] Form submitted successfully. Message:', result.message || 'Thêm linh kiện thành công!');
+      
+      // Show success notification
+      setNotification({
+        type: 'success',
+        message: result.message || 'Thêm linh kiện thành công!'
+      });
+      
+      // Auto hide notification after 3 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      
+      // Refresh parts list - reload page or update state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (error: unknown) {
+      console.error('[ManagePart] Error submitting form:', error);
+      
+      let errorMessage = 'Có lỗi xảy ra khi thêm linh kiện';
+      let showNotification = true;
+      const newFormErrors: Partial<Record<keyof PartFormData, string>> = {};
+      
+      // Handle Axios error
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as AxiosError<{ 
+          message?: string; 
+          error?: string; 
+          errors?: string[] | { name?: string; partNumber?: string; price?: string; quantity?: string } 
+        }>;
+        console.error('[ManagePart] Axios error response:', axiosError.response);
+        
+        if (axiosError.response?.data) {
+          const errorData = axiosError.response.data;
+          errorMessage = errorData.message || errorData.error || `HTTP ${axiosError.response.status}: ${axiosError.response.statusText}`;
+          
+          // Parse validation errors - hiển thị trong form
+          // Nếu BE trả về errors object với field cụ thể
+          if (errorData.errors && typeof errorData.errors === 'object' && !Array.isArray(errorData.errors)) {
+            // BE trả về { name: "...", partNumber: "..." }
+            const fieldErrors = errorData.errors as { name?: string; partNumber?: string; price?: string; quantity?: string };
+            if (fieldErrors.name) {
+              newFormErrors.name = fieldErrors.name;
+              showNotification = false;
+            }
+            if (fieldErrors.partNumber) {
+              newFormErrors.partNumber = fieldErrors.partNumber;
+              showNotification = false;
+            }
+            if (fieldErrors.price) {
+              newFormErrors.price = fieldErrors.price;
+              showNotification = false;
+            }
+            if (fieldErrors.quantity) {
+              newFormErrors.quantity = fieldErrors.quantity;
+              showNotification = false;
+            }
+          } else if (errorData.message) {
+            // Fallback: Parse từ message nếu BE chưa trả về errors object
+            const message = errorData.message.toLowerCase();
+            
+            // Kiểm tra lỗi trùng tên (chỉ về tên)
+            if (message.includes('tên linh kiện đã tồn tại') || (message.includes('tên') && message.includes('tồn tại') && !message.includes('mã'))) {
+              newFormErrors.name = 'Tên linh kiện đã tồn tại';
+              showNotification = false;
+            }
+            
+            // Kiểm tra lỗi trùng mã (chỉ về mã)
+            if (message.includes('mã linh kiện đã tồn tại') || (message.includes('mã') && message.includes('tồn tại') && !message.includes('tên'))) {
+              newFormErrors.partNumber = 'Mã linh kiện đã tồn tại';
+              showNotification = false;
+            }
+            
+            // Kiểm tra lỗi trùng cả tên và mã
+            if (message.includes('tên và mã') || (message.includes('tên') && message.includes('mã') && message.includes('tồn tại'))) {
+              newFormErrors.name = 'Tên linh kiện đã tồn tại';
+              newFormErrors.partNumber = 'Mã linh kiện đã tồn tại';
+              showNotification = false;
+            }
+            
+            // Kiểm tra lỗi giá
+            if (message.includes('giá') && message.includes('1.000')) {
+              newFormErrors.price = 'Giá phải từ 1.000 VNĐ trở lên';
+              showNotification = false;
+            }
+            
+            // Kiểm tra lỗi số lượng
+            if (message.includes('số lượng') && (message.includes('âm') || message.includes('không thể'))) {
+              newFormErrors.quantity = 'Số lượng không thể âm';
+              showNotification = false;
+            }
+            
+            // Kiểm tra validation errors từ BE (array)
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+              errorData.errors.forEach((err: string) => {
+                const errLower = err.toLowerCase();
+                if (errLower.includes('name') || (errLower.includes('tên') && !errLower.includes('mã'))) {
+                  newFormErrors.name = err;
+                } else if (errLower.includes('partnumber') || (errLower.includes('mã') && !errLower.includes('tên'))) {
+                  newFormErrors.partNumber = err;
+                } else if (errLower.includes('price') || errLower.includes('giá')) {
+                  newFormErrors.price = err;
+                } else if (errLower.includes('quantity') || errLower.includes('số lượng')) {
+                  newFormErrors.quantity = err;
+                }
+              });
+              showNotification = false;
+            }
+          }
+          
+          console.error('[ManagePart] Error data:', errorData);
+        } else if (axiosError.response?.status) {
+          errorMessage = `HTTP ${axiosError.response.status}: ${axiosError.response.statusText || 'Lỗi không xác định'}`;
+        } else if (axiosError.request) {
+          errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+          console.error('[ManagePart] Network error - no response received');
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('[ManagePart] Error message:', error.message);
+        console.error('[ManagePart] Error stack:', error.stack);
+      } else {
+        console.error('[ManagePart] Unknown error type:', typeof error, error);
+      }
+      
+      // Set form errors nếu có
+      if (Object.keys(newFormErrors).length > 0) {
+        setFormErrors(newFormErrors);
+        // Scroll to first error field
+        const firstErrorField = Object.keys(newFormErrors)[0];
+        const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          (errorElement as HTMLElement).focus();
+        }
+      }
+      
+      console.error('[ManagePart] Final error message:', errorMessage);
+      
+      // Chỉ hiện notification nếu không phải lỗi validation (đã hiện trong form)
+      if (showNotification) {
+        setNotification({
+          type: 'error',
+          message: errorMessage
+        });
+        
+        // Auto hide notification after 5 seconds
+        setTimeout(() => {
+          setNotification(null);
+        }, 5000);
+      }
+    } finally {
+      setIsSubmitting(false);
+      console.log('[ManagePart] Form submission process completed');
+    }
+  };
+
+  // Reset form when modal closes
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setFormData({
+      name: '',
+      description: '',
+      manufacturer: '',
+      partNumber: '',
+      price: '',
+      status: 'active',
+      category: 'accessories',
+      warrantyPeriod: '',
+      warrantyCondition: '',
+      quantity: '0',
+    });
+    setFormErrors({});
+  };
+
   // Pagination component
   const renderPagination = () => {
     // Always show pagination if there are items
@@ -442,8 +748,72 @@ const ManagePart: React.FC = () => {
     );
   };
 
+  // Notification component
+  const NotificationToast = () => {
+    if (!notification) return null;
+    
+    return (
+      <div 
+        className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out"
+        style={{
+          transform: 'translateX(0)',
+          animation: 'slideInRight 0.3s ease-out'
+        }}
+      >
+        <style>{`
+          @keyframes slideInRight {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+        `}</style>
+        <div
+          className={`px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-md ${
+            notification.type === 'success'
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}
+        >
+          {notification.type === 'success' ? (
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          <p
+            className={`flex-1 text-sm font-medium ${
+              notification.type === 'success' ? 'text-green-800' : 'text-red-800'
+            }`}
+          >
+            {notification.message}
+          </p>
+          <button
+            onClick={() => setNotification(null)}
+            className={`text-gray-400 hover:text-gray-600 transition-colors ${
+              notification.type === 'success' ? 'hover:text-green-600' : 'hover:text-red-600'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen space-y-2 pb-8">
+      {/* Notification Toast */}
+      <NotificationToast />
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-2">
         <div className="flex items-center justify-between">
@@ -472,7 +842,7 @@ const ManagePart: React.FC = () => {
             </div>
             
             <button
-              onClick={() => console.log('Add part modal')}
+              onClick={() => setIsAddModalOpen(true)}
               className="px-3 py-1.5 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90"
               style={{ backgroundColor: '#014091' }}
             >
@@ -671,6 +1041,244 @@ const ManagePart: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add Part Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseModal}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold" style={{ color: '#014091' }}>
+                  Thêm linh kiện mới
+                </h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-3">
+              {/* Name - Required */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tên linh kiện <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                    formErrors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Nhập tên linh kiện"
+                />
+                {formErrors.name && (
+                  <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mô tả
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="Nhập mô tả linh kiện"
+                />
+              </div>
+
+              {/* Two columns: Manufacturer and Part Number */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nhà sản xuất
+                  </label>
+                  <input
+                    type="text"
+                    name="manufacturer"
+                    value={formData.manufacturer}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Nhập tên nhà sản xuất"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mã linh kiện
+                  </label>
+                  <input
+                    type="text"
+                    name="partNumber"
+                    value={formData.partNumber}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                      formErrors.partNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Nhập mã linh kiện"
+                  />
+                  {formErrors.partNumber && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.partNumber}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Two columns: Price and Category */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Giá (VNĐ) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    min="1000"
+                    step="1000"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                      formErrors.price ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Nhập giá (tối thiểu 1.000 VNĐ)"
+                  />
+                  {formErrors.price && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.price}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Danh mục <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    <option value="tires">Lốp xe</option>
+                    <option value="oil">Dầu nhớt</option>
+                    <option value="filters">Lọc</option>
+                    <option value="brakes">Phanh</option>
+                    <option value="electrical">Điện</option>
+                    <option value="cooling">Làm mát</option>
+                    <option value="suspension">Giảm xóc</option>
+                    <option value="transmission">Truyền động</option>
+                    <option value="accessories">Phụ kiện</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Two columns: Status and Quantity */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Trạng thái
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Ngừng hoạt động</option>
+                    <option value="hidden">Ẩn</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Số lượng tồn kho
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    min="0"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                      formErrors.quantity ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Nhập số lượng"
+                  />
+                  {formErrors.quantity && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.quantity}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Warranty Section */}
+              <div className="border-t border-gray-200 pt-3">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Thông tin bảo hành</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Thời hạn bảo hành
+                    </label>
+                    <input
+                      type="number"
+                      name="warrantyPeriod"
+                      value={formData.warrantyPeriod}
+                      onChange={handleInputChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      placeholder="Nhập số"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Đơn vị <span className={formData.warrantyPeriod ? 'text-red-500' : 'text-gray-400'}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="warrantyCondition"
+                      value={formData.warrantyCondition}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                        formErrors.warrantyCondition ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Ví dụ: tháng, km"
+                    />
+                    {formErrors.warrantyCondition && (
+                      <p className="mt-1 text-xs text-red-500">{formErrors.warrantyCondition}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#014091' }}
+                >
+                  {isSubmitting ? 'Đang thêm...' : 'Thêm linh kiện'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

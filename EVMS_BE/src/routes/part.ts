@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getParts, updatePart, createPart, getPartById } from '../controllers/partController.js';
+import { getParts, updatePart, createPart, getPartById, createPartWithInventory } from '../controllers/partController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
@@ -10,7 +10,8 @@ partRouter.get('/', getParts);
 partRouter.get('/:id', getPartById);
 
 // Admin/staff manage
-partRouter.post('/', authMiddleware, roleMiddleware(['admin']), createPart);
-partRouter.put('/:id', authMiddleware, roleMiddleware(['admin']), updatePart);
+partRouter.post('/', authMiddleware, roleMiddleware(['admin, staff']), createPart);
+partRouter.post('/with-inventory', authMiddleware, roleMiddleware(['admin', 'staff']), createPartWithInventory);
+partRouter.put('/:id', authMiddleware, roleMiddleware(['admin, staff']), updatePart);
 
 

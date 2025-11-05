@@ -67,6 +67,22 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
   }
 }
 
+interface CreatePartWithInventoryParams {
+  // Part fields
+  name: string
+  description?: string
+  manufacturer?: string
+  partNumber?: string
+  price: number
+  status?: 'active' | 'inactive' | 'hidden'
+  category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
+  warrantyPeriod?: number
+  warrantyCondition?: string
+  // Inventory fields
+  quantity?: number
+  inventoryStatus?: 'in_stock' | 'low_stock' | 'out_of_stock'
+}
+
 export const PartApi = {
   getParts: async (params: { page: number; limit: number; search?: string }) => {
     return fetchParts({ page: params.page, limit: params.limit, search: params.search })
@@ -76,6 +92,9 @@ export const PartApi = {
   },
   createPart: (params: Part) => {
     return api.post('/parts', params)
+  },
+  createPartWithInventory: (params: CreatePartWithInventoryParams) => {
+    return api.post<{ message: string; part: Part; inventory: any }>('/parts/with-inventory', params)
   },
   updatePart: (id: string, params: Part) => {
     return api.put(`/parts/${id}`, params)

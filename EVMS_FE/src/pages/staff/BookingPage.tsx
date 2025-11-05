@@ -4,12 +4,17 @@ import { UserApi } from '../../api/UserApi'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServicePackageApi } from '../../api/ServicePackageApi'
 import { fetchParts } from '../../api/PartApi'
+import { VehicleApi } from '../../api/VehicleApi'
+import { PaymentApi } from '../../api/PaymentApi'
 import type { Part } from '../../types/Part'
+import type { VehicleResponse } from '../../types/Vehicle'
 
 type StepKey = 1 | 2 | 3 | 4
 
 type AppointmentLite = {
   id: string
+  userID?: string
+  vehicleID?: string
   customerName: string
   customerPhone: string
   bookingDateISO?: string
@@ -67,6 +72,9 @@ const BookingPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'PAYOS' | ''>('')
   const [note, setNote] = useState('')
   const [isPaying, setIsPaying] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null)
+  const [vehicle, setVehicle] = useState<VehicleResponse | null>(null)
+  const [vehicleLoading, setVehicleLoading] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   // Derived totals
@@ -80,7 +88,7 @@ const BookingPage: React.FC = () => {
       setError('')
       try {
         const res = await AppointmentApi.getTodayAwaitingPayment()
-        type BackendAppointment = { _id?: string; id?: string; userID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown }
+        type BackendAppointment = { _id?: string; id?: string; userID?: string; vehicleID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown }
         const list = (res?.data?.data || []) as BackendAppointment[]
         // Build minimal list; enrich with user name/phone
         const uniqueUserIds = Array.from(new Set(list.map(a => a.userID).filter((id): id is string => Boolean(id))))
@@ -207,6 +215,8 @@ const BookingPage: React.FC = () => {
           }
           return {
             id: String(apt._id || apt.id || ''),
+            userID: apt.userID,
+            vehicleID: apt.vehicleID,
             customerName: u.fullName || u.userName || `Khách ${String(apt._id || '').slice(-4)}`,
             customerPhone: u.phoneNumber || '—',
             bookingDateISO: apt.bookingDate || undefined,
@@ -268,6 +278,26 @@ const BookingPage: React.FC = () => {
     }
   }, [activeStep, partsPage, debouncedSearch])
 
+  // Load vehicle when entering step 3
+  useEffect(() => {
+    const loadVehicle = async () => {
+      if (activeStep === 3 && selectedAppointment?.vehicleID) {
+        setVehicleLoading(true)
+        try {
+          const res = await VehicleApi.getVehicleById(selectedAppointment.vehicleID)
+          setVehicle(res.data || null)
+        } catch {
+          setVehicle(null)
+        } finally {
+          setVehicleLoading(false)
+        }
+      } else {
+        setVehicle(null)
+      }
+    }
+    loadVehicle()
+  }, [activeStep, selectedAppointment?.vehicleID])
+
   const normalize = (s: string) => s
     .toLowerCase()
     .normalize('NFD')
@@ -307,17 +337,61 @@ const BookingPage: React.FC = () => {
   const canProceedStep3 = paymentMethod !== ''
 
   const handlePay = async () => {
+    if (!selectedAppointment) {
+      setError('Vui lòng chọn lịch hẹn')
+      return
+    }
+
     setIsPaying(true)
     setError('')
+
     try {
-      // Simulate payment
-      await new Promise(r => setTimeout(r, 900))
-      setPaymentSuccess(true)
-      setActiveStep(4)
-    } catch {
+      if (paymentMethod === 'CASH') {
+        // Thanh toán tiền mặt - xác nhận ngay
+        const res = await PaymentApi.confirmCashPayment({
+          appointmentId: selectedAppointment.id,
+          amount: grandTotal,
+          note: note || undefined,
+        })
+
+        if (res.data?.success) {
+          setPaymentSuccess(true)
+          setActiveStep(4)
+        } else {
+          setError(res.data?.message || 'Thanh toán thất bại')
+          setPaymentSuccess(false)
+          setActiveStep(4)
+        }
+      } else if (paymentMethod === 'PAYOS') {
+        // Thanh toán PayOS - tạo payment link và redirect
+        // Sử dụng tunnel URL nếu có (cho local development), không thì dùng window.location.origin
+        const frontendBaseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin
+        const returnUrl = `${frontendBaseUrl}/payment/callback?appointmentId=${selectedAppointment.id}`
+        const cancelUrl = `${frontendBaseUrl}/staff/booking`
+
+        const res = await PaymentApi.createPayOSPayment({
+          appointmentId: selectedAppointment.id,
+          amount: grandTotal,
+          description: `Thanh toán dịch vụ: ${selectedAppointment.descriptionText || 'Dịch vụ'}`,
+          returnUrl,
+          cancelUrl,
+          note: note || undefined,
+        })
+
+        if (res.data?.success && res.data.data?.checkoutUrl) {
+          // Redirect đến PayOS checkout page
+          window.location.href = res.data.data.checkoutUrl
+        } else {
+          setError(res.data?.message || 'Không thể tạo liên kết thanh toán')
+          setIsPaying(false)
+        }
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Có lỗi xảy ra khi thanh toán'
+      setError(errorMessage)
       setPaymentSuccess(false)
       setActiveStep(4)
-    } finally {
       setIsPaying(false)
     }
   }
@@ -644,6 +718,33 @@ const BookingPage: React.FC = () => {
               <div className="text-xs text-gray-600 mt-1">Thời gian: {selectedAppointment.dateText} {selectedAppointment.timeText}</div>
             )}
           </div>
+
+          {/* Vehicle Information */}
+          {vehicleLoading ? (
+            <div className="border rounded p-2">
+              <div className="text-sm font-semibold text-gray-900 mb-1">Thông tin xe</div>
+              <div className="text-xs text-gray-600">Đang tải...</div>
+            </div>
+          ) : vehicle ? (
+            <div className="border rounded p-2">
+              <div className="text-sm font-semibold text-gray-900 mb-2">Thông tin xe</div>
+              <div className="border-l-2 border-blue-300 pl-2 space-y-1">
+                {(() => {
+                  const categoryLabel = vehicle.vehicleCategory === 'CAR' ? 'Ô tô' : vehicle.vehicleCategory === 'MOTOBIKE' ? 'Xe máy' : vehicle.vehicleCategory === 'BICYCLE' ? 'Xe đạp' : vehicle.vehicleCategory
+                  return (
+                    <>
+                      <div className="text-xs font-medium text-gray-800">{vehicle.brand} • {categoryLabel}</div>
+                      <div className="text-xs text-gray-600">Biển số: {vehicle.plateNumber}</div>
+                      <div className="text-xs text-gray-600">VIN: {vehicle.VIN}</div>
+                      <div className="text-xs text-gray-600">Năm: {vehicle.year} • Số km: {vehicle.mileage.toLocaleString('vi-VN')}</div>
+                      <div className="text-xs text-gray-600">Dung lượng pin: {vehicle.batteryCapacity} Ah</div>
+                      <div className="text-xs text-gray-600">Trạng thái: <span className={vehicle.status === 'active' ? 'text-green-600' : vehicle.status === 'maintenance' ? 'text-orange-600' : 'text-gray-600'}>{vehicle.status === 'active' ? 'Đang hoạt động' : vehicle.status === 'maintenance' ? 'Bảo trì' : vehicle.status === 'inactive' ? 'Không hoạt động' : 'Đã nghỉ'}</span></div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          ) : null}
 
           <div className="border rounded p-2">
             <div className="text-sm font-semibold text-gray-900 mb-1">Linh kiện</div>
