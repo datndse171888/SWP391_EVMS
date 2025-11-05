@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IVehicle extends Document {
   userID: mongoose.Types.ObjectId;
-  VIN?: string; // Optional for MOTOBIKE and BICYCLE; required for CAR
+  VIN: string;
   vehicleCategory: 'CAR' | 'BICYCLE' | 'MOTOBIKE';
   plateNumber: string;
   brand: string;
@@ -10,6 +10,11 @@ export interface IVehicle extends Document {
   mileage: number;
   batteryCapacity: number;
   status: 'active' | 'inactive' | 'maintenance' | 'retired';
+  // Maintenance reminder fields
+  lastMaintenanceDate?: Date;
+  nextMaintenanceDate?: Date;
+  maintenanceCycleMonths?: number; // e.g., 3 for bicycle, 6 for motorbike/car
+  isMaintenanceDue?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,9 +28,9 @@ const VehicleSchema = new Schema<IVehicle>(
     },
     VIN: {
       type: String,
-      // Required only for cars; optional for motobike and bicycle
-      required: function (this: any) { return this.vehicleCategory === 'CAR'; },
-      // Allow multiple documents without VIN by using sparse unique index
+      required: function (this: any) {
+        return this?.vehicleCategory === 'CAR';
+      },
       unique: true,
       sparse: true,
       uppercase: true,
@@ -71,6 +76,11 @@ const VehicleSchema = new Schema<IVehicle>(
       enum: ['active', 'inactive', 'maintenance', 'retired'],
       default: 'active',
     },
+    // Maintenance reminder fields (all optional)
+    lastMaintenanceDate: { type: Date },
+    nextMaintenanceDate: { type: Date, index: true },
+    maintenanceCycleMonths: { type: Number, min: 1, max: 24 },
+    isMaintenanceDue: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,

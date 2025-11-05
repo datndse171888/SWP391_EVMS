@@ -40,6 +40,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [periodicInfo, setPeriodicInfo] = useState<any>(null);
 
   const { showAlert, AlertComponent } = useAlert();
 
@@ -79,6 +80,13 @@ const Confirmation: React.FC<ConfirmationProps> = ({
             console.error('Error fetching service:', error);
             showAlert('error', 'Không thể tải thông tin dịch vụ');
           }
+          // Fetch periodic info by service
+          if (formData.vehicleID) {
+            try {
+              const infoRes = await VehicleApi.getVehiclePeriodicStatus(formData.vehicleID, { serviceId: formData.serviceID });
+              setPeriodicInfo(infoRes.data);
+            } catch { setPeriodicInfo(null); }
+          }
         }
 
       // Fetch service package details
@@ -91,6 +99,13 @@ const Confirmation: React.FC<ConfirmationProps> = ({
           } catch (error) {
             console.error('Error fetching service package:', error);
             showAlert('error', 'Không thể tải thông tin gói dịch vụ');
+          }
+          // Fetch periodic info by package
+          if (formData.vehicleID) {
+            try {
+              const infoRes = await VehicleApi.getVehiclePeriodicStatus(formData.vehicleID, { servicePackageId: formData.servicePackageID });
+              setPeriodicInfo(infoRes.data);
+            } catch { setPeriodicInfo(null); }
           }
         }
 
@@ -200,6 +215,23 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   }
 
   const { date, time } = formatDateTime(formData.bookingDate);
+  // Compute next due for first-time periodic booking (no startDate yet)
+  const nextDueDisplay = (() => {
+    try {
+      if (!periodicInfo?.periodicEnabled) return null;
+      if (periodicInfo?.nextDueDate) return new Date(periodicInfo.nextDueDate).toLocaleDateString('vi-VN');
+      if (!periodicInfo?.startDate && periodicInfo?.intervalMonths && formData.bookingDate) {
+        const d = new Date(formData.bookingDate);
+        const m = Number(periodicInfo.intervalMonths) || 0;
+        if (m > 0) {
+          const nd = new Date(d);
+          nd.setMonth(nd.getMonth() + m);
+          return nd.toLocaleDateString('vi-VN');
+        }
+      }
+      return null;
+    } catch { return null; }
+  })();
 
   return (
     <>
@@ -291,7 +323,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 <div>
                   <p className="text-sm text-gray-500">Giá dịch vụ</p>
                   <p className="font-medium text-orange-600 text-lg">
-                    {formatPrice(service?.price || servicePackage?.price || 0)}
+                    {periodicInfo?.periodicEnabled ? formatPrice(0) : formatPrice(service?.price || servicePackage?.price || 0)}
                   </p>
                 </div>
               </div>
@@ -340,6 +372,23 @@ const Confirmation: React.FC<ConfirmationProps> = ({
         <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-orange-800 mb-4">Tổng kết</h3>
 
+          {periodicInfo?.periodicEnabled && (
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Còn lại</div>
+                <div className="font-semibold">{periodicInfo.remainingVisits} / {periodicInfo.totalVisits} lần</div>
+              </div>
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Đã dùng</div>
+                <div className="font-semibold">{periodicInfo.visitsUsed}</div>
+              </div>
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Đến hạn kế tiếp</div>
+                <div className="font-semibold">{nextDueDisplay || '—'}</div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center text-lg">
             <span className="text-gray-700">Tổng thời gian dự kiến:</span>
             <span className="font-semibold text-gray-800">
@@ -356,7 +405,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 </span>
               </div>
               <span className="font-bold text-orange-600 whitespace-nowrap">
-                {formatPrice(service?.price || servicePackage?.price || 0)}
+                {periodicInfo?.periodicEnabled ? formatPrice(0) : formatPrice(service?.price || servicePackage?.price || 0)}
               </span>
             </div>
           </div>

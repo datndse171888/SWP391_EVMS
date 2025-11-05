@@ -58,6 +58,30 @@ export const UserProfileSidebar: React.FC = () => {
         </Link>
         
         <Link
+          to="/maintenance"
+          className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+            isActive('/maintenance')
+              ? 'bg-white shadow-sm'
+              : 'text-gray-600 hover:bg-opacity-10'
+          }`}
+          style={{ 
+            color: isActive('/maintenance') ? '#014091' : '#5f6777'
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive('/maintenance')) {
+              e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive('/maintenance')) {
+              e.currentTarget.style.backgroundColor = '';
+            }
+          }}
+        >
+          Bảo dưỡng định kỳ
+        </Link>
+
+        <Link
           to="/appointment-history"
           className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
             isActive('/appointment-history')

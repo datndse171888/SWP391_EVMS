@@ -44,6 +44,7 @@ import TechnicianProfile from './pages/technician/TechnicianProfile';
 import Profile from './pages/user/Profile';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
+import Maintenance from './pages/user/Maintenance';
 import PaymentCallback from './pages/payment/PaymentCallback';
 
 // Placeholder components for different dashboards
@@ -79,6 +80,11 @@ export const Router: React.FC = () => {
         <Route path="/profile" element={
           <PrivateRoute>
             <Profile />
+          </PrivateRoute>
+        } />
+        <Route path="/maintenance" element={
+          <PrivateRoute>
+            <Maintenance />
           </PrivateRoute>
         } />
         <Route path="/appointment-history" element={

@@ -10,6 +10,7 @@ import { ServicePackageCard, ServiceCard } from '../../components/ui/Card'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServicePackageApi } from '../../api/ServicePackageApi'
 import type { DataResponse } from '../../types/DataResponse'
+import { VehicleApi } from '../../api/VehicleApi'
 
 
 interface ServiceProps {
@@ -17,10 +18,15 @@ interface ServiceProps {
   formData: (selectedId: string, selectedType: 'service' | 'package') => void;
   onNext: () => void;
   onPrevious: () => void;
+  vehicleId?: string;
 }
 
 // Main Service Component
-const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, onPrevious }) => {
+interface ServicePropsExtended extends ServiceProps {
+  locked?: boolean;
+}
+
+const Service: React.FC<ServicePropsExtended> = ({ vehicleCategory, formData, onNext, onPrevious, vehicleId, locked = false }) => {
   // ================================
   // UseStates & Variables  
   // ================================
@@ -31,6 +37,9 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'service' | 'package' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [periodicInfo, setPeriodicInfo] = useState<any>(null);
+  const [activePeriodicKey, setActivePeriodicKey] = useState<string | null>(null); // 'S:<id>' | 'P:<id>'
+  const [activeSub, setActiveSub] = useState<any | null>(null);
 
   // ================================
   // UseEffects & CallAPIs
@@ -39,6 +48,23 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
   useEffect(() => {
     fetchServiceData();
   }, [vehicleCategory]);
+  // Load active periodic for this vehicle (remainingVisits>0)
+  useEffect(() => {
+    const run = async () => {
+      try {
+        if (!vehicleId) { setActivePeriodicKey(null); return; }
+        const subs = await VehicleApi.getMyPeriodicSubscriptions();
+        const items = (subs.data?.items || []) as any[];
+        const found = items.find(s => String(s.vehicleId) === String(vehicleId) && Number(s.remainingVisits) > 0);
+        if (found) {
+          setActiveSub(found);
+          setActivePeriodicKey((found.sourceType === 'service' ? 'S:' : 'P:') + found.sourceId);
+        } else { setActiveSub(null); setActivePeriodicKey(null); }
+      } catch { setActiveSub(null); setActivePeriodicKey(null); }
+    };
+    run();
+  }, [vehicleId]);
+
 
   const fetchServiceData = async () => {
     setIsLoading(true);
@@ -61,27 +87,71 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
       setIsLoading(false);
     }
   };
+  // Split into 4 groups
+  const servicesPeriodic = services.filter(s => (s as any).periodicEnabled);
+  const servicesNormal = services.filter(s => !(s as any).periodicEnabled);
+  const packagesPeriodic = servicePackages.filter(p => (p as any).periodicEnabled);
+  const packagesNormal = servicePackages.filter(p => !(p as any).periodicEnabled);
+
 
   // ================================
   // Handlers & Functions
   // ================================
 
   const handleServiceSelect = (serviceId: string) => {
+    if (activePeriodicKey) return; // block selecting periodic when active exists
     setSelectedId(serviceId);
     setSelectedType('service');
   };
 
   const handlePackageSelect = (packageId: string) => {
+    if (activePeriodicKey) return; // block selecting periodic when active exists
     setSelectedId(packageId);
     setSelectedType('package');
   };
 
   const handleNext = () => {
+    // Block if trying to proceed with a periodic selection while another is active
+    const isPeriodicSelection = selectedType === 'service'
+      ? servicesPeriodic.some(s => s._id === selectedId)
+      : packagesPeriodic.some(p => p._id === selectedId);
+    if (activePeriodicKey && isPeriodicSelection) {
+      return; // no-op
+    }
     if (selectedId && selectedType) {
       formData(selectedId, selectedType);
       onNext();
     }
   };
+
+  // Fetch periodic status for current selection
+  useEffect(() => {
+    const run = async () => {
+      try {
+        if (!vehicleId || !selectedId || !selectedType) { setPeriodicInfo(null); return; }
+        const params = selectedType === 'service' ? { serviceId: selectedId } : { servicePackageId: selectedId };
+        const res = await VehicleApi.getVehiclePeriodicStatus(vehicleId, params);
+        setPeriodicInfo(res.data);
+      } catch (e) {
+        setPeriodicInfo(null);
+      }
+    };
+    run();
+  }, [vehicleId, selectedId, selectedType]);
+
+  // If activePeriodicKey becomes true while a periodic item is selected, clear selection
+  useEffect(() => {
+    if (!activePeriodicKey) return;
+    if (!selectedId || !selectedType) return;
+    const isPeriodicSelection = selectedType === 'service'
+      ? servicesPeriodic.some(s => s._id === selectedId)
+      : packagesPeriodic.some(p => p._id === selectedId);
+    if (isPeriodicSelection) {
+      setSelectedId(null);
+      setSelectedType(null);
+      setPeriodicInfo(null);
+    }
+  }, [activePeriodicKey]);
 
   const getVehicleCategoryName = () => {
     switch (vehicleCategory) {
@@ -130,18 +200,15 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
         </p>
       </div>
 
-      {/* Service Packages Section */}
-      {servicePackages.length > 0 && (
+      {/* Service Packages - Non periodic */}
+      {packagesNormal.length > 0 && (
         <div className="mb-12">
           <div className="flex items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-800">Gói dịch vụ</h3>
-            <span className="ml-3 bg-orange-100 text-orange-600 text-sm font-medium px-3 py-1 rounded-full">
-              Tiết kiệm hơn
-            </span>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {servicePackages.map((pkg) => (
+            {packagesNormal.map((pkg) => (
               <ServicePackageCard
                 key={pkg._id}
                 servicePackage={pkg}
@@ -153,13 +220,13 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
         </div>
       )}
 
-      {/* Individual Services Section */}
-      {services.length > 0 && (
+      {/* Individual Services - Non periodic */}
+      {servicesNormal.length > 0 && (
         <div className="mb-8">
           <h3 className="text-2xl font-bold text-gray-800 mb-6">Dịch vụ đơn lẻ</h3>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service) => (
+            {servicesNormal.map((service) => (
               <ServiceCard
                 key={service._id}
                 service={service}
@@ -168,6 +235,55 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Service Packages - Periodic */}
+      {packagesPeriodic.length > 0 && (
+        <div className="mb-12">
+          <div className="flex items-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-800">Gói dịch vụ định kỳ</h3>
+            <span className="ml-3 bg-green-100 text-green-700 text-sm font-medium px-3 py-1 rounded-full">Định kỳ</span>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {packagesPeriodic.map((pkg) => (
+              <ServicePackageCard
+                key={pkg._id}
+                servicePackage={pkg}
+                isSelected={selectedId === pkg._id && selectedType === 'package'}
+                onSelect={() => handlePackageSelect(pkg._id)}
+                disabled={!!activePeriodicKey}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Individual Services - Periodic */}
+      {servicesPeriodic.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">Dịch vụ đơn lẻ định kỳ</h3>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {servicesPeriodic.map((service) => (
+              <ServiceCard
+                key={service._id}
+                service={service}
+                isSelected={selectedId === service._id && selectedType === 'service'}
+                onSelect={() => handleServiceSelect(service._id)}
+                disabled={!!activePeriodicKey}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(activeSub || locked) && (
+        <div className="mt-4 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded px-3 py-2">
+          {locked
+            ? 'Bạn đang đặt lịch theo gói/dịch vụ định kỳ đã chọn từ trang Bảo dưỡng định kỳ. Bỏ qua bước chọn dịch vụ và tiếp tục chọn ngày giờ.'
+            : `Xe này đang có gói/dịch vụ định kỳ còn hiệu lực (${activeSub?.name || '—'} - còn ${activeSub?.remainingVisits}/${activeSub?.totalVisits}). Không thể chọn thêm bất kỳ dịch vụ/gói định kỳ nào tại bước này. Vui lòng đặt lịch lần kế tiếp từ trang Bảo dưỡng định kỳ, hoặc chọn gói/dịch vụ không định kỳ.`}
         </div>
       )}
 
@@ -184,6 +300,22 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
               }
             </span>
           </div>
+          {periodicInfo?.periodicEnabled && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Còn lại</div>
+                <div className="font-semibold">{periodicInfo.remainingVisits} / {periodicInfo.totalVisits} lần</div>
+              </div>
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Đã dùng</div>
+                <div className="font-semibold">{periodicInfo.visitsUsed}</div>
+              </div>
+              <div className="bg-white rounded border p-2">
+                <div className="text-gray-500">Đến hạn kế tiếp</div>
+                <div className="font-semibold">{periodicInfo.nextDueDate ? new Date(periodicInfo.nextDueDate).toLocaleDateString('vi-VN') : '—'}</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -203,7 +335,9 @@ const Service: React.FC<ServiceProps> = ({ vehicleCategory, formData, onNext, on
           size="sm"
           type="button"
           onClick={handleNext}
-          disabled={!selectedId || !selectedType}
+          disabled={!selectedId || !selectedType || (activePeriodicKey && (
+            selectedType === 'service' ? servicesPeriodic.some(s => s._id === selectedId) : packagesPeriodic.some(p => p._id === selectedId)
+          ))}
         >
           Tiếp theo
         </Button>

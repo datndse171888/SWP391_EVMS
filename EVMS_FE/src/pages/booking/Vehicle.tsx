@@ -157,7 +157,11 @@ const Vehicle: React.FC<VehicleProps> = ({
       }
     } catch (error: any) {
       console.error('Error creating vehicle:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+      const baseMsg = error.response?.data?.message || error.message || 'Đã có lỗi xảy ra khi tạo xe mới';
+      // Gộp chi tiết lỗi nếu BE trả về mảng errors (422 ValidationError)
+      const details: string[] | undefined = error.response?.data?.errors;
+      const detailText = Array.isArray(details) && details.length > 0 ? `: ${details.join(', ')}` : '';
+      const errorMessage = `${baseMsg}${detailText}`;
       showAlert('error', errorMessage);
       setError(errorMessage);
       return null;
