@@ -193,7 +193,6 @@ const ManagePart: React.FC = () => {
   }, [filteredParts, lowStockParts, activeParts, selectedTab]);
 
   const currentData = React.useMemo(() => getCurrentData(), [getCurrentData]);
-  const totalPages = Math.ceil(currentData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = currentData.slice(startIndex, endIndex);
