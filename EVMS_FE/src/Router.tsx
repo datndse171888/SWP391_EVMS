@@ -46,6 +46,7 @@ import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import PaymentCallback from './pages/payment/PaymentCallback';
 import Contact from './pages/Contact';
+import ButtonRegister from './components/ButtonRegister';
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -58,16 +59,16 @@ export const Router: React.FC = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="/introduction" element={<Introduction />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/service" element={<Service />} />
-          <Route path="/carService" element={<CarService />} />
-          <Route path="/bikeService" element={<BikeService />} />
-          <Route path="/motoService" element={<MotoService />} />
-          <Route path="/parts" element={<PartsPage />} />
-          <Route path="/part/:id" element={<PartDetail />} />
-          <Route path="/technicians" element={<TechniciansPage />} />
+          <Route index element={<><Home /><ButtonRegister /></>} />
+          <Route path="/introduction" element={<><Introduction /><ButtonRegister /></>} />
+          <Route path="/contact" element={<><Contact /><ButtonRegister /></>} />
+          <Route path="/service" element={<><Service /><ButtonRegister /></>} />
+          <Route path="/carService" element={<><CarService /><ButtonRegister /></>} />
+          <Route path="/bikeService" element={<><BikeService /><ButtonRegister /></>} />
+          <Route path="/motoService" element={<><MotoService /><ButtonRegister /></>} />
+          <Route path="/parts" element={<><PartsPage /><ButtonRegister /></>} />
+          <Route path="/part/:id" element={<><PartDetail /><ButtonRegister /></>} />
+          <Route path="/technicians" element={<><TechniciansPage /><ButtonRegister /></>} />
           <Route path='/booking' element={<Booking />} />
           <Route path="/feedback" element={<FeedbackPage />} />
         </Route>
