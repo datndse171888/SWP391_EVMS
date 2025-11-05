@@ -33,8 +33,8 @@ export const PaymentApi = {
     return api.post<CheckingResponse<PayOSPaymentResponse>>('/payments/payos/create', data)
   },
 
-  // Xác nhận thanh toán tiền mặt
-  confirmCashPayment: (data: { appointmentId: string; amount: number; note?: string }) => {
+  // Xác nhận thanh toán tiền mặt theo billId (BE lấy amount và appointmentID từ bill)
+  confirmCashPayment: (data: { billId: string; note?: string }) => {
     return api.post<CheckingResponse<PaymentResponse>>('/payments/cash/confirm', data)
   },
 

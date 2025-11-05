@@ -11,6 +11,29 @@ function calculateStatus(quantity: number): InventoryStatus {
   return 'in_stock';
 }
 
+// Helper function để giảm kho theo partID (dùng trong transaction)
+export async function decreaseInventoryByPartId(
+  partID: mongoose.Types.ObjectId,
+  decreaseBy: number,
+  session?: mongoose.ClientSession
+): Promise<{ inventory: any; success: boolean; message?: string }> {
+  const inventory = await Inventory.findOne({ partID }).session(session || null);
+  if (!inventory) {
+    return { inventory: null, success: false, message: 'Không tìm thấy tồn kho cho partID này' };
+  }
+  if (inventory.quantity < decreaseBy) {
+    return {
+      inventory: null,
+      success: false,
+      message: `Không đủ tồn kho. Tồn hiện tại: ${inventory.quantity}, yêu cầu: ${decreaseBy}`,
+    };
+  }
+  inventory.quantity -= decreaseBy;
+  inventory.status = calculateStatus(inventory.quantity);
+  await inventory.save({ session: session || undefined });
+  return { inventory, success: true };
+}
+
 export async function getInventories(req: Request, res: Response) {
   try {
     const page = Math.max(parseInt(String(req.query.page || '1'), 10), 1);
@@ -254,6 +277,39 @@ export async function deleteInventory(req: Request, res: Response) {
     }
     return res.json({ message: 'Xóa tồn kho thành công' });
   } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+
+// Giảm số lượng tồn kho theo số lượng giảm (decreaseBy)
+export async function decreaseInventoryQuantity(req: Request, res: Response) {
+  try {
+    const { decreaseBy } = req.body as { decreaseBy?: number };
+
+    if (decreaseBy === undefined || isNaN(Number(decreaseBy))) {
+      return res.status(400).json({ message: 'Thiếu hoặc sai decreaseBy' });
+    }
+    const delta = Math.floor(Number(decreaseBy));
+    if (delta <= 0) {
+      return res.status(400).json({ message: 'decreaseBy phải > 0' });
+    }
+
+    const existing = await Inventory.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
+    }
+
+    if (existing.quantity - delta < 0) {
+      return res.status(400).json({ message: 'Số lượng giảm vượt quá tồn hiện tại' });
+    }
+
+    existing.quantity = existing.quantity - delta;
+    existing.status = calculateStatus(existing.quantity);
+    const saved = await existing.save();
+
+    return res.json({ message: 'Giảm số lượng thành công', inventory: saved });
+  } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

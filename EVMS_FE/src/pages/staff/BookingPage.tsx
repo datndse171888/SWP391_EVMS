@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppointmentApi } from '../../api/AppointmentApi'
+import { BillApi } from '../../api/BillApi'
 import { UserApi } from '../../api/UserApi'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServicePackageApi } from '../../api/ServicePackageApi'
-import { fetchParts } from '../../api/PartApi'
+import { InventoryApi, type InventoryItemResponse } from '../../api/Inventory'
 import { VehicleApi } from '../../api/VehicleApi'
 import { PaymentApi } from '../../api/PaymentApi'
 import type { Part } from '../../types/Part'
@@ -12,7 +13,7 @@ import type { VehicleResponse } from '../../types/Vehicle'
 type StepKey = 1 | 2 | 3 | 4
 
 type AppointmentLite = {
-  id: string
+  id: string 
   userID?: string
   vehicleID?: string
   customerName: string
@@ -49,23 +50,13 @@ const BookingPage: React.FC = () => {
   const [appointments, setAppointments] = useState<AppointmentLite[]>([])
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentLite | null>(null)
 
-  // Step 2: parts selection
-  // Parts from API
+  // Step 2: parts selection (from Inventories with populated Part)
   const [partsSearch, setPartsSearch] = useState('')
-  const [parts, setParts] = useState<PartItem[]>([])
-  const [partsPage, setPartsPage] = useState(1)
-  const [partsTotalPages, setPartsTotalPages] = useState(1)
+  const [inventoryItems, setInventoryItems] = useState<InventoryItemResponse[]>([])
   const [partsLoading, setPartsLoading] = useState(false)
-  const partsPageSize = 8
-  const [partsGoTo, setPartsGoTo] = useState('')
-  const partsCacheRef = useRef<Record<string, PartItem[]>>({})
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  // removed debouncedSearch (client-side filtering only)
 
-  // Debounce search to reduce requests and flicker
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(partsSearch.trim()), 250)
-    return () => clearTimeout(t)
-  }, [partsSearch])
+  // no debounce needed; filtering is client-side
   const [cartLines, setCartLines] = useState<CartLine[]>([])
 
   // Step 3: payment
@@ -75,208 +66,194 @@ const BookingPage: React.FC = () => {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null)
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null)
   const [vehicleLoading, setVehicleLoading] = useState(false)
+  const [billId, setBillId] = useState<string>('')
+  const [billNumber, setBillNumber] = useState<string>('')
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Derived totals
   const serviceFee = selectedAppointment?.servicePrice || 0
   const partsTotal = useMemo(() => cartLines.reduce((sum, l) => sum + l.part.price * l.quantity, 0), [cartLines])
   const grandTotal = serviceFee + partsTotal
 
-  useEffect(() => {
-    const fetchApts = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const res = await AppointmentApi.getTodayAwaitingPayment()
-        type BackendAppointment = { _id?: string; id?: string; userID?: string; vehicleID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown }
-        const list = (res?.data?.data || []) as BackendAppointment[]
-        // Build minimal list; enrich with user name/phone
-        const uniqueUserIds = Array.from(new Set(list.map(a => a.userID).filter((id): id is string => Boolean(id))))
-        const userCache = new Map<string, { fullName?: string; userName?: string; phoneNumber?: string }>()
-        await Promise.all(uniqueUserIds.map(async (uid: string) => {
+  // Fetch appointments function - can be called multiple times
+  const fetchAppointments = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await AppointmentApi.getTodayAwaitingPayment()
+      type BackendAppointment = { _id?: string; id?: string; userID?: string; vehicleID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown }
+      const list = (res?.data?.data || []) as BackendAppointment[]
+      // Build minimal list; enrich with user name/phone
+      const uniqueUserIds = Array.from(new Set(list.map(a => a.userID).filter((id): id is string => Boolean(id))))
+      const userCache = new Map<string, { fullName?: string; userName?: string; phoneNumber?: string }>()
+      await Promise.all(uniqueUserIds.map(async (uid: string) => {
+        try {
+          const ures = await UserApi.getUserById(uid)
+          userCache.set(uid, {
+            fullName: ures?.data?.fullName,
+            userName: ures?.data?.userName,
+            phoneNumber: ures?.data?.phoneNumber,
+          })
+        } catch {
+          userCache.set(uid, {})
+        }
+      }))
+
+      const formatDate = (iso: string) => {
+        const d = new Date(iso)
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN')
+      }
+      const formatTime = (iso: string) => {
+        const d = new Date(iso)
+        return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      }
+
+      // API already returns today's appointments with awaiting_payment status
+      const source = list
+
+      // helpers to extract ids
+      const getServiceId = (a: BackendAppointment): string | undefined => {
+        const raw: unknown = (a as unknown as Record<string, unknown>).serviceID
+          ?? (a as unknown as Record<string, unknown>).serviceId
+          ?? (a as unknown as Record<string, unknown>).service
+        const sid = raw as unknown
+        if (!sid) return undefined
+        if (typeof sid === 'string') return sid
+        if (typeof sid === 'object') {
+          const o = sid as { _id?: string; id?: string }
+          return String(o?._id || o?.id || '')
+        }
+        return undefined
+      }
+      const getServicePackageId = (a: BackendAppointment): string | undefined => {
+        const raw: unknown = (a as unknown as Record<string, unknown>).servicePackageID
+          ?? (a as unknown as Record<string, unknown>).servicePackageId
+          ?? (a as unknown as Record<string, unknown>).servicePackage
+        const pid = raw as unknown
+        if (!pid) return undefined
+        if (typeof pid === 'string') return pid
+        if (typeof pid === 'object') {
+          const o = pid as { _id?: string; id?: string }
+          return String(o?._id || o?.id || '')
+        }
+        return undefined
+      }
+
+      const serviceIds = Array.from(new Set(source.map(a => getServiceId(a)).filter((x): x is string => Boolean(x))))
+      const servicePackageIds = Array.from(new Set(source.map(a => getServicePackageId(a)).filter((x): x is string => Boolean(x))))
+
+      type ServiceLite = { name?: string; description?: string; vehicleCategory?: string; price?: number } | undefined
+      type ServicePackageLite = { name?: string; vehicleCategory?: string; price?: number } | undefined
+      const serviceCache = new Map<string, ServiceLite>()
+      const servicePackageCache = new Map<string, ServicePackageLite>()
+
+      await Promise.all([
+        ...serviceIds.map(async (sid) => {
           try {
-            const ures = await UserApi.getUserById(uid)
-            userCache.set(uid, {
-              fullName: ures?.data?.fullName,
-              userName: ures?.data?.userName,
-              phoneNumber: ures?.data?.phoneNumber,
-            })
-          } catch {
-            userCache.set(uid, {})
-          }
-        }))
-
-        const formatDate = (iso: string) => {
-          const d = new Date(iso)
-          return isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN')
-        }
-        const formatTime = (iso: string) => {
-          const d = new Date(iso)
-          return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-        }
-
-        // API already returns today's appointments with awaiting_payment status
-        const source = list
-
-        // helpers to extract ids
-        const getServiceId = (a: BackendAppointment): string | undefined => {
-          const raw: unknown = (a as unknown as Record<string, unknown>).serviceID
-            ?? (a as unknown as Record<string, unknown>).serviceId
-            ?? (a as unknown as Record<string, unknown>).service
-          const sid = raw as unknown
-          if (!sid) return undefined
-          if (typeof sid === 'string') return sid
-          if (typeof sid === 'object') {
-            const o = sid as { _id?: string; id?: string }
-            return String(o?._id || o?.id || '')
-          }
-          return undefined
-        }
-        const getServicePackageId = (a: BackendAppointment): string | undefined => {
-          const raw: unknown = (a as unknown as Record<string, unknown>).servicePackageID
-            ?? (a as unknown as Record<string, unknown>).servicePackageId
-            ?? (a as unknown as Record<string, unknown>).servicePackage
-          const pid = raw as unknown
-          if (!pid) return undefined
-          if (typeof pid === 'string') return pid
-          if (typeof pid === 'object') {
-            const o = pid as { _id?: string; id?: string }
-            return String(o?._id || o?.id || '')
-          }
-          return undefined
-        }
-
-        const serviceIds = Array.from(new Set(source.map(a => getServiceId(a)).filter((x): x is string => Boolean(x))))
-        const servicePackageIds = Array.from(new Set(source.map(a => getServicePackageId(a)).filter((x): x is string => Boolean(x))))
-
-        type ServiceLite = { name?: string; description?: string; vehicleCategory?: string; price?: number } | undefined
-        type ServicePackageLite = { name?: string; vehicleCategory?: string; price?: number } | undefined
-        const serviceCache = new Map<string, ServiceLite>()
-        const servicePackageCache = new Map<string, ServicePackageLite>()
-
-        await Promise.all([
-          ...serviceIds.map(async (sid) => {
-            try {
-              const sres = await ServiceApi.getServiceById(sid)
-              const raw = sres?.data as unknown as Record<string, unknown>
-              const getProp = (o: unknown, key: string) => (o && typeof o === 'object' && key in (o as Record<string, unknown>) ? (o as Record<string, unknown>)[key] : undefined)
-              const svcObj = (raw && (raw as Record<string, unknown>).name)
-                ? raw
-                : (getProp(raw, 'service') || getProp(getProp(raw, 'data'), 'service') || getProp(raw, 'data') || undefined)
-              if (svcObj && typeof svcObj === 'object') {
-                const so = svcObj as Record<string, unknown>
-                serviceCache.set(sid, {
-                  name: (so.name as string | undefined),
-                  description: (so.description as string | undefined),
-                  vehicleCategory: (so.vehicleCategory as string | undefined),
-                  price: (so.price as number | undefined),
-                })
-              } else {
-                serviceCache.set(sid, undefined)
-              }
-            } catch {
+            const sres = await ServiceApi.getServiceById(sid)
+            const raw = sres?.data as unknown as Record<string, unknown>
+            const getProp = (o: unknown, key: string) => (o && typeof o === 'object' && key in (o as Record<string, unknown>) ? (o as Record<string, unknown>)[key] : undefined)
+            const svcObj = (raw && (raw as Record<string, unknown>).name)
+              ? raw
+              : (getProp(raw, 'service') || getProp(getProp(raw, 'data'), 'service') || getProp(raw, 'data') || undefined)
+            if (svcObj && typeof svcObj === 'object') {
+              const so = svcObj as Record<string, unknown>
+              serviceCache.set(sid, {
+                name: (so.name as string | undefined),
+                description: (so.description as string | undefined),
+                vehicleCategory: (so.vehicleCategory as string | undefined),
+                price: (so.price as number | undefined),
+              })
+            } else {
               serviceCache.set(sid, undefined)
             }
-          }),
-          ...servicePackageIds.map(async (pid) => {
-            try {
-              const pres = await ServicePackageApi.getServicePackageById(pid)
-              const raw = pres?.data as unknown as { name?: string; vehicleCategory?: string; price?: number }
-              servicePackageCache.set(pid, raw)
-            } catch {
-              servicePackageCache.set(pid, undefined)
-            }
-          })
-        ])
-
-        const ui: AppointmentLite[] = source.map((apt: BackendAppointment) => {
-          const u = userCache.get(apt.userID || '') || {}
-          let descriptionText: string | undefined
-          const tags: string[] = []
-          let vehicleCategory: string | undefined
-          let servicePrice: number | undefined
-
-          const embeddedService = (apt as unknown as { service?: { name?: string; description?: string; vehicleCategory?: string } }).service
-          const sid = getServiceId(apt)
-          const pid = getServicePackageId(apt)
-          if (embeddedService?.name || sid) {
-            const svc = embeddedService?.name ? embeddedService : (sid ? serviceCache.get(sid) : undefined)
-            descriptionText = svc?.name || 'Dịch vụ'
-            vehicleCategory = svc?.vehicleCategory
-            servicePrice = (svc as { price?: number } | undefined)?.price
-          } else if (pid) {
-            const pack = servicePackageCache.get(pid)
-            descriptionText = pack?.name || 'Gói dịch vụ'
-            vehicleCategory = pack?.vehicleCategory
-            servicePrice = (pack as { price?: number } | undefined)?.price
+          } catch {
+            serviceCache.set(sid, undefined)
           }
-          if (vehicleCategory) {
-            tags.push(vehicleCategory === 'MOTOBIKE' ? 'Xe máy' : vehicleCategory === 'CAR' ? 'Ô tô' : vehicleCategory === 'BICYCLE' ? 'Xe đạp' : vehicleCategory)
-          }
-          return {
-            id: String(apt._id || apt.id || ''),
-            userID: apt.userID,
-            vehicleID: apt.vehicleID,
-            customerName: u.fullName || u.userName || `Khách ${String(apt._id || '').slice(-4)}`,
-            customerPhone: u.phoneNumber || '—',
-            bookingDateISO: apt.bookingDate || undefined,
-            dateText: formatDate(apt.bookingDate || ''),
-            timeText: formatTime(apt.bookingDate || ''),
-            status: apt.status,
-            descriptionText,
-            tags,
-            vehicleCategory,
-            kind: pid ? 'package' : 'service',
-            servicePrice,
+        }),
+        ...servicePackageIds.map(async (pid) => {
+          try {
+            const pres = await ServicePackageApi.getServicePackageById(pid)
+            const raw = pres?.data as unknown as { name?: string; vehicleCategory?: string; price?: number }
+            servicePackageCache.set(pid, raw)
+          } catch {
+            servicePackageCache.set(pid, undefined)
           }
         })
-        setAppointments(ui)
-      } catch {
-        setError('Không thể tải lịch hẹn')
-      } finally {
-        setLoading(false)
-      }
+      ])
+
+      const ui: AppointmentLite[] = source.map((apt: BackendAppointment) => {
+        const u = userCache.get(apt.userID || '') || {}
+        let descriptionText: string | undefined
+        const tags: string[] = []
+        let vehicleCategory: string | undefined
+        let servicePrice: number | undefined
+
+        const embeddedService = (apt as unknown as { service?: { name?: string; description?: string; vehicleCategory?: string } }).service
+        const sid = getServiceId(apt)
+        const pid = getServicePackageId(apt)
+        if (embeddedService?.name || sid) {
+          const svc = embeddedService?.name ? embeddedService : (sid ? serviceCache.get(sid) : undefined)
+          descriptionText = svc?.name || 'Dịch vụ'
+          vehicleCategory = svc?.vehicleCategory
+          servicePrice = (svc as { price?: number } | undefined)?.price
+        } else if (pid) {
+          const pack = servicePackageCache.get(pid)
+          descriptionText = pack?.name || 'Gói dịch vụ'
+          vehicleCategory = pack?.vehicleCategory
+          servicePrice = (pack as { price?: number } | undefined)?.price
+        }
+        if (vehicleCategory) {
+          tags.push(vehicleCategory === 'MOTOBIKE' ? 'Xe máy' : vehicleCategory === 'CAR' ? 'Ô tô' : vehicleCategory === 'BICYCLE' ? 'Xe đạp' : vehicleCategory)
+        }
+        return {
+          id: String(apt._id || apt.id || ''),
+          userID: apt.userID,
+          vehicleID: apt.vehicleID,
+          customerName: u.fullName || u.userName || `Khách ${String(apt._id || '').slice(-4)}`,
+          customerPhone: u.phoneNumber || '—',
+          bookingDateISO: apt.bookingDate || undefined,
+          dateText: formatDate(apt.bookingDate || ''),
+          timeText: formatTime(apt.bookingDate || ''),
+          status: apt.status,
+          descriptionText,
+          tags,
+          vehicleCategory,
+          kind: pid ? 'package' : 'service',
+          servicePrice,
+        }
+      })
+      setAppointments(ui)
+    } catch {
+      setError('Không thể tải lịch hẹn')
+    } finally {
+      setLoading(false)
     }
-    fetchApts()
   }, [])
 
-  // Load parts when entering step 2 (or on first mount if preferred)
+  // Initial fetch on mount
   useEffect(() => {
-    const loadParts = async () => {
-      try {
-        const cacheKey = `${debouncedSearch}|${partsPage}`
-        const cached = partsCacheRef.current[cacheKey]
-        if (cached && cached.length > 0) {
-          setParts(cached)
-          setPartsLoading(false)
-          return
-        }
-        setPartsLoading(true)
-        const res = await fetchParts({ page: partsPage, limit: partsPageSize, search: debouncedSearch })
-        setParts(res.data.parts)
-        setPartsTotalPages(res.data.pagination.totalPages)
-        partsCacheRef.current[cacheKey] = res.data.parts
+    fetchAppointments()
+  }, [fetchAppointments])
 
-        // Prefetch next page to avoid flicker when user clicks next
-        const nextPage = partsPage + 1
-        if (nextPage <= res.data.pagination.totalPages) {
-          const nextKey = `${debouncedSearch}|${nextPage}`
-          if (!partsCacheRef.current[nextKey]) {
-            fetchParts({ page: nextPage, limit: partsPageSize, search: debouncedSearch })
-              .then(r => { partsCacheRef.current[nextKey] = r.data.parts })
-              .catch(() => {})
-          }
-        }
+  // Load inventories with parts when entering step 2
+  useEffect(() => {
+    const loadInventories = async () => {
+      try {
+        setPartsLoading(true)
+        const res = await InventoryApi.getWithParts({})
+        setInventoryItems(res.items || [])
       } catch {
-        // ignore
+        setInventoryItems([])
       } finally {
         setPartsLoading(false)
       }
     }
     if (activeStep === 2) {
-      loadParts()
+      loadInventories()
     }
-  }, [activeStep, partsPage, debouncedSearch])
+  }, [activeStep])
 
   // Load vehicle when entering step 3
   useEffect(() => {
@@ -312,12 +289,36 @@ const BookingPage: React.FC = () => {
     return appointments.filter(a => q === '' || normalize(a.customerName).includes(q) || a.customerPhone.replace(/\s+/g, '').includes(flat))
   }, [appointments, searchText])
 
-  const addPart = (part: PartItem) => {
+  // remove old quick-add (đã thay bằng addPartFromInventory có kiểm soát tồn kho)
+
+  const addPartFromInventory = (inv: InventoryItemResponse) => {
+    const p = inv.partID
+    const part: PartItem = {
+      id: String(p._id),
+      name: p.name,
+      description: p.description,
+      manufacturer: p.manufacturer,
+      partNumber: p.partNumber,
+      price: p.price,
+      status: (p.status === 'inactive' ? 'inactive' : 'active') as PartItem['status'],
+      warrantyPeriod: p.warrantyPeriod,
+      warrantyCondition: p.warrantyCondition,
+      createdAt: p.createdAt || new Date().toISOString(),
+      updatedAt: p.updatedAt || new Date().toISOString(),
+    } as unknown as PartItem
+    // Chặn vượt quá tồn kho hiện tại
     setCartLines(prev => {
       const idx = prev.findIndex(l => l.part.id === part.id)
+      const currentQty = idx >= 0 ? prev[idx].quantity : 0
+      if (currentQty >= inv.quantity) {
+        setError(`Không thể thêm quá số lượng trong kho. Tối đa ${inv.quantity} sản phẩm cho "${p.name}".`)
+        setTimeout(() => setError(''), 3000)
+        return prev
+      }
+      const nextQty = Math.min(currentQty + 1, inv.quantity)
       if (idx >= 0) {
         const copy = [...prev]
-        copy[idx] = { ...copy[idx], quantity: Math.min(copy[idx].quantity + 1, 99) }
+        copy[idx] = { ...copy[idx], quantity: nextQty }
         return copy
       }
       return [...prev, { part, quantity: 1 }]
@@ -347,18 +348,51 @@ const BookingPage: React.FC = () => {
 
     try {
       if (paymentMethod === 'CASH') {
-        // Thanh toán tiền mặt - xác nhận ngay
-        const res = await PaymentApi.confirmCashPayment({
-          appointmentId: selectedAppointment.id,
-          amount: grandTotal,
+        // 1) Tạo bill pending với items từ cart
+        let billId = ''
+        try {
+          const billItems = cartLines.map(line => ({
+            partID: line.part.id,
+            partName: line.part.name,
+            partNumber: line.part.partNumber || '',
+            unitPrice: line.part.price,
+            quantity: line.quantity,
+            lineTotal: line.part.price * line.quantity,
+          }))
+          const billRes = await BillApi.createBill({
+            appointmentID: selectedAppointment.id,
+            items: billItems,
+            subtotal: serviceFee + partsTotal,
+            tax: 0,
+            totalAmount: grandTotal,
+          })
+          billId = billRes.data.bill?._id || ''
+          setBillId(billId)
+          setBillNumber(billRes.data.bill?.billNumber || '')
+        } catch (e) {
+          // vẫn cho tiếp tục payment để không kẹt, nhưng log lỗi
+          console.error('Create bill failed:', e)
+        }
+
+        // 2) Xác nhận thanh toán tiền mặt
+        const payRes = await PaymentApi.confirmCashPayment({
+          billId: billId,
           note: note || undefined,
         })
 
-        if (res.data?.success) {
+        if (payRes.data?.success) {
+          // 3) Cập nhật bill sang paid (nếu đã tạo được bill)
+          if (billId) {
+            try {
+              await BillApi.updateBillStatus(billId, 'paid')
+            } catch (e) {
+              console.error('Update bill status failed:', e)
+            }
+          }
           setPaymentSuccess(true)
           setActiveStep(4)
         } else {
-          setError(res.data?.message || 'Thanh toán thất bại')
+          setError(payRes.data?.message || 'Thanh toán thất bại')
           setPaymentSuccess(false)
           setActiveStep(4)
         }
@@ -403,7 +437,27 @@ const BookingPage: React.FC = () => {
     setPaymentMethod('')
     setNote('')
     setPaymentSuccess(null)
+    setBillId('')
+    setBillNumber('')
+    // Reload appointments list to reflect updated statuses after payment
+    fetchAppointments()
   }
+
+  // Handler for note textarea to prevent focus loss
+  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.stopPropagation()
+    const value = e.target.value
+    const cursorPosition = e.target.selectionStart
+    setNote(value)
+    // Restore focus and cursor position after state update
+    requestAnimationFrame(() => {
+      if (noteTextareaRef.current) {
+        noteTextareaRef.current.focus()
+        const newPosition = Math.min(cursorPosition, value.length)
+        noteTextareaRef.current.setSelectionRange(newPosition, newPosition)
+      }
+    })
+  }, [])
 
   const Stepper = () => {
     const steps = [
@@ -536,6 +590,21 @@ const BookingPage: React.FC = () => {
   )
 
   const Step2 = () => {
+    const q = normalize(partsSearch)
+    // Ẩn các item hết hàng (quantity === 0)
+    const source = inventoryItems.filter(inv => inv.quantity > 0)
+    const filteredInventory = q
+      ? source.filter(inv => {
+          const p = inv.partID
+          return (
+            p.name.toLowerCase().includes(q) ||
+            (p.partNumber || '').toLowerCase().includes(q) ||
+            (p.manufacturer || '').toLowerCase().includes(q)
+          )
+        })
+      : source
+
+    // Không dùng badge trạng thái; chỉ hiển thị số lượng nổi bật
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Parts list */}
@@ -545,8 +614,8 @@ const BookingPage: React.FC = () => {
             <div className="relative">
               <input
                 value={partsSearch}
-                onChange={(e) => { setPartsSearch(e.target.value); setPartsPage(1); }}
-                placeholder="Tìm theo tên hoặc SKU..."
+                onChange={(e) => { setPartsSearch(e.target.value) }}
+                placeholder="Tìm theo tên, mã hoặc NSX..."
                 className="w-72 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -554,100 +623,43 @@ const BookingPage: React.FC = () => {
               </svg>
             </div>
           </div>
+          {error && (
+            <div className="mb-2 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded">
+              {error}
+            </div>
+          )}
 
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {parts.map(p => (
-              <div key={p.id} className="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">{p.name}</div>
-                  <div className="text-xs text-gray-600">SKU: {p.partNumber}</div>
-                    <div className="text-xs text-gray-700 mt-1">Giá: {currency(p.price)} • Trạng thái: {p.status || '—'}</div>
-                    <div className="text-xs text-gray-700">Nhà cung ứng: {p.manufacturer || '—'}</div>
-                    <div className="text-xs text-gray-700">Bảo hành: {p.warrantyPeriod ? `${p.warrantyPeriod} tháng` : '—'}</div>
+              {filteredInventory.map(inv => (
+                <div key={inv._id} className="border border-gray-200 rounded-lg p-3 flex items-start justify-between relative">
+                  <div className="min-w-0 pr-16">
+                    <div className="text-sm font-semibold text-gray-900 truncate">{inv.partID.name}</div>
+                    <div className="mt-0.5 text-xs text-gray-600">Mã: <span className="font-medium">{inv.partID.partNumber || '—'}</span></div>
+                    <div className="text-xs text-gray-600">NSX: {inv.partID.manufacturer || '—'}</div>
+                    <div className="text-xs text-gray-700 mt-1">Giá: <span className="font-semibold">{currency(inv.partID.price)}</span></div>
+                    <div className="text-xs text-gray-700">Danh mục: {inv.partID.category || '—'}</div>
+                    <div className="text-xs text-gray-700">Bảo hành: {inv.partID.warrantyPeriod ? `${inv.partID.warrantyPeriod} ${inv.partID.warrantyCondition || 'tháng'}` : '—'}</div>
+                  </div>
+                  <div className="flex flex-col items-end ml-2">
+                    <div className="absolute top-2 right-2">
+                      <div className="px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                        {inv.quantity} sản phẩm
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => addPartFromInventory(inv)}
+                      className={`px-3 py-1 rounded text-xs bg-gray-800 text-white whitespace-nowrap mt-8`}
+                    >
+                      Thêm
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => addPart(p)}
-                  className={`px-3 py-1 rounded text-xs bg-gray-800 text-white`}
-                >
-                  Thêm
-                </button>
-              </div>
               ))}
             </div>
             {partsLoading && (
               <div className="mt-2 text-xs text-gray-600">Đang tải dữ liệu...</div>
             )}
-          </div>
-
-          {/* Pagination - centered, numbered with ellipsis */}
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <button
-              onClick={() => setPartsPage(p => Math.max(1, p - 1))}
-              disabled={partsPage === 1}
-              className="h-8 w-8 flex items-center justify-center rounded-full border text-sm disabled:opacity-40"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            {(() => {
-              const window = 2
-              const pages: (number | string)[] = []
-              const push = (v: number | string) => pages.push(v)
-              push(1)
-              const start = Math.max(2, partsPage - window)
-              const end = Math.min(partsTotalPages - 1, partsPage + window)
-              if (start > 2) push('...')
-              for (let i = start; i <= end; i++) push(i)
-              if (end < partsTotalPages - 1) push('...')
-              if (partsTotalPages > 1) push(partsTotalPages)
-              return (
-                <>
-                  {pages.map((p, idx) => (
-                    typeof p === 'number' ? (
-                      <button
-                        key={idx}
-                        onClick={() => setPartsPage(p)}
-                        className={`h-8 w-8 flex items-center justify-center rounded-full text-sm ${p === partsPage ? 'bg-gray-900 text-white' : 'border'}`}
-                      >
-                        {p}
-                      </button>
-                    ) : (
-                      <span key={`e-${idx}`} className="px-2 text-sm text-gray-600">{p}</span>
-                    )
-                  ))}
-                </>
-              )
-            })()}
-            <button
-              onClick={() => setPartsPage(p => Math.min(partsTotalPages, p + 1))}
-              disabled={partsPage >= partsTotalPages}
-              className="h-8 w-8 flex items-center justify-center rounded-full border text-sm disabled:opacity-40"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </button>
-            <div className="ml-3 flex items-center gap-1">
-              <span className="text-xs text-gray-600">Tới trang</span>
-              <input
-                value={partsGoTo}
-                onChange={(e) => setPartsGoTo(e.target.value)}
-                className="w-12 h-8 border rounded px-2 text-sm"
-              />
-              <button
-                onClick={() => {
-                  const v = Math.max(1, Math.min(partsTotalPages, parseInt(partsGoTo || '0', 10) || 1))
-                  setPartsPage(v)
-                }}
-                className="h-8 w-8 flex items-center justify-center rounded border text-sm"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -707,18 +719,6 @@ const BookingPage: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <div className="border rounded p-2">
-            <div className="text-sm font-semibold text-gray-900">Phí dịch vụ</div>
-            <div className="text-xs text-gray-600">
-              Dịch vụ: <span className="font-medium">{selectedAppointment?.descriptionText || '—'}</span>
-              {selectedAppointment?.vehicleCategory ? ` • ${selectedAppointment.vehicleCategory}` : ''}
-              <span className="ml-2">— Tạm tính: {currency(serviceFee)}</span>
-            </div>
-            {selectedAppointment && (
-              <div className="text-xs text-gray-600 mt-1">Thời gian: {selectedAppointment.dateText} {selectedAppointment.timeText}</div>
-            )}
-          </div>
-
           {/* Vehicle Information */}
           {vehicleLoading ? (
             <div className="border rounded p-2">
@@ -747,6 +747,18 @@ const BookingPage: React.FC = () => {
               </div>
             </div>
           ) : null}
+
+          <div className="border rounded p-2">
+            <div className="text-sm font-semibold text-gray-900">Phí dịch vụ</div>
+            <div className="text-xs text-gray-600">
+              Dịch vụ: <span className="font-medium">{selectedAppointment?.descriptionText || '—'}</span>
+              {selectedAppointment?.vehicleCategory ? ` • ${selectedAppointment.vehicleCategory}` : ''}
+              <span className="ml-2">— Tạm tính: {currency(serviceFee)}</span>
+            </div>
+            {selectedAppointment && (
+              <div className="text-xs text-gray-600 mt-1">Thời gian: {selectedAppointment.dateText} {selectedAppointment.timeText}</div>
+            )}
+          </div>
 
           <div className="border rounded p-2">
             <div className="text-sm font-semibold text-gray-900 mb-1">Linh kiện</div>
@@ -789,7 +801,17 @@ const BookingPage: React.FC = () => {
 
         <div className="mt-3">
           <label className="text-xs text-gray-600">Ghi chú</label>
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="mt-1 w-full border rounded p-2 text-sm" placeholder="Thông tin bổ sung..." />
+          <textarea 
+            ref={noteTextareaRef}
+            value={note} 
+            onChange={handleNoteChange}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            onInput={(e) => e.stopPropagation()}
+            rows={3} 
+            className="mt-1 w-full border rounded p-2 text-sm resize-none" 
+            placeholder="Thông tin bổ sung..."
+          />
         </div>
 
         <div className="mt-3 flex items-center justify-between">
@@ -803,60 +825,196 @@ const BookingPage: React.FC = () => {
 
   const Step4 = () => {
     const now = new Date()
-    const billId = `#BILL${String(now.getTime()).slice(-6)}`
-    const pmLabel = paymentMethod === 'CASH' ? 'Tiền mặt' : paymentMethod === 'PAYOS' ? 'PayOS' : '—'
-    return (
-      <div className="flex items-start justify-center p-4">
-        <div className="w-full max-w-xl bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex flex-col items-center text-center">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${paymentSuccess ? 'bg-green-100' : 'bg-red-100'}`}>
-              {paymentSuccess ? (
-                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              ) : (
+    // Use actual bill number or generate a formatted ID
+    const displayBillId = billNumber || billId || `#BILL${String(now.getTime()).slice(-6)}`
+    const formattedDate = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    
+    // Fireworks Icon Component - Pháo hoa bắn lên (nhỏ hơn)
+    const FireworksIcon = () => (
+      <div className="relative w-12 h-12 flex items-center justify-center mb-2">
+        <svg width="48" height="48" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Central explosion */}
+          <circle cx="40" cy="40" r="4" fill="#FFD700"/>
+          <circle cx="40" cy="40" r="6" fill="#FFA500" opacity="0.5"/>
+          <circle cx="40" cy="40" r="8" fill="#FF6B6B" opacity="0.3"/>
+          
+          {/* Main radiating lines */}
+          <line x1="40" y1="40" x2="40" y2="15" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="40" y2="65" stroke="#4ECDC4" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="15" y2="40" stroke="#FF6B6B" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="65" y2="40" stroke="#95E1D3" strokeWidth="2" strokeLinecap="round"/>
+          
+          {/* Diagonal lines */}
+          <line x1="40" y1="40" x2="25" y2="25" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="55" y2="55" stroke="#4ECDC4" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="55" y2="25" stroke="#FF6B6B" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="40" y1="40" x2="25" y2="55" stroke="#95E1D3" strokeWidth="2" strokeLinecap="round"/>
+          
+          {/* Sparkles at line ends */}
+          <circle cx="40" cy="15" r="2.5" fill="#FFD700"/>
+          <circle cx="40" cy="65" r="2.5" fill="#4ECDC4"/>
+          <circle cx="15" cy="40" r="2.5" fill="#FF6B6B"/>
+          <circle cx="65" cy="40" r="2.5" fill="#95E1D3"/>
+          <circle cx="25" cy="25" r="2" fill="#FFD700"/>
+          <circle cx="55" cy="55" r="2" fill="#4ECDC4"/>
+          <circle cx="55" cy="25" r="2" fill="#FF6B6B"/>
+          <circle cx="25" cy="55" r="2" fill="#95E1D3"/>
+          
+          {/* Additional small sparkles */}
+          <circle cx="40" cy="10" r="1.5" fill="#FF6B6B"/>
+          <circle cx="40" cy="70" r="1.5" fill="#4ECDC4"/>
+          <circle cx="10" cy="40" r="1.5" fill="#FFD700"/>
+          <circle cx="70" cy="40" r="1.5" fill="#FF6B6B"/>
+          <circle cx="30" cy="20" r="1" fill="#4ECDC4"/>
+          <circle cx="50" cy="60" r="1" fill="#FFD700"/>
+          <circle cx="50" cy="20" r="1" fill="#FF6B6B"/>
+          <circle cx="30" cy="60" r="1" fill="#4ECDC4"/>
+        </svg>
+      </div>
+    )
+
+    // Dashed line with curved indents on sides (rìa cong vào)
+    const DashedLineWithCurves = () => (
+      <div className="relative w-full my-2" style={{ height: '16px' }}>
+        <svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none" style={{ display: 'block' }}>
+          <defs>
+            <pattern id="dash-pattern" x="0" y="0" width="6" height="2" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="1" x2="4" y2="1" stroke="#D1D5DB" strokeWidth="1.5"/>
+            </pattern>
+          </defs>
+          {/* Left curved indent - semicircle going inward */}
+          <path d="M 0 8 A 4 4 0 0 1 8 8" stroke="#D1D5DB" strokeWidth="1.5" fill="none"/>
+          {/* Dashed line in the middle */}
+          <rect x="8" y="7.25" width="84" height="1.5" fill="url(#dash-pattern)"/>
+          {/* Right curved indent - semicircle going inward */}
+          <path d="M 92 8 A 4 4 0 0 0 100 8" stroke="#D1D5DB" strokeWidth="1.5" fill="none"/>
+        </svg>
+      </div>
+    )
+
+    // Regular dashed line
+    const DashedLine = () => (
+      <div className="w-full border-t border-dashed border-gray-300 my-2"></div>
+    )
+
+    // Scalloped bottom edge (răng cưa - như vé bị xé)
+    const ScallopedEdge = () => (
+      <div className="relative w-full" style={{ height: '8px' }}>
+        <svg width="100%" height="8" viewBox="0 0 100 8" preserveAspectRatio="none" style={{ display: 'block' }}>
+          <path d="M0,8 Q2,5 4,8 Q6,5 8,8 Q10,5 12,8 Q14,5 16,8 Q18,5 20,8 Q22,5 24,8 Q26,5 28,8 Q30,5 32,8 Q34,5 36,8 Q38,5 40,8 Q42,5 44,8 Q46,5 48,8 Q50,5 52,8 Q54,5 56,8 Q58,5 60,8 Q62,5 64,8 Q66,5 68,8 Q70,5 72,8 Q74,5 76,8 Q78,5 80,8 Q82,5 84,8 Q86,5 88,8 Q90,5 92,8 Q94,5 96,8 Q98,5 100,8 L100,8 L0,8 Z" 
+                fill="white" stroke="#E5E7EB" strokeWidth="0.5"/>
+        </svg>
+      </div>
+    )
+
+    if (!paymentSuccess) {
+      return (
+        <div className="flex items-start justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-2xl shadow-sm p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-red-100">
                 <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              )}
-            </div>
-            <div className="mt-3 text-lg font-semibold text-gray-900">{paymentSuccess ? 'Thanh toán thành công' : 'Thanh toán thất bại'}</div>
-            <div className="mt-1 text-2xl font-bold" style={{ color: '#014091' }}>{currency(grandTotal)}</div>
-            <div className="mt-1 text-xs text-gray-600">{now.toLocaleDateString('vi-VN')} · Mã hóa đơn: {billId}</div>
-          </div>
-
-          {/* Payment details */}
-          <div className="mt-5 border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b text-sm font-semibold text-gray-800">Chi tiết thanh toán</div>
-            <div className="divide-y">
-              <div className="px-4 py-3 text-sm flex items-center justify-between">
-                <div className="text-gray-700">Dịch vụ (1)</div>
-                <div className="font-medium">{currency(serviceFee)}</div>
               </div>
-              <div className="px-4 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-gray-700">Linh kiện ({cartLines.length})</div>
-                  <div className="font-medium">{currency(partsTotal)}</div>
+              <div className="mt-3 text-lg font-semibold text-gray-900">Thanh toán thất bại</div>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <button onClick={() => setActiveStep(3)} className="px-4 py-2 border rounded">Quay lại</button>
+                <button onClick={resetFlow} className="px-4 py-2 rounded text-white bg-gray-800">Tạo giao dịch mới</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex items-start justify-center p-4 bg-gray-50">
+        <div className="w-full max-w-lg">
+          {/* Ticket Card - Rectangle shape */}
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden relative">
+            {/* Success Header Section */}
+            <div className="flex flex-col items-center text-center pt-5 pb-2 px-6">
+              <FireworksIcon />
+              <h1 className="text-xl font-bold text-gray-900 mb-1">Thanh toán thành công</h1>
+              
+              {/* Large prominent price */}
+              <div className="text-3xl font-bold mb-2" style={{ color: '#014091' }}>
+                {currency(grandTotal)}
+              </div>
+              
+              {/* Small date and bill ID */}
+              <div className="text-xs text-gray-500 mb-2">
+                {formattedDate} • Mã hóa đơn: {displayBillId}
+              </div>
+              
+              {/* Dashed line with curved indents */}
+              <DashedLineWithCurves />
+            </div>
+
+            {/* Payment Details Section */}
+            <div className="px-6 pb-3">
+              <div className="text-sm font-semibold text-gray-900 mb-2">Chi tiết thanh toán</div>
+              
+              {/* Service fee */}
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="text-gray-700">Dịch vụ ({serviceFee > 0 ? 1 : 0})</span>
+                <span className="font-medium text-gray-900">{currency(serviceFee)}</span>
+              </div>
+              
+              {/* Parts total */}
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="text-gray-700">Linh kiện ({cartLines.length})</span>
+                <span className="font-medium text-gray-900">{currency(partsTotal)}</span>
+              </div>
+              
+              {/* Individual parts list */}
+              {cartLines.length > 0 && (
+                <div className="ml-4 mt-1 space-y-0.5">
+                  {cartLines.map(l => (
+                    <div key={l.part.id} className="flex items-center justify-between text-xs text-gray-600">
+                      <span className="truncate mr-2">{l.part.name} × {l.quantity}</span>
+                      <span className="font-medium whitespace-nowrap">{currency(l.part.price * l.quantity)}</span>
+                    </div>
+                  ))}
                 </div>
-                {cartLines.length > 0 && (
-                  <ul className="mt-2 text-xs text-gray-600 space-y-1 max-h-28 overflow-auto pr-1">
-                    {cartLines.map((l) => (
-                      <li key={l.part.id} className="flex items-center justify-between">
-                        <span className="truncate mr-2">{l.part.name} × {l.quantity}</span>
-                        <span className="whitespace-nowrap">{currency(l.part.price * l.quantity)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="px-4 py-3 text-sm">
-                <div className="text-gray-500 mb-1">Chi tiết giao dịch</div>
-                <div className="flex items-center justify-between"><span className="text-gray-600">Đã thanh toán</span><span className="font-medium">{currency(grandTotal)}</span></div>
-                <div className="flex items-center justify-between"><span className="text-gray-600">Tiền thừa</span><span className="font-medium">{currency(0)}</span></div>
-                <div className="flex items-center justify-between"><span className="text-gray-600">Phương thức</span><span className="font-medium">{pmLabel}</span></div>
+              )}
+              
+              {/* Regular dashed line */}
+              <DashedLine />
+              
+              {/* Transaction Details */}
+              <div className="text-sm font-semibold text-gray-900 mb-2">Chi tiết giao dịch</div>
+              
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Đã thanh toán</span>
+                  <span className="font-medium text-gray-900">{currency(grandTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Tiền thừa</span>
+                  <span className="font-medium text-gray-900">{currency(0)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Phương thức</span>
+                  <span className="font-medium text-gray-900">
+                    {paymentMethod === 'CASH' ? 'Tiền mặt' : paymentMethod === 'PAYOS' ? 'PayOS' : '—'}
+                  </span>
+                </div>
               </div>
             </div>
+            
+            {/* Scalloped bottom edge */}
+            <ScallopedEdge />
           </div>
 
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <button onClick={() => setActiveStep(3)} className="px-4 py-2 border rounded">Quay lại</button>
-            <button onClick={resetFlow} className="px-4 py-2 rounded text-white" style={{ backgroundColor: '#014091' }}>Tạo giao dịch mới</button>
+          {/* Action Button */}
+          <div className="mt-6 flex items-center justify-center">
+            <button 
+              onClick={resetFlow} 
+              className="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition-colors shadow-md"
+              style={{ backgroundColor: '#014091' }}
+            >
+              Tạo giao dịch mới
+            </button>
           </div>
         </div>
       </div>

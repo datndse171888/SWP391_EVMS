@@ -7,6 +7,7 @@ import {
   getInventoryByPartId,
   createOrUpdateInventory,
   updateInventoryQuantity,
+  decreaseInventoryQuantity,
   deleteInventory,
 } from '../controllers/inventoryController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
@@ -26,5 +27,7 @@ inventoryRouter.get('/:id', getInventoryById);
 // Admin/staff manage - quản lý tồn kho
 inventoryRouter.post('/', authMiddleware, roleMiddleware(['admin', 'staff']), createOrUpdateInventory);
 inventoryRouter.put('/:id', authMiddleware, roleMiddleware(['admin', 'staff']), updateInventoryQuantity);
+// Giảm số lượng tồn kho theo delta (decreaseBy)
+inventoryRouter.patch('/:id/decrease', authMiddleware, roleMiddleware(['admin', 'staff']), decreaseInventoryQuantity);
 inventoryRouter.delete('/:id', authMiddleware, roleMiddleware(['admin']), deleteInventory);
 
