@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { PartApi } from '../../api/PartApi';
+import { InventoryApi } from '../../api/Inventory';
+import type { InventoryItemResponse } from '../../api/Inventory';
 import type { AxiosError } from 'axios';
 
 interface Part {
   id: string;
+  inventoryId?: string;
   name: string;
   description?: string;
   manufacturer?: string;
   partNumber?: string;
   price: number;
-  status: 'active' | 'inactive' | 'hidden';
+  status: 'active' | 'inactive';
+  category?: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories';
   warrantyPeriod?: number;
   warrantyCondition?: string;
   stockQuantity?: number;
@@ -23,34 +27,36 @@ interface PartFormData {
   manufacturer: string;
   partNumber: string;
   price: string;
-  status: 'active' | 'inactive' | 'hidden';
+  status: 'active' | 'inactive';
   category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories';
   warrantyPeriod: string;
   warrantyCondition: string;
   quantity: string;
 }
 
-interface PartUsage {
-  id: string;
-  appointmentID: string;
-  partID: string;
-  quantity: number;
-  priceAtUsage: number;
-  warrantyApplied: boolean;
-  note?: string;
-  warrantyExpiryDate?: string;
-  createdAt: string;
-}
+// Removed PartUsage since the 'Lịch sử sử dụng' tab was replaced by 'Đang hoạt động'
 
 const ManagePart: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<'inventory' | 'usage' | 'low-stock'>('inventory');
+  const [selectedTab, setSelectedTab] = useState<'inventory' | 'low-stock' | 'active'>('inventory');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  // Filters
   const [filterManufacturer, setFilterManufacturer] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [priceCap, setPriceCap] = useState<number>(50000000); // 50,000,000đ
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiParts, setApiParts] = useState<Part[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingPart, setEditingPart] = useState<Part | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importPart, setImportPart] = useState<Part | null>(null);
+  const [importQuantity, setImportQuantity] = useState<string>('');
+  const [importError, setImportError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
   const [formData, setFormData] = useState<PartFormData>({
     name: '',
     description: '',
@@ -66,181 +72,109 @@ const ManagePart: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof PartFormData, string>>>({});
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Mock data - thay thế bằng API calls
-  const mockParts: Part[] = [
-    {
-      id: '1',
-      name: 'Lốp xe máy 110/70-17',
-      description: 'Lốp xe máy cao cấp, độ bền cao',
-      manufacturer: 'Michelin',
-      partNumber: 'MIC-110-70-17',
-      price: 450000,
-      status: 'active',
-      warrantyPeriod: 12,
-      warrantyCondition: 'tháng',
-      stockQuantity: 25,
-      createdAt: '2024-01-10',
-      updatedAt: '2024-01-15'
-    },
-    {
-      id: '2',
-      name: 'Dầu nhớt động cơ 10W-40',
-      description: 'Dầu nhớt tổng hợp cho động cơ xe máy',
-      manufacturer: 'Castrol',
-      partNumber: 'CAS-10W40-1L',
-      price: 120000,
-      status: 'active',
-      warrantyPeriod: 6,
-      warrantyCondition: 'tháng',
-      stockQuantity: 8,
-      createdAt: '2024-01-08',
-      updatedAt: '2024-01-12'
-    },
-    {
-      id: '3',
-      name: 'Phanh đĩa trước xe máy',
-      description: 'Hệ thống phanh đĩa chất lượng cao',
-      manufacturer: 'Brembo',
-      partNumber: 'BRE-DISC-320',
-      price: 850000,
-      status: 'active',
-      warrantyPeriod: 24,
-      warrantyCondition: 'tháng',
-      stockQuantity: 3,
-      createdAt: '2024-01-05',
-      updatedAt: '2024-01-10'
-    },
-    {
-      id: '4',
-      name: 'Bugi đánh lửa Iridium',
-      description: 'Bugi đánh lửa hiệu suất cao',
-      manufacturer: 'NGK',
-      partNumber: 'NGK-IR-IX',
-      price: 85000,
-      status: 'active',
-      warrantyPeriod: 12,
-      warrantyCondition: 'tháng',
-      stockQuantity: 1,
-      createdAt: '2024-01-03',
-      updatedAt: '2024-01-08'
-    },
-    {
-      id: '5',
-      name: 'Lọc gió động cơ cao cấp',
-      description: 'Lọc gió động cơ chất lượng cao, tăng hiệu suất và bảo vệ động cơ tối ưu',
-      manufacturer: 'K&N',
-      partNumber: 'KN-AIR-001',
-      price: 180000,
-      status: 'active',
-      warrantyPeriod: 6,
-      warrantyCondition: 'tháng',
-      stockQuantity: 12,
-      createdAt: '2024-01-12',
-      updatedAt: '2024-01-15'
-    },
-    {
-      id: '6',
-      name: 'Ắc quy xe máy 12V 7Ah',
-      description: 'Ắc quy khô 12V dung lượng cao, bền bỉ và ổn định trong mọi điều kiện',
-      manufacturer: 'GS',
-      partNumber: 'GS-12V-7AH',
-      price: 450000,
-      status: 'active',
-      warrantyPeriod: 12,
-      warrantyCondition: 'tháng',
-      stockQuantity: 4,
-      createdAt: '2024-01-14',
-      updatedAt: '2024-01-16'
-    },
-    {
-      id: '7',
-      name: 'Nhông sên dĩa siêu bền',
-      description: 'Bộ nhông sên dĩa siêu bền, tăng cường hiệu suất truyền động và độ bền',
-      manufacturer: 'DID',
-      partNumber: 'DID-SET-001',
-      price: 320000,
-      status: 'active',
-      warrantyPeriod: 6,
-      warrantyCondition: 'tháng',
-      stockQuantity: 6,
-      createdAt: '2024-01-16',
-      updatedAt: '2024-01-18'
-    },
-    {
-      id: '8',
-      name: 'Gương chiếu hậu chống chói',
-      description: 'Gương chiếu hậu chống chói, tầm nhìn rộng và thiết kế thể thao hiện đại',
-      manufacturer: 'Rizoma',
-      partNumber: 'RIZ-MIR-001',
-      price: 280000,
-      status: 'active',
-      warrantyPeriod: 3,
-      warrantyCondition: 'tháng',
-      stockQuantity: 15,
-      createdAt: '2024-01-18',
-      updatedAt: '2024-01-20'
-    },
-    {
-      id: '9',
-      name: 'Dây phanh dầu chịu nhiệt',
-      description: 'Dây phanh dầu chịu nhiệt và áp lực cao, đảm bảo an toàn tối đa',
-      manufacturer: 'Galfer',
-      partNumber: 'GAL-BRAKE-001',
-      price: 150000,
-      status: 'active',
-      warrantyPeriod: 6,
-      warrantyCondition: 'tháng',
-      stockQuantity: 8,
-      createdAt: '2024-01-20',
-      updatedAt: '2024-01-22'
-    }
-  ];
+  // Bỏ mock data: toàn bộ dữ liệu lấy từ API
 
-  const mockPartUsage: PartUsage[] = [
-    {
-      id: '1',
-      appointmentID: 'apt-001',
-      partID: '1',
-      quantity: 2,
-      priceAtUsage: 450000,
-      warrantyApplied: false,
-      note: 'Thay lốp cho xe Honda Wave',
-      createdAt: '2024-01-15'
-    },
-    {
-      id: '2',
-      appointmentID: 'apt-002',
-      partID: '2',
-      quantity: 1,
-      priceAtUsage: 120000,
-      warrantyApplied: true,
-      warrantyExpiryDate: '2024-07-15',
-      note: 'Thay dầu nhớt định kỳ',
-      createdAt: '2024-01-14'
-    }
-  ];
+  // Lịch sử sử dụng tab được thay bằng tab Đang hoạt động
+
+  // Load inventory from API (with full Part) and map to Part card data
+  const fetchKey = `${currentPage}-${itemsPerPage}`;
+
+  React.useEffect(() => {
+    let isCancelled = false;
+
+    const fetchParts = async () => {
+      try {
+        setLoading(true);
+        setApiError(null);
+        console.log('[ManagePart] Fetch inventories start', { page: currentPage, limit: itemsPerPage });
+        const { items } = await InventoryApi.getWithParts({ page: currentPage, limit: itemsPerPage });
+        console.log('[ManagePart] Fetch inventories success', { itemsCount: items?.length, firstItem: items?.[0] });
+        if (isCancelled) return;
+        const mapped: Part[] = items.map((inv: InventoryItemResponse) => ({
+          id: inv.partID?._id || inv._id,
+          inventoryId: inv._id,
+          name: inv.partID?.name || '—',
+          description: inv.partID?.description,
+          manufacturer: inv.partID?.manufacturer,
+          partNumber: inv.partID?.partNumber,
+          price: inv.partID?.price ?? 0,
+          status: (inv.partID?.status as Part['status']) || 'active',
+          category: inv.partID?.category as Part['category'],
+          warrantyPeriod: inv.partID?.warrantyPeriod,
+          warrantyCondition: inv.partID?.warrantyCondition,
+          stockQuantity: inv.quantity,
+          createdAt: inv.partID?.createdAt || '',
+          updatedAt: inv.partID?.updatedAt || '',
+        }));
+        console.log('[ManagePart] Mapped parts', { mappedCount: mapped.length, firstMapped: mapped[0] });
+        setApiParts(mapped);
+      } catch (e) {
+        console.error('[ManagePart] Load inventory failed:', e);
+        setApiError('Không tải được dữ liệu kho từ server. Đang hiển thị dữ liệu mẫu.');
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+    fetchParts();
+    return () => { isCancelled = true; };
+  }, [currentPage, itemsPerPage, fetchKey]);
+
+  // Dữ liệu nguồn: lấy từ API; không còn fallback mock
+  const baseParts: Part[] = apiParts;
+
+  React.useEffect(() => {
+    console.log('[ManagePart] State updated: apiParts', { count: apiParts.length, first: apiParts[0] });
+  }, [apiParts]);
 
   // Filter function
-  const filterParts = (parts: Part[]) => {
-    return parts.filter(part => {
+  const partCategoryEq = (part: Part, cat: string) => {
+    return (part.category || '') === cat;
+  };
+
+  const priceWithin = (price: number, min: number | undefined, max: number | undefined) => {
+    const minVal = min;
+    const maxVal = max;
+    if (minVal !== undefined && price < minVal) return false;
+    if (maxVal !== undefined && price > maxVal) return false;
+    return true;
+  };
+
+  const formatCurrency = (value: number) => value.toLocaleString('vi-VN') + 'đ';
+
+  const filterParts = React.useCallback((parts: Part[]) => {
+    const result = parts.filter(part => {
       const matchesSearch = searchTerm === '' || 
         part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.partNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = filterStatus === '' || part.status === filterStatus;
+      const matchesCategory = filterCategory === '' || partCategoryEq(part, filterCategory);
+      const withinPrice = priceWithin(part.price, 0, priceCap);
       const matchesManufacturer = filterManufacturer === '' || part.manufacturer === filterManufacturer;
       
-      return matchesSearch && matchesStatus && matchesManufacturer;
+      return matchesSearch && matchesCategory && withinPrice && matchesManufacturer;
     });
-  };
+    console.log('[ManagePart] Filter parts', {
+      sourceCount: parts.length,
+      searchTerm,
+      filterCategory,
+      priceCap,
+      filterManufacturer,
+      filteredCount: result.length,
+    });
+    return result;
+  }, [searchTerm, filterManufacturer, filterCategory, priceCap]);
 
-  const filteredParts = filterParts(mockParts);
-  const lowStockParts = filteredParts.filter(part => (part.stockQuantity || 0) <= 5);
-  const activeParts = filteredParts.filter(part => part.status === 'active');
+  const filteredParts = React.useMemo(() => filterParts(baseParts), [baseParts, filterParts]);
+  // Theo BE: 0 => out_of_stock, 1..10 => low_stock, >10 => in_stock
+  const lowStockParts = React.useMemo(() => filteredParts.filter(part => {
+    const q = part.stockQuantity || 0;
+    return q > 0 && q <= 10;
+  }), [filteredParts]);
+  const activeParts = React.useMemo(() => filteredParts.filter(part => part.status === 'active'), [filteredParts]);
 
   // Pagination logic
-  const getCurrentData = () => {
+  const getCurrentData = React.useCallback(() => {
     let data = [];
     switch (selectedTab) {
       case 'inventory':
@@ -249,16 +183,16 @@ const ManagePart: React.FC = () => {
       case 'low-stock':
         data = lowStockParts;
         break;
-      case 'usage':
-        data = mockPartUsage;
+      case 'active':
+        data = activeParts;
         break;
       default:
         data = filteredParts;
     }
     return data;
-  };
+  }, [filteredParts, lowStockParts, activeParts, selectedTab]);
 
-  const currentData = getCurrentData();
+  const currentData = React.useMemo(() => getCurrentData(), [getCurrentData]);
   const totalPages = Math.ceil(currentData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -268,13 +202,12 @@ const ManagePart: React.FC = () => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterManufacturer, selectedTab]);
+  }, [searchTerm, filterManufacturer, filterCategory, priceCap, selectedTab]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       active: { text: 'Hoạt động', color: 'bg-blue-100 text-blue-800' },
-      inactive: { text: 'Ngừng hoạt động', color: 'bg-gray-100 text-gray-800' },
-      hidden: { text: 'Ẩn', color: 'bg-red-100 text-red-800' }
+      inactive: { text: 'Ngừng hoạt động', color: 'bg-gray-100 text-gray-800' }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig];
@@ -286,13 +219,13 @@ const ManagePart: React.FC = () => {
   };
 
   const getStockBadge = (quantity: number) => {
-    if (quantity <= 5) {
-      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Sắp hết</span>;
-    } else if (quantity <= 15) {
-      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Trung bình</span>;
-    } else {
-      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Đủ hàng</span>;
+    if (quantity === 0) {
+      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-200 text-red-900">Hết hàng</span>;
     }
+    if (quantity <= 10) {
+      return <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sắp hết</span>;
+    }
+    return <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Đủ hàng</span>;
   };
 
   // Handle form input change
@@ -331,6 +264,32 @@ const ManagePart: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Detect changes in edit mode to prevent no-op updates
+  const isEditMode = modalMode === 'edit';
+  const isFormDirty = React.useMemo(() => {
+    if (!isEditMode || !editingPart) return true; // create always allowed
+    const toNumberOrUndefined = (v: string) => (v === '' ? undefined : Number(v));
+    const original = {
+      description: editingPart.description || undefined,
+      manufacturer: editingPart.manufacturer || undefined,
+      price: editingPart.price,
+      status: editingPart.status,
+      category: editingPart.category,
+      warrantyPeriod: editingPart.warrantyPeriod,
+      warrantyCondition: editingPart.warrantyCondition || undefined,
+    };
+    const current = {
+      description: formData.description.trim() || undefined,
+      manufacturer: formData.manufacturer.trim() || undefined,
+      price: parseFloat(formData.price || '0'),
+      status: formData.status,
+      category: formData.category,
+      warrantyPeriod: toNumberOrUndefined(formData.warrantyPeriod),
+      warrantyCondition: formData.warrantyCondition.trim() || undefined,
+    };
+    return JSON.stringify(original) !== JSON.stringify(current);
+  }, [isEditMode, editingPart, formData.description, formData.manufacturer, formData.price, formData.status, formData.category, formData.warrantyPeriod, formData.warrantyCondition]);
+
   // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,6 +302,12 @@ const ManagePart: React.FC = () => {
       return;
     }
     
+    if (modalMode === 'edit' && !isFormDirty) {
+      setNotification({ type: 'error', message: 'Không có nội dung thay đổi' });
+      setTimeout(() => setNotification(null), 2500);
+      return;
+    }
+
     setIsSubmitting(true);
     
     // Prepare request data
@@ -364,19 +329,58 @@ const ManagePart: React.FC = () => {
     console.log('[ManagePart] Submitting form with data:', requestData);
     
     try {
-      console.log('[ManagePart] Calling PartApi.createPartWithInventory with data:', requestData);
-      
-      const response = await PartApi.createPartWithInventory(requestData);
-      
-      console.log('[ManagePart] Response status:', response.status, response.statusText);
-      console.log('[ManagePart] Response data:', response.data);
-      
-      const result = response.data;
-      
-      console.log('[ManagePart] Success response:', result);
-      console.log('[ManagePart] Created part:', result.part);
-      console.log('[ManagePart] Created inventory:', result.inventory);
-      
+      if (modalMode === 'edit' && editingPart) {
+        const updatePayload = {
+          description: requestData.description,
+          manufacturer: requestData.manufacturer,
+          price: requestData.price,
+          status: requestData.status,
+          category: requestData.category,
+          warrantyPeriod: requestData.warrantyPeriod,
+          warrantyCondition: requestData.warrantyCondition,
+        };
+        console.log('[ManagePart] Calling PartApi.updatePart with data:', updatePayload);
+        const resp = await PartApi.updatePart(editingPart.id, updatePayload);
+        const updatedAny = resp.data.part as unknown as Record<string, unknown>;
+        setApiParts(prev => prev.map(p => p.id === editingPart.id ? {
+          ...p,
+          description: (updatedAny.description as string | undefined) ?? p.description,
+          manufacturer: (updatedAny.manufacturer as string | undefined) ?? p.manufacturer,
+          price: (updatedAny.price as number | undefined) ?? p.price,
+          status: ((updatedAny.status as 'active' | 'inactive' | undefined)) ?? p.status,
+          category: (updatedAny.category as Part['category'] | undefined) ?? p.category,
+          warrantyPeriod: (updatedAny.warrantyPeriod as number | undefined) ?? p.warrantyPeriod,
+          warrantyCondition: (updatedAny.warrantyCondition as string | undefined) ?? p.warrantyCondition,
+          updatedAt: (updatedAny.updatedAt as string | undefined) ?? p.updatedAt,
+        } : p));
+        setNotification({ type: 'success', message: resp.data.message || 'Cập nhật linh kiện thành công!' });
+      } else {
+        console.log('[ManagePart] Calling PartApi.createPartWithInventory with data:', requestData);
+        const response = await PartApi.createPartWithInventory(requestData);
+        const createdUnknown = response.data as unknown;
+        const created = createdUnknown as { message: string; part: Record<string, unknown>; inventory?: Record<string, unknown> };
+        const rp = created.part;
+        const ri = created.inventory || {};
+        const newPart: Part = {
+          id: String((rp.id as string) ?? (rp._id as string) ?? ''),
+          inventoryId: String((ri._id as string) ?? ''),
+          name: (rp.name as string) || '',
+          description: rp.description as string | undefined,
+          manufacturer: rp.manufacturer as string | undefined,
+          partNumber: rp.partNumber as string | undefined,
+          price: Number(rp.price ?? 0),
+          status: ((rp.status as string) as 'active' | 'inactive') || 'active',
+          category: rp.category as Part['category'] | undefined,
+          warrantyPeriod: rp.warrantyPeriod as number | undefined,
+          warrantyCondition: rp.warrantyCondition as string | undefined,
+          stockQuantity: Number((ri.quantity as number | undefined) ?? 0),
+          createdAt: (rp.createdAt as string) || new Date().toISOString(),
+          updatedAt: (rp.updatedAt as string) || new Date().toISOString(),
+        };
+        setApiParts(prev => [newPart, ...prev]);
+        setNotification({ type: 'success', message: created.message || 'Thêm linh kiện thành công!' });
+      }
+
       // Reset form and close modal
       setFormData({
         name: '',
@@ -392,24 +396,17 @@ const ManagePart: React.FC = () => {
       });
       setFormErrors({});
       setIsAddModalOpen(false);
+      setModalMode('create');
+      setEditingPart(null);
       
-      console.log('[ManagePart] Form submitted successfully. Message:', result.message || 'Thêm linh kiện thành công!');
-      
-      // Show success notification
-      setNotification({
-        type: 'success',
-        message: result.message || 'Thêm linh kiện thành công!'
-      });
+      console.log('[ManagePart] Form submitted successfully.');
       
       // Auto hide notification after 3 seconds
       setTimeout(() => {
         setNotification(null);
       }, 3000);
       
-      // Refresh parts list - reload page or update state
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      // Không reload lại trang để tránh chớp màn hình
       
     } catch (error: unknown) {
       console.error('[ManagePart] Error submitting form:', error);
@@ -430,6 +427,7 @@ const ManagePart: React.FC = () => {
         if (axiosError.response?.data) {
           const errorData = axiosError.response.data;
           errorMessage = errorData.message || errorData.error || `HTTP ${axiosError.response.status}: ${axiosError.response.statusText}`;
+          const collected: string[] = [];
           
           // Parse validation errors - hiển thị trong form
           // Nếu BE trả về errors object với field cụ thể
@@ -439,19 +437,24 @@ const ManagePart: React.FC = () => {
             if (fieldErrors.name) {
               newFormErrors.name = fieldErrors.name;
               showNotification = false;
+              collected.push(fieldErrors.name);
             }
             if (fieldErrors.partNumber) {
               newFormErrors.partNumber = fieldErrors.partNumber;
               showNotification = false;
+              collected.push(fieldErrors.partNumber);
             }
             if (fieldErrors.price) {
               newFormErrors.price = fieldErrors.price;
               showNotification = false;
+              collected.push(fieldErrors.price);
             }
             if (fieldErrors.quantity) {
               newFormErrors.quantity = fieldErrors.quantity;
               showNotification = false;
+              collected.push(fieldErrors.quantity);
             }
+            if (collected.length) setSubmitErrors(collected);
           } else if (errorData.message) {
             // Fallback: Parse từ message nếu BE chưa trả về errors object
             const message = errorData.message.toLowerCase();
@@ -460,12 +463,14 @@ const ManagePart: React.FC = () => {
             if (message.includes('tên linh kiện đã tồn tại') || (message.includes('tên') && message.includes('tồn tại') && !message.includes('mã'))) {
               newFormErrors.name = 'Tên linh kiện đã tồn tại';
               showNotification = false;
+              setSubmitErrors(['Tên linh kiện đã tồn tại']);
             }
             
             // Kiểm tra lỗi trùng mã (chỉ về mã)
             if (message.includes('mã linh kiện đã tồn tại') || (message.includes('mã') && message.includes('tồn tại') && !message.includes('tên'))) {
               newFormErrors.partNumber = 'Mã linh kiện đã tồn tại';
               showNotification = false;
+              setSubmitErrors(['Mã linh kiện đã tồn tại']);
             }
             
             // Kiểm tra lỗi trùng cả tên và mã
@@ -473,22 +478,26 @@ const ManagePart: React.FC = () => {
               newFormErrors.name = 'Tên linh kiện đã tồn tại';
               newFormErrors.partNumber = 'Mã linh kiện đã tồn tại';
               showNotification = false;
+              setSubmitErrors(['Tên linh kiện đã tồn tại', 'Mã linh kiện đã tồn tại']);
             }
             
             // Kiểm tra lỗi giá
             if (message.includes('giá') && message.includes('1.000')) {
               newFormErrors.price = 'Giá phải từ 1.000 VNĐ trở lên';
               showNotification = false;
+              setSubmitErrors(['Giá phải từ 1.000 VNĐ trở lên']);
             }
             
             // Kiểm tra lỗi số lượng
             if (message.includes('số lượng') && (message.includes('âm') || message.includes('không thể'))) {
               newFormErrors.quantity = 'Số lượng không thể âm';
               showNotification = false;
+              setSubmitErrors(['Số lượng không thể âm']);
             }
             
             // Kiểm tra validation errors từ BE (array)
             if (errorData.errors && Array.isArray(errorData.errors)) {
+              const arrMsgs: string[] = [];
               errorData.errors.forEach((err: string) => {
                 const errLower = err.toLowerCase();
                 if (errLower.includes('name') || (errLower.includes('tên') && !errLower.includes('mã'))) {
@@ -500,17 +509,21 @@ const ManagePart: React.FC = () => {
                 } else if (errLower.includes('quantity') || errLower.includes('số lượng')) {
                   newFormErrors.quantity = err;
                 }
+                arrMsgs.push(err);
               });
               showNotification = false;
+              setSubmitErrors(arrMsgs);
             }
           }
           
           console.error('[ManagePart] Error data:', errorData);
         } else if (axiosError.response?.status) {
           errorMessage = `HTTP ${axiosError.response.status}: ${axiosError.response.statusText || 'Lỗi không xác định'}`;
+          setSubmitErrors([errorMessage]);
         } else if (axiosError.request) {
           errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
           console.error('[ManagePart] Network error - no response received');
+          setSubmitErrors([errorMessage]);
         }
       } else if (error instanceof Error) {
         errorMessage = error.message;
@@ -555,6 +568,8 @@ const ManagePart: React.FC = () => {
   // Reset form when modal closes
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
+    setNotification(null);
+    setSubmitErrors([]);
     setFormData({
       name: '',
       description: '',
@@ -723,22 +738,44 @@ const ManagePart: React.FC = () => {
 
         <div className="flex justify-between items-center">
           <button
-            onClick={() => console.log('Edit part:', part.id)}
+            onClick={() => {
+              setModalMode('edit');
+              setEditingPart(part);
+              setFormData({
+                name: part.name,
+                description: part.description || '',
+                manufacturer: part.manufacturer || '',
+                partNumber: part.partNumber || '',
+                price: String(part.price || ''),
+                status: part.status || 'active',
+                category: part.category || 'accessories',
+                warrantyPeriod: part.warrantyPeriod !== undefined ? String(part.warrantyPeriod) : '',
+                warrantyCondition: part.warrantyCondition || '',
+                quantity: '',
+              });
+              setSubmitErrors([]);
+              setIsAddModalOpen(true);
+            }}
             className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 transition-colors"
+            aria-label="Sửa"
+            title="Sửa"
           >
-            Sửa
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
           </button>
           
           <div className="flex space-x-1">
             <button 
               className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90"
-              style={{ backgroundColor: '#014091' }}
-            >
-              Chi tiết
-            </button>
-            <button 
-              className="px-2 py-1 text-white rounded text-xs font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#f6ae2d' }}
+            onClick={() => {
+                setImportPart(part);
+                setImportQuantity('');
+              setImportError('');
+                setIsImportModalOpen(true);
+              }}
             >
               Nhập
             </button>
@@ -814,6 +851,17 @@ const ManagePart: React.FC = () => {
     <div className="min-h-screen space-y-2 pb-8">
       {/* Notification Toast */}
       <NotificationToast />
+      {/* API status banner */}
+      {loading && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-3 py-2 rounded">
+          Đang tải dữ liệu kho...
+        </div>
+      )}
+      {apiError && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs px-3 py-2 rounded">
+          {apiError}
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-2">
         <div className="flex items-center justify-between">
@@ -858,7 +906,7 @@ const ManagePart: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Tổng linh kiện</p>
-              <p className="text-lg font-bold" style={{ color: '#014091' }}>{mockParts.length}</p>
+              <p className="text-lg font-bold" style={{ color: '#014091' }}>{baseParts.length}</p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#8dcdfa' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#014091' }}>
@@ -901,7 +949,7 @@ const ManagePart: React.FC = () => {
             <div>
               <p className="text-xs font-medium" style={{ color: '#5f6777' }}>Tổng giá trị</p>
               <p className="text-lg font-bold" style={{ color: '#014091' }}>
-                {mockParts.reduce((sum, part) => sum + (part.price * (part.stockQuantity || 0)), 0).toLocaleString('vi-VN')}đ
+                {baseParts.reduce((sum, part) => sum + (part.price * (part.stockQuantity || 0)), 0).toLocaleString('vi-VN')}đ
               </p>
             </div>
             <div className="p-2 rounded-full" style={{ backgroundColor: '#8abdfe' }}>
@@ -939,30 +987,36 @@ const ManagePart: React.FC = () => {
               Sắp hết hàng ({lowStockParts.length})
             </button>
             <button
-              onClick={() => setSelectedTab('usage')}
+              onClick={() => setSelectedTab('active')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                selectedTab === 'usage'
+                selectedTab === 'active'
                 ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Lịch sử sử dụng ({mockPartUsage.length})
+              Đang hoạt động ({activeParts.length})
             </button>
           </nav>
           
           {/* Filters on the right */}
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-              <label className="text-xs font-medium text-gray-700">Trạng thái:</label>
+              <label className="text-xs font-medium text-gray-700">Danh mục:</label>
               <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
                 className="px-2 py-1 border border-gray-300 rounded text-xs"
               >
                 <option value="">Tất cả</option>
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Ngừng hoạt động</option>
-                <option value="hidden">Ẩn</option>
+                <option value="tires">Lốp xe</option>
+                <option value="oil">Dầu nhớt</option>
+                <option value="filters">Lọc</option>
+                <option value="brakes">Phanh</option>
+                <option value="electrical">Điện</option>
+                <option value="cooling">Làm mát</option>
+                <option value="suspension">Giảm xóc</option>
+                <option value="transmission">Truyền động</option>
+                <option value="accessories">Phụ kiện</option>
               </select>
             </div>
 
@@ -974,23 +1028,40 @@ const ManagePart: React.FC = () => {
                 className="px-2 py-1 border border-gray-300 rounded text-xs"
               >
                 <option value="">Tất cả</option>
-                <option value="Michelin">Michelin</option>
-                <option value="Castrol">Castrol</option>
-                <option value="Brembo">Brembo</option>
-                <option value="NGK">NGK</option>
-                <option value="K&N">K&N</option>
-                <option value="GS">GS</option>
-                <option value="DID">DID</option>
-                <option value="Rizoma">Rizoma</option>
-                <option value="Galfer">Galfer</option>
+                {Array.from(new Set(baseParts.map(p => p.manufacturer).filter(Boolean))).sort().map((mfr) => (
+                  <option key={String(mfr)} value={String(mfr)}>{String(mfr)}</option>
+                ))}
               </select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-xs font-medium text-gray-700">Giá:</label>
+              <div className="relative w-64">
+                <input
+                  type="range"
+                  min={0}
+                  max={50000000}
+                  step={50000}
+                  value={priceCap}
+                  onChange={(e) => setPriceCap(Number(e.target.value))}
+                  className="w-full"
+                />
+                <div
+                  className="absolute -top-6 transform -translate-x-1/2 bg-white border border-gray-300 text-gray-700 text-[10px] px-2 py-0.5 rounded"
+                  style={{ left: `${(priceCap / 50000000) * 100}%` }}
+                >
+                  {formatCurrency(priceCap)}
+                </div>
+              </div>
+              <span className="text-xs text-gray-500">0đ - 50.000.000đ</span>
             </div>
 
             <button
               onClick={() => {
                 setSearchTerm('');
-                setFilterStatus('');
                 setFilterManufacturer('');
+                setFilterCategory('');
+                setPriceCap(50000000);
               }}
               className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors"
             >
@@ -1012,45 +1083,43 @@ const ManagePart: React.FC = () => {
          >
            {selectedTab === 'inventory' && (paginatedData as Part[]).map(renderPartCard)}
            {selectedTab === 'low-stock' && (paginatedData as Part[]).map(renderPartCard)}
-          {selectedTab === 'usage' && (
-            <div className="col-span-full">
-              <p className="text-center text-gray-500 py-8">Lịch sử sử dụng linh kiện sẽ được hiển thị ở đây</p>
-            </div>
-          )}
+           {selectedTab === 'active' && (paginatedData as Part[]).map(renderPartCard)}
         </div>
 
         {/* Pagination */}
         {renderPagination()}
 
-        {/* Empty State */}
+        {/* Empty State - centered in content area */}
         {currentData.length === 0 && (
-          <div className="text-center py-8">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              {selectedTab === 'inventory' && 'Không tìm thấy linh kiện nào'}
-              {selectedTab === 'low-stock' && 'Không có linh kiện nào sắp hết hàng'}
-              {selectedTab === 'usage' && 'Không có lịch sử sử dụng nào'}
-            </h3>
-            <p className="mt-1 text-xs text-gray-500">
-              {selectedTab === 'inventory' && 'Thử thay đổi bộ lọc hoặc tìm kiếm khác.'}
-              {selectedTab === 'low-stock' && 'Tất cả linh kiện đều có đủ hàng.'}
-              {selectedTab === 'usage' && 'Chưa có lịch sử sử dụng linh kiện nào.'}
-            </p>
+          <div className="flex items-center justify-center min-h-[460px]">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                {selectedTab === 'inventory' && 'Không tìm thấy linh kiện nào'}
+                {selectedTab === 'low-stock' && 'Không có linh kiện nào sắp hết hàng'}
+                {selectedTab === 'active' && 'Không có linh kiện đang hoạt động'}
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                {selectedTab === 'inventory' && 'Thử thay đổi bộ lọc hoặc tìm kiếm khác.'}
+                {selectedTab === 'low-stock' && 'Tất cả linh kiện đều có đủ hàng.'}
+                {selectedTab === 'active' && 'Không có linh kiện nào đang hoạt động.'}
+              </p>
+            </div>
           </div>
         )}
       </div>
 
       {/* Add Part Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" style={{ backdropFilter: 'blur(2px)' }} onClick={handleCloseModal}>
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+              <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold" style={{ color: '#014091' }}>
-                  Thêm linh kiện mới
+                  {modalMode === 'edit' ? 'Cập nhật linh kiện' : 'Thêm linh kiện mới'}
                 </h2>
                 <button
                   onClick={handleCloseModal}
@@ -1065,6 +1134,15 @@ const ManagePart: React.FC = () => {
 
             {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-3">
+              {submitErrors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded">
+                  <ul className="list-disc pl-4 space-y-1">
+                    {submitErrors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {/* Name - Required */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1075,9 +1153,10 @@ const ManagePart: React.FC = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
+                  disabled={modalMode === 'edit'}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
                     formErrors.name ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${modalMode === 'edit' ? 'bg-red-50 cursor-not-allowed text-gray-600' : ''}`}
                   placeholder="Nhập tên linh kiện"
                 />
                 {formErrors.name && (
@@ -1124,9 +1203,10 @@ const ManagePart: React.FC = () => {
                     name="partNumber"
                     value={formData.partNumber}
                     onChange={handleInputChange}
+                    disabled={modalMode === 'edit'}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
                       formErrors.partNumber ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    } ${modalMode === 'edit' ? 'bg-red-50 cursor-not-allowed text-gray-600' : ''}`}
                     placeholder="Nhập mã linh kiện"
                   />
                   {formErrors.partNumber && (
@@ -1194,9 +1274,9 @@ const ManagePart: React.FC = () => {
                   >
                     <option value="active">Hoạt động</option>
                     <option value="inactive">Ngừng hoạt động</option>
-                    <option value="hidden">Ẩn</option>
                   </select>
                 </div>
+                {modalMode === 'create' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Số lượng tồn kho
@@ -1216,6 +1296,7 @@ const ManagePart: React.FC = () => {
                     <p className="mt-1 text-xs text-red-500">{formErrors.quantity}</p>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Warranty Section */}
@@ -1248,7 +1329,7 @@ const ManagePart: React.FC = () => {
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
                         formErrors.warrantyCondition ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="Ví dụ: tháng, km"
+                      placeholder="Ví dụ: tháng"
                     />
                     {formErrors.warrantyCondition && (
                       <p className="mt-1 text-xs text-red-500">{formErrors.warrantyCondition}</p>
@@ -1258,7 +1339,7 @@ const ManagePart: React.FC = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleCloseModal}
@@ -1266,16 +1347,101 @@ const ManagePart: React.FC = () => {
                 >
                   Hủy
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#014091' }}
-                >
-                  {isSubmitting ? 'Đang thêm...' : 'Thêm linh kiện'}
-                </button>
+
+                <div className="flex items-center space-x-3">
+                  {isEditMode && !isFormDirty && (
+                    <span className="text-xs text-gray-500">Không có nội dung thay đổi</span>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || (isEditMode && !isFormDirty)}
+                    className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: '#014091' }}
+                  >
+                    {isSubmitting ? (modalMode === 'edit' ? 'Đang cập nhật...' : 'Đang thêm...') : (modalMode === 'edit' ? 'Cập nhật' : 'Thêm linh kiện')}
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Quantity Modal */}
+      {isImportModalOpen && importPart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" style={{ backdropFilter: 'blur(2px)' }} onClick={() => { setIsImportModalOpen(false); setNotification(null); setImportError(''); }}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold" style={{ color: '#014091' }}>Nhập số lượng</h2>
+                <button onClick={() => { setIsImportModalOpen(false); setNotification(null); setImportError(''); }} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-3">
+              <div className="text-sm text-gray-700">{importPart.name}</div>
+              <div className="text-xs text-gray-500">Tồn hiện tại: {importPart.stockQuantity || 0} sp</div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng cần nhập thêm</label>
+              <input
+                type="number"
+                min={1}
+                value={importQuantity}
+                onChange={(e) => setImportQuantity(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="Nhập số lượng tăng thêm (>= 1)"
+              />
+              <p className="text-xs text-gray-500">Số lượng nhập sẽ được cộng dồn. Hiện tại: <span className="font-semibold">{importPart.stockQuantity || 0}</span> sp.</p>
+              {importError && (
+                <p className="text-xs text-red-600 mt-1">{importError}</p>
+              )}
+            </div>
+            <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => { setIsImportModalOpen(false); setNotification(null); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const addVal = Number(importQuantity);
+                  if (!Number.isFinite(addVal) || addVal <= 0) {
+                    setImportError('Số lượng nhập thêm phải > 0');
+                    return;
+                  }
+                  try {
+                    const currentQty = importPart.stockQuantity || 0;
+                    const newQty = currentQty + addVal;
+                    if (!importPart.inventoryId) {
+                      setImportError('Không tìm thấy kho cho linh kiện này. Vui lòng tải lại danh sách.');
+                      return;
+                    }
+                    const resp = await InventoryApi.updateQuantity(importPart.inventoryId, newQty);
+                    setApiParts(prev => prev.map(p => p.id === importPart.id ? { ...p, stockQuantity: newQty } : p));
+                    setNotification({ type: 'success', message: resp.data?.message || 'Cập nhật số lượng thành công' });
+                    setIsImportModalOpen(false);
+                    setImportError('');
+                  } catch (e) {
+                    console.error('[ManagePart] Import quantity failed:', e);
+                    let msg = 'Cập nhật số lượng thất bại';
+                    if (e && typeof e === 'object' && 'response' in e) {
+                      const axiosErr = e as { response?: { data?: { message?: string } } };
+                      msg = axiosErr?.response?.data?.message || msg;
+                    }
+                    setImportError(msg);
+                  }
+                }}
+                className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90"
+                style={{ backgroundColor: '#014091' }}
+              >
+                Xác nhận
+              </button>
+            </div>
           </div>
         </div>
       )}

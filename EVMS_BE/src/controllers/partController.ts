@@ -269,3 +269,107 @@ export async function createPartWithInventory(req: Request, res: Response) {
 }
 
 
+// Update Part and its Inventory together (transactional)
+export async function updatePartWithInventory(req: Request, res: Response) {
+  try {
+    const partId = req.params.id;
+    const {
+      name, description, manufacturer, partNumber, price, status,
+      warrantyPeriod, warrantyCondition, category,
+      quantity, inventoryStatus
+    } = req.body;
+
+    // Find existing part first
+    const existingPart = await Part.findById(partId);
+    if (!existingPart) {
+      return res.status(404).json({ message: 'Không tìm thấy linh kiện' });
+    }
+
+    // Duplicate checks only if fields provided and changed
+    if (name && name.trim() && name.trim().toLowerCase() !== existingPart.name.toLowerCase()) {
+      const dupByName = await Part.findOne({
+        name: { $regex: new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      });
+      if (dupByName) {
+        return res.status(400).json({ message: 'Tên linh kiện đã tồn tại', errors: { name: 'Tên linh kiện đã tồn tại' } });
+      }
+    }
+
+    if (partNumber && partNumber.trim() && partNumber.trim() !== (existingPart.partNumber || '')) {
+      const dupByNumber = await Part.findOne({ partNumber: partNumber.trim() }).collation({ locale: 'en', strength: 2 });
+      if (dupByNumber) {
+        return res.status(400).json({ message: 'Mã linh kiện đã tồn tại', errors: { partNumber: 'Mã linh kiện đã tồn tại' } });
+      }
+    }
+
+    if (price !== undefined && (isNaN(Number(price)) || Number(price) < 1000)) {
+      return res.status(400).json({ message: 'Giá phải từ 1.000 VNĐ trở lên' });
+    }
+
+    if (category !== undefined) {
+      const validCategories = ['tires', 'oil', 'filters', 'brakes', 'electrical', 'cooling', 'suspension', 'transmission', 'accessories'];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({ message: 'Danh mục không hợp lệ' });
+      }
+    }
+
+    // Begin transaction
+    const session = await Part.db.startSession();
+    session.startTransaction();
+    try {
+      // Update part (only provided fields)
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description?.trim() || undefined;
+      if (manufacturer !== undefined) updateData.manufacturer = manufacturer?.trim() || undefined;
+      if (partNumber !== undefined) updateData.partNumber = partNumber?.trim() || undefined;
+      if (price !== undefined) updateData.price = Number(price);
+      if (status !== undefined) updateData.status = status as 'active' | 'inactive';
+      if (warrantyPeriod !== undefined) updateData.warrantyPeriod = warrantyPeriod ? Number(warrantyPeriod) : undefined;
+      if (warrantyCondition !== undefined) updateData.warrantyCondition = warrantyCondition?.trim() || undefined;
+      if (category !== undefined) updateData.category = category;
+
+      const updatedPart = await Part.findByIdAndUpdate(partId, updateData, { new: true, session, runValidators: true });
+      if (!updatedPart) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: 'Không tìm thấy linh kiện' });
+      }
+
+      // Update or create inventory if quantity provided
+      let inventoryDoc = await Inventory.findOne({ partID: partId }).session(session);
+
+      if (quantity !== undefined && quantity !== null) {
+        const qty = Number(quantity);
+        if (isNaN(qty) || qty < 0) {
+          await session.abortTransaction();
+          return res.status(400).json({ message: 'Số lượng không thể âm' });
+        }
+        const calcStatus = (inventoryStatus as any) || calculateInventoryStatus(qty);
+        if (inventoryDoc) {
+          inventoryDoc.quantity = qty;
+          inventoryDoc.status = calcStatus;
+          await inventoryDoc.save({ session });
+        } else {
+          inventoryDoc = await Inventory.create([{ partID: updatedPart._id, quantity: qty, status: calcStatus }], { session }).then(arr => arr[0]);
+        }
+      }
+
+      await session.commitTransaction();
+
+      // Populate minimal inventory for response consistency
+      return res.json({ message: 'Cập nhật linh kiện và tồn kho thành công', part: updatedPart, inventory: inventoryDoc });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      return res.status(400).json({ message: 'Tên phụ tùng hoặc mã phụ tùng đã tồn tại' });
+    }
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+

@@ -14,7 +14,7 @@ function calculateStatus(quantity: number): InventoryStatus {
 export async function getInventories(req: Request, res: Response) {
   try {
     const page = Math.max(parseInt(String(req.query.page || '1'), 10), 1);
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '10'), 10), 1), 100);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '8'), 10), 1), 100);
     const partID = req.query.partID as string | undefined;
     const lowStock = req.query.lowStock === 'true';
     const status = req.query.status as InventoryStatus | undefined;
@@ -40,6 +40,63 @@ export async function getInventories(req: Request, res: Response) {
     ]);
 
     return res.json({ items, page, limit, total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+// Trả về danh sách tồn kho với đầy đủ thông tin Part (populate toàn bộ Part)
+export async function getInventoriesWithFullPart(req: Request, res: Response) {
+  try {
+    const page = Math.max(parseInt(String(req.query.page || '1'), 10), 1);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit || '8'), 10), 1), 100);
+    const partID = req.query.partID as string | undefined;
+    const lowStock = req.query.lowStock === 'true';
+    const status = req.query.status as InventoryStatus | undefined;
+
+    const filter: any = {};
+    if (partID) {
+      filter.partID = partID;
+    }
+    if (status) {
+      filter.status = status;
+    } else if (lowStock) {
+      filter.status = 'low_stock';
+    }
+
+    const [items, total] = await Promise.all([
+      Inventory.find(filter)
+        .populate('partID')
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Inventory.countDocuments(filter),
+    ]);
+
+    return res.json({ items, page, limit, total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+// Trả về toàn bộ tồn kho với đầy đủ Part, KHÔNG phân trang (dùng cho FE phân trang client-side)
+export async function getAllInventoriesWithFullPart(req: Request, res: Response) {
+  try {
+    const partID = req.query.partID as string | undefined;
+    const lowStock = req.query.lowStock === 'true';
+    const status = req.query.status as InventoryStatus | undefined;
+
+    const filter: any = {};
+    if (partID) filter.partID = partID;
+    if (status) filter.status = status; else if (lowStock) filter.status = 'low_stock';
+
+    const items = await Inventory.find(filter)
+      .populate('partID')
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return res.json({ items, total: items.length });
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
@@ -162,14 +219,22 @@ export async function updateInventoryQuantity(req: Request, res: Response) {
       return res.status(400).json({ message: 'Số lượng không thể âm' });
     }
 
+    // Lấy inventory hiện tại để kiểm tra chỉ được tăng
+    const existing = await Inventory.findById(req.params.id).populate('partID', 'name partNumber price status category');
+    if (!existing) {
+      return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
+    }
+
+    if (quantity < existing.quantity) {
+      return res.status(400).json({ message: 'Chỉ được tăng số lượng (không được giảm)' });
+    }
+
     // Tính status nếu không được cung cấp
     const calculatedStatus = status || calculateStatus(quantity);
 
-    const inventory = await Inventory.findByIdAndUpdate(
-      req.params.id,
-      { quantity, status: calculatedStatus },
-      { new: true, runValidators: true }
-    ).populate('partID', 'name partNumber price status category');
+    existing.quantity = quantity;
+    existing.status = calculatedStatus;
+    const inventory = await existing.save();
 
     if (!inventory) {
       return res.status(404).json({ message: 'Không tìm thấy tồn kho' });
