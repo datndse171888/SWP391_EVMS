@@ -569,7 +569,7 @@ export async function getAppointmentById(req: Request, res: Response) {
 
     // Tối thiểu: chỉ cho phép chủ sở hữu xem; có thể mở rộng cho technician khi có liên kết user-technician
     if (role === 'customer' && String(doc.userID) === req.user.id) {
-      return res.json({ data: doc });
+      return res.json( doc );
     }
 
     return res.status(403).json({ message: 'Insufficient permissions' });

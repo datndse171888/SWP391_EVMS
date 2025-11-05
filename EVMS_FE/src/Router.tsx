@@ -151,7 +151,7 @@ export const Router: React.FC = () => {
                 <Route path="dashboard" element={<TechnicianDashboard />} />
                 <Route path="schedule" element={<TechnicianSchedule />} />
                 <Route path="profile" element={<TechnicianProfile />} />
-                <Route path="appointments/:id" element={<AppointmentWorkspace />} />
+                <Route path="appointments/:appointmentId" element={<AppointmentWorkspace />} />
                 <Route path="*" element={<Navigate to="/technician/dashboard" replace />} />
               </Routes>
             </TechnicianLayout>

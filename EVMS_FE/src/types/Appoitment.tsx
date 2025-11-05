@@ -15,10 +15,13 @@ export interface AppointmentResponse {
     vehicleID: string;
     serviceID?: string;
     servicePackageID?: string;
+    technicianLeaderID?: string;
+    technicianSupport1?: string;
+    technicianSupport2?: string;
     bookingDate: string;
     status: AppointmentStatus;
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface UpdateAppointmentStatusRequest {
