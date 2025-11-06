@@ -57,7 +57,6 @@ const TechnicianSchedule: React.FC = () => {
   const [weekIndex, setWeekIndex] = useState(0);
   const navigate = useNavigate();
   const [shift, setShift] = useState<Shift>('all');
-  const [selectedStatus, setSelectedStatus] = useState<AppointmentStatus | 'all'>('all');
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,11 +70,11 @@ const TechnicianSchedule: React.FC = () => {
     fetchAppointments();
   }, []);
 
-  // fetch function
+  // fetch function - only fetch confirmed appointments
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      const response = await AppointmentApi.getAppointmentByTechnician();
+      const response = await AppointmentApi.getAppointmentByTechnician('confirmed');
       const data: AppointmentResponse[] = response.data;
       setAppointments(data);
     } catch (error) {
@@ -91,6 +90,49 @@ const TechnicianSchedule: React.FC = () => {
     return null;
   };
 
+  // Helper: Calculate end time considering lunch break (12:00-13:00)
+  const calculateEndTime = (startTime: Date, durationMinutes: number): Date => {
+    const endTime = new Date(startTime);
+    let remainingMinutes = durationMinutes;
+    
+    // Process minute by minute, skipping lunch break (12:00-13:00)
+    while (remainingMinutes > 0) {
+      const currentHour = endTime.getHours();
+      const currentMinutes = endTime.getMinutes();
+      
+      // If we're at or past 12:00 but before 13:00, skip to 13:00
+      if (currentHour === 12) {
+        endTime.setHours(13, 0, 0, 0);
+        continue;
+      }
+      
+      // Calculate how many minutes until next hour or lunch break
+      let minutesUntilNextHour = 60 - currentMinutes;
+      
+      // If crossing into lunch break (12:00-13:00), only count until 12:00
+      if (currentHour === 11 && currentMinutes + remainingMinutes > 60) {
+        minutesUntilNextHour = 60 - currentMinutes;
+      }
+      
+      // Add minutes (either until next hour or remaining minutes, whichever is less)
+      const minutesToAdd = Math.min(remainingMinutes, minutesUntilNextHour);
+      endTime.setMinutes(endTime.getMinutes() + minutesToAdd);
+      remainingMinutes -= minutesToAdd;
+      
+      // If we've reached a full hour, move to next hour
+      if (endTime.getMinutes() === 60) {
+        endTime.setHours(endTime.getHours() + 1, 0, 0, 0);
+      }
+      
+      // If we're now at 12:00, skip to 13:00
+      if (endTime.getHours() === 12) {
+        endTime.setHours(13, 0, 0, 0);
+      }
+    }
+    
+    return endTime;
+  };
+
   // Handle appointment click
   const handleAppointmentClick = (appointmentId: string) => {
     navigate(`/technician/appointments/${appointmentId}`);
@@ -98,22 +140,8 @@ const TechnicianSchedule: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      {/* Filter Section */}
+      {/* Filter Section - Only shift filter */}
       <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-wrap items-center gap-4">
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value as AppointmentStatus | 'all')}
-          className="w-80 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="pending">Chờ xác nhận</option>
-          <option value="confirmed">Đã xác nhận</option>
-          <option value="in_progress">Đang thực hiện</option>
-          <option value="completed">Hoàn thành</option>
-          <option value="cancelled">Đã hủy</option>
-          <option value="no_show">Không đến</option>
-        </select>
-
         <div className="flex-1"></div>
         <div className="flex gap-1">
           {shiftOptions.map(opt => (
@@ -184,11 +212,8 @@ const TechnicianSchedule: React.FC = () => {
               return { slot, appointment };
             });
 
-            // Filter by status
-            let filteredSlots = daySlots;
-            if (selectedStatus !== 'all') {
-              filteredSlots = daySlots.filter(s => s.appointment && s.appointment.status === selectedStatus);
-            }
+            // No need to filter by status here - already filtered on server
+            const filteredSlots = daySlots;
 
             return (
               <div key={idx} className="border-r border-gray-100 last:border-r-0 px-2 py-1">
@@ -206,9 +231,47 @@ const TechnicianSchedule: React.FC = () => {
                       if (appointment) {
                         const date = getAppointmentStartTime(appointment);
                         if (!date) return null;
-                        const endDate = new Date(date.getTime() + 60 * 60 * 1000);
+                        
+                        // Get duration from service/package
+                        let durationMinutes = 60; // Default 1 hour
+                        if (appointment.servicePackageID && typeof appointment.servicePackageID === 'object' && 'duration' in appointment.servicePackageID) {
+                          durationMinutes = (appointment.servicePackageID as any).duration || 60;
+                        } else if (appointment.serviceID && typeof appointment.serviceID === 'object' && 'duration' in appointment.serviceID) {
+                          durationMinutes = (appointment.serviceID as any).duration || 60;
+                        }
+                        
+                        // Calculate end time considering lunch break (12:00-13:00)
+                        const endDate = calculateEndTime(date, durationMinutes);
                         const hour = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} - ${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-                        const customerName = appointment.userID || 'Không rõ tên';
+                        
+                        // Get customer name - handle both populated object and ID string
+                        let customerName = 'Không rõ tên';
+                        if (appointment.userID) {
+                          if (typeof appointment.userID === 'object' && appointment.userID !== null) {
+                            // If userID is populated as object, use fullName or userName
+                            const userObj = appointment.userID as any;
+                            customerName = userObj.fullName || userObj.userName || 'Không rõ tên';
+                            console.log('Customer name from populated data:', customerName, 'User object:', userObj);
+                          } else {
+                            // If userID is just a string ID and not populated, log warning
+                            console.warn('UserID is not populated, userID:', appointment.userID);
+                            customerName = 'Không rõ tên';
+                          }
+                        } else {
+                          console.warn('No userID in appointment:', appointment._id);
+                        }
+
+                        // Get service/package name - handle both populated object and ID string
+                        let serviceName = '';
+                        if (appointment.servicePackageID) {
+                          if (typeof appointment.servicePackageID === 'object' && 'name' in appointment.servicePackageID) {
+                            serviceName = (appointment.servicePackageID as any).name || '';
+                          }
+                        } else if (appointment.serviceID) {
+                          if (typeof appointment.serviceID === 'object' && 'name' in appointment.serviceID) {
+                            serviceName = (appointment.serviceID as any).name || '';
+                          }
+                        }
 
                         // Get status color class
                         const statusBgClass =
@@ -217,6 +280,17 @@ const TechnicianSchedule: React.FC = () => {
                               appointment.status === 'pending' ? 'bg-yellow-50' :
                                 appointment.status === 'in_progress' ? 'bg-purple-50' :
                                   'bg-gray-50';
+
+                        // Get status text in Vietnamese
+                        const statusText: Record<string, string> = {
+                          'pending': 'Chờ xác nhận',
+                          'confirmed': 'Đã xác nhận',
+                          'in_progress': 'Đang thực hiện',
+                          'completed': 'Hoàn thành',
+                          'cancelled': 'Đã hủy',
+                          'no_show': 'Không đến',
+                          'awaiting_payment': 'Chờ thanh toán'
+                        };
 
                         return (
                           <div
@@ -233,22 +307,24 @@ const TechnicianSchedule: React.FC = () => {
                             </div>
                             <div className="flex items-center">
                               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-semibold border-2 border-white flex-shrink-0">
-                                {customerName.charAt(0)}
+                                {customerName.charAt(0).toUpperCase()}
                               </div>
-                              <div className="min-w-0 ml-2">
+                              <div className="min-w-0 ml-2 flex-1">
                                 <div className="font-medium truncate text-sm" style={{ color: '#014091' }}>
                                   {customerName}
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
-                                  {appointment.status}
+                                  {statusText[appointment.status] || appointment.status}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate">
-                                {appointment.serviceID || ''}
-                              </span>
-                            </div>
+                            {serviceName && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 truncate">
+                                  {serviceName}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         );
                       }

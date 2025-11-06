@@ -99,13 +99,29 @@ const Service: React.FC<ServicePropsExtended> = ({ vehicleCategory, formData, on
   // ================================
 
   const handleServiceSelect = (serviceId: string) => {
-    if (activePeriodicKey) return; // block selecting periodic when active exists
+    // Only block if selecting a periodic service when another periodic is active
+    const service = services.find(s => s._id === serviceId);
+    if (!service) return; // Service not found
+    const isPeriodic = !!(service as any).periodicEnabled;
+    if (activePeriodicKey && isPeriodic) {
+      console.log('Blocked: Cannot select periodic service when another periodic is active');
+      return; // block selecting periodic when active exists
+    }
+    console.log('Selecting service:', serviceId, 'isPeriodic:', isPeriodic, 'activePeriodicKey:', activePeriodicKey);
     setSelectedId(serviceId);
     setSelectedType('service');
   };
 
   const handlePackageSelect = (packageId: string) => {
-    if (activePeriodicKey) return; // block selecting periodic when active exists
+    // Only block if selecting a periodic package when another periodic is active
+    const pkg = servicePackages.find(p => p._id === packageId);
+    if (!pkg) return; // Package not found
+    const isPeriodic = !!(pkg as any).periodicEnabled;
+    if (activePeriodicKey && isPeriodic) {
+      console.log('Blocked: Cannot select periodic package when another periodic is active');
+      return; // block selecting periodic when active exists
+    }
+    console.log('Selecting package:', packageId, 'isPeriodic:', isPeriodic, 'activePeriodicKey:', activePeriodicKey);
     setSelectedId(packageId);
     setSelectedType('package');
   };
@@ -143,15 +159,20 @@ const Service: React.FC<ServicePropsExtended> = ({ vehicleCategory, formData, on
   useEffect(() => {
     if (!activePeriodicKey) return;
     if (!selectedId || !selectedType) return;
-    const isPeriodicSelection = selectedType === 'service'
-      ? servicesPeriodic.some(s => s._id === selectedId)
-      : packagesPeriodic.some(p => p._id === selectedId);
+    let isPeriodicSelection = false;
+    if (selectedType === 'service') {
+      const service = services.find(s => s._id === selectedId);
+      isPeriodicSelection = service ? !!(service as any).periodicEnabled : false;
+    } else {
+      const pkg = servicePackages.find(p => p._id === selectedId);
+      isPeriodicSelection = pkg ? !!(pkg as any).periodicEnabled : false;
+    }
     if (isPeriodicSelection) {
       setSelectedId(null);
       setSelectedType(null);
       setPeriodicInfo(null);
     }
-  }, [activePeriodicKey]);
+  }, [activePeriodicKey, selectedId, selectedType, services, servicePackages]);
 
   const getVehicleCategoryName = () => {
     switch (vehicleCategory) {

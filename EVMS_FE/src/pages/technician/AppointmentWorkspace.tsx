@@ -72,42 +72,150 @@ const AppointmentWorkspace: React.FC = () => {
         setTechInfo(techInfoData.data);
       }
 
-      const appointmentResponse = await AppointmentApi.getAppointmentById(appointmentId || '');
-      const appointmentData: AppointmentResponse = appointmentResponse.data;
-      if (appointmentData) {
-        setAppointment(appointmentData);
+      // Fetch appointment with populated user, service/package info
+      if (!appointmentId) {
+        throw new Error('Appointment ID is required');
+      }
+      
+      console.log('Fetching appointment with ID:', appointmentId);
+      let appointmentData: AppointmentResponse | null = null;
+      
+      try {
+        const appointmentResponse = await AppointmentApi.getAppointmentById(
+          appointmentId, 
+          'user,service,package'
+        );
+        console.log('Appointment response:', appointmentResponse);
+        
+        appointmentData = appointmentResponse.data?.data || appointmentResponse.data;
+        if (!appointmentData) {
+          console.error('Appointment data is missing in response');
+        } else {
+          console.log('Appointment data received:', appointmentData);
+          setAppointment(appointmentData);
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch appointment:', error);
+        // If appointment fetch fails, try to get basic info from technician appointments list
+        if (error.response?.status === 404 || error.response?.status === 403) {
+          console.log('Trying to fetch appointment from technician list...');
+          try {
+            const techAppointmentsResponse = await AppointmentApi.getAppointmentByTechnician('confirmed');
+            const techAppointments: AppointmentResponse[] = techAppointmentsResponse.data;
+            const foundAppointment = techAppointments.find(app => app._id === appointmentId);
+            if (foundAppointment) {
+              console.log('Found appointment in technician list:', foundAppointment);
+              appointmentData = foundAppointment;
+              setAppointment(foundAppointment);
+            }
+          } catch (fallbackError) {
+            console.error('Failed to fetch from technician list:', fallbackError);
+          }
+        }
+        
+        if (!appointmentData) {
+          throw new Error('Appointment not found or access denied');
+        }
+      }
+      
+      // Fetch customer data - always fetch to ensure we have the data
+      if (appointmentData && appointmentData.userID) {
+        try {
+          console.log('Appointment userID:', appointmentData.userID, 'Type:', typeof appointmentData.userID);
+          
+          // Check if already populated
+          if (typeof appointmentData.userID === 'object' && appointmentData.userID !== null && 'fullName' in appointmentData.userID) {
+            console.log('Using populated customer data:', appointmentData.userID);
+            setCustomer(appointmentData.userID as any);
+          } else {
+            // Fetch customer data - extract ID if it's an object
+            let userId: string;
+            if (typeof appointmentData.userID === 'object' && appointmentData.userID !== null) {
+              // If it's an object with _id property
+              userId = (appointmentData.userID as any)._id || (appointmentData.userID as any).id || String(appointmentData.userID);
+            } else {
+              userId = typeof appointmentData.userID === 'string' ? appointmentData.userID : String(appointmentData.userID);
+            }
+            console.log('Fetching customer data for userId:', userId);
+            const customerResponse = await UserApi.getById(userId);
+            console.log('Customer API response:', customerResponse);
+            const customerData: UserResponse = customerResponse.data;
+            console.log('Customer data received:', customerData);
+            if (customerData) {
+              console.log('Setting customer state:', customerData);
+              setCustomer(customerData);
+            } else {
+              console.warn('Customer data is empty or null');
+            }
+          }
+        } catch (error: any) {
+          console.error('Failed to fetch customer data:', error);
+          console.error('Error response:', error.response);
+          console.error('Error message:', error.message);
+        }
+      } else {
+        console.warn('No userID in appointment data. AppointmentData:', appointmentData);
       }
 
+      // Fetch vehicle data - always fetch to ensure we have the data
+      if (appointmentData.vehicleID) {
+        try {
+          const vehicleId = typeof appointmentData.vehicleID === 'string' ? appointmentData.vehicleID : String(appointmentData.vehicleID);
+          console.log('Fetching vehicle data for vehicleId:', vehicleId);
+          const vehicleResponse = await VehicleApi.getVehicleById(vehicleId);
+          const vehicleData: VehicleResponse = vehicleResponse.data;
+          console.log('Vehicle data received:', vehicleData);
+          if (vehicleData) {
+            setVehicle(vehicleData);
+          } else {
+            console.warn('Vehicle data is empty');
+          }
+        } catch (error) {
+          console.error('Failed to fetch vehicle data:', error);
+          console.error('Error details:', error);
+        }
+      } else {
+        console.warn('No vehicleID in appointment data');
+      }
+
+      // If service/package data is populated, use it directly, otherwise fetch
+      if (appointmentData.servicePackageID) {
+        if (typeof appointmentData.servicePackageID === 'object' && 'name' in appointmentData.servicePackageID) {
+          setInfo(appointmentData.servicePackageID as any);
+        } else {
+          try {
+            const packageId = typeof appointmentData.servicePackageID === 'string' ? appointmentData.servicePackageID : String(appointmentData.servicePackageID);
+            const servicePackageResponse = await ServicePackageApi.getServicePackageById(packageId);
+            const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
+            if (servicePackageData) {
+              setInfo(servicePackageData);
+            }
+          } catch (error) {
+            console.error('Failed to fetch service package data:', error);
+          }
+        }
+      } else if (appointmentData.serviceID) {
+        if (typeof appointmentData.serviceID === 'object' && 'name' in appointmentData.serviceID) {
+          setInfo(appointmentData.serviceID as any);
+        } else {
+          try {
+            const serviceId = typeof appointmentData.serviceID === 'string' ? appointmentData.serviceID : String(appointmentData.serviceID);
+            const serviceResponse = await ServiceApi.getServiceById(serviceId);
+            const serviceData: ServiceResponse = serviceResponse.data;
+            if (serviceData) {
+              setInfo(serviceData);
+            }
+          } catch (error) {
+            console.error('Failed to fetch service data:', error);
+          }
+        }
+      }
+
+      // Fetch checklist
       const checklistResponse = await ChecklistApi.getByAppointmentId(appointmentId || '');
       const checklistData: ChecklistResponse[] = checklistResponse.data;
       if (checklistData) {
         setChecklist(checklistData);
-      }
-
-      const customerResponse = await UserApi.getById(appointmentData.userID);
-      const customerData: UserResponse = customerResponse.data;
-      if (customerData) {
-        setCustomer(customerData);
-      }
-
-      const vehicleResponse = await VehicleApi.getVehicleById(appointmentData.vehicleID);
-      const vehicleData: VehicleResponse = vehicleResponse.data;
-      if (vehicleData) {
-        setVehicle(vehicleData);
-      }
-
-      if (appointmentData.servicePackageID) {
-        const servicePackageResponse = await ServicePackageApi.getServicePackageById(appointmentData.servicePackageID);
-        const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
-        if (servicePackageData) {
-          setInfo(servicePackageData);
-        }
-      } else if (appointmentData.serviceID) {
-        const serviceResponse = await ServiceApi.getServiceById(appointmentData.serviceID);
-        const serviceData: ServiceResponse = serviceResponse.data;
-        if (serviceData) {
-          setInfo(serviceData);
-        }
       }
 
     } catch (error) {
@@ -137,29 +245,29 @@ const AppointmentWorkspace: React.FC = () => {
         <div>
           <div className="text-sm text-gray-500">Appointment</div>
 
-          {appointment?.servicePackageID &&
+          {appointment?.servicePackageID && info &&
             <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
               {(info as ServicePackageResponse).name}
             </h1>}
-          {appointment?.serviceID &&
+          {appointment?.serviceID && info &&
             <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
               {(info as ServiceResponse).name}
             </h1>}
 
-          {appointment?.servicePackageID &&
+          {appointment?.servicePackageID && info &&
             <div className="text-xs text-gray-400">
               {(info as ServicePackageResponse).description}
             </div>}
-          {appointment?.serviceID &&
+          {appointment?.serviceID && info &&
             <div className="text-xs text-gray-400">
               {(info as ServiceResponse).description}
             </div>}
 
-          {appointment?.servicePackageID &&
+          {appointment?.servicePackageID && info &&
             <div className="text-xs text-gray-400">
               {(info as ServicePackageResponse).duration} phút
             </div>}
-          {appointment?.serviceID &&
+          {appointment?.serviceID && info &&
             <div className="text-xs text-gray-400">
               {(info as ServiceResponse).duration} phút
             </div>}
@@ -175,8 +283,14 @@ const AppointmentWorkspace: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-xs text-gray-400">Khách hàng</div>
-                <div className="font-medium" style={{ color: '#014091' }}>{customer?.fullName}</div>
-                <div className="text-sm text-gray-500">{customer?.phoneNumber}</div>
+                {customer ? (
+                  <>
+                    <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
+                    <div className="text-sm text-gray-500">{customer.phoneNumber || 'Chưa có số điện thoại'}</div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-400">Đang tải...</div>
+                )}
               </div>
               <div>
                 <div className="text-xs text-gray-400">Xe</div>
@@ -186,20 +300,20 @@ const AppointmentWorkspace: React.FC = () => {
               <div>
                 <div className="text-xs text-gray-400">Dịch vụ</div>
 
-                {appointment?.servicePackageID &&
+                {appointment?.servicePackageID && info &&
                   <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
                     {(info as ServicePackageResponse).name}
                   </h1>}
-                {appointment?.serviceID &&
+                {appointment?.serviceID && info &&
                   <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
                     {(info as ServiceResponse).name}
                   </h1>}
 
-                {appointment?.servicePackageID &&
+                {appointment?.servicePackageID && info &&
                   <div className="text-xs text-gray-400">
                     {(info as ServicePackageResponse).duration} phút
                   </div>}
-                {appointment?.serviceID &&
+                {appointment?.serviceID && info &&
                   <div className="text-xs text-gray-400">
                     {(info as ServiceResponse).duration} phút
                   </div>}
@@ -266,8 +380,14 @@ const AppointmentWorkspace: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <div className="text-xs text-gray-400">Khách hàng</div>
-                  <div className="font-medium" style={{ color: '#014091' }}>{customer?.fullName}</div>
-                  <div className="text-sm text-gray-500">{customer?.phoneNumber}</div>
+                  {customer ? (
+                    <>
+                      <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
+                      <div className="text-sm text-gray-500">{customer.phoneNumber || 'Chưa có số điện thoại'}</div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-400">Đang tải...</div>
+                  )}
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Xe</div>
@@ -277,10 +397,10 @@ const AppointmentWorkspace: React.FC = () => {
                 <div>
                   <div className="text-xs text-gray-400">Dịch vụ</div>
                   <div className="font-medium" style={{ color: '#014091' }}>
-                    {appointment?.servicePackageID ? (info as ServicePackageResponse).name : (info as ServiceResponse).name}
+                    {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).name : (info as ServiceResponse).name)}
                   </div>
                   <div className="text-sm text-gray-500">Thời lượng ~
-                    {appointment?.servicePackageID ? (info as ServicePackageResponse).duration : (info as ServiceResponse).duration}
+                    {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).duration : (info as ServiceResponse).duration)}
                     phút</div>
                 </div>
                 {/* <div>

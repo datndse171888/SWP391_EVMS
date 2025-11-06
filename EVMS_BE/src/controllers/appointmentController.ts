@@ -621,6 +621,10 @@ export async function getAppointmentById(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
     const id = String(req.params.id);
+    console.log('getAppointmentById - Requested ID:', id);
+    console.log('getAppointmentById - User role:', req.user.role);
+    console.log('getAppointmentById - User ID:', req.user.id);
+    
     const includeParam = (req.query.include as string | undefined)?.trim();
     const fieldsParam = (req.query.fields as string | undefined)?.trim();
     const select = buildSelect(fieldsParam);
@@ -629,20 +633,57 @@ export async function getAppointmentById(req: Request, res: Response) {
     let query = Appointment.findById(id);
     if (select) query = query.select(select);
     let doc = await query.populate(populates);
-    if (!doc) return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    
+    if (!doc) {
+      console.log('getAppointmentById - Appointment not found in database');
+      return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    }
+
+    console.log('getAppointmentById - Appointment found:', {
+      id: doc._id,
+      userID: doc.userID,
+      technicianLeaderID: doc.technicianLeaderID,
+      technicianSupport1ID: doc.technicianSupport1ID,
+      technicianSupport2ID: doc.technicianSupport2ID
+    });
 
     const role = req.user.role;
     if (role === 'admin' || role === 'staff') {
       return res.json({ data: doc });
     }
 
-    // Tối thiểu: chỉ cho phép chủ sở hữu xem; có thể mở rộng cho technician khi có liên kết user-technician
+    // Allow customer to view their own appointments
     if (role === 'customer' && String(doc.userID) === req.user.id) {
-      return res.json( doc );
+      return res.json({ data: doc });
+    }
+
+    // Allow technician to view appointments they are assigned to
+    if (role === 'technician') {
+      const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+      if (!techDoc) {
+        console.log('getAppointmentById - Technician profile not found');
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      const technicianId = String(techDoc._id);
+      console.log('getAppointmentById - Technician ID:', technicianId);
+      
+      const isAssigned = 
+        String(doc.technicianLeaderID) === technicianId ||
+        String(doc.technicianSupport1ID) === technicianId ||
+        String(doc.technicianSupport2ID) === technicianId;
+      
+      console.log('getAppointmentById - Is assigned:', isAssigned);
+      
+      if (isAssigned) {
+        return res.json({ data: doc });
+      } else {
+        console.log('getAppointmentById - Technician not assigned to this appointment');
+      }
     }
 
     return res.status(403).json({ message: 'Insufficient permissions' });
   } catch (error) {
+    console.error('getAppointmentById error:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

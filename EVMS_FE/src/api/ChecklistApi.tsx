@@ -7,6 +7,6 @@ export const ChecklistApi = {
     },
 
     getByAppointmentId: (appointmentId: string) => {
-        return api.get<ChecklistResponse[]>(`/appointment/${appointmentId}`);
+        return api.get<ChecklistResponse[]>(`/checklists/appointment/${appointmentId}`);
     }
 }
