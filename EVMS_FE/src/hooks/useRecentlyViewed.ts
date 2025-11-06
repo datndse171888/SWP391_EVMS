@@ -31,7 +31,7 @@ export const useRecentlyViewed = () => {
   const addToRecentlyViewed = useCallback((part: Part) => {
     setRecentlyViewed((prev) => {
       // Loại bỏ part nếu đã tồn tại
-      const filtered = prev.filter((p) => p.id !== part.id && p._id !== part._id);
+      const filtered = prev.filter((p) => p._id !== part._id && p._id !== part._id);
 
       // Thêm part mới vào đầu
       const newPart: RecentlyViewedPart = {
@@ -52,7 +52,7 @@ export const useRecentlyViewed = () => {
   // Xóa một part khỏi lịch sử
   const removeFromRecentlyViewed = (partId: string) => {
     setRecentlyViewed((prev) => {
-      const updated = prev.filter((p) => p.id !== partId && p._id !== partId);
+      const updated = prev.filter((p) => p._id !== partId && p._id !== partId);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });

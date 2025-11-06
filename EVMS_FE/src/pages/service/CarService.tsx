@@ -190,7 +190,7 @@ export const CarService: React.FC = () => {
 
                 {/* Packages and Services Sections */}
                 <section className='py-20 bg-white packages-section'>
-                    <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                    <div className="max-w-7xl mx-auto ">
                         <div className='text-center'>
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Gói dịch vụ</h2>
                         </div>
@@ -204,7 +204,7 @@ export const CarService: React.FC = () => {
                                     );
                                 
                                 return filteredPackages.length > 0 ? (
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
                                         {filteredPackages.map((pkg) => (
                                             <PackageCard 
                                                 key={pkg._id} 

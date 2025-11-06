@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Tag, DollarSign } from 'lucide-react';
 import type { ServiceResponse } from '../../types/Service';
+import { Link } from 'react-router-dom';
 
 interface ServiceDetailModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-opacity-50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="relative h-64 bg-gradient-to-r from-orange-100 to-blue-100">
@@ -41,7 +42,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ isOpen, 
               </div>
             </div>
           )}
-          
+
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all hover:scale-110"
@@ -59,7 +60,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ isOpen, 
         {/* Content */}
         <div className="p-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">{service.name}</h2>
-          
+
           {service.description && (
             <p className="text-gray-600 text-lg mb-6 leading-relaxed">
               {service.description}
@@ -107,15 +108,13 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ isOpen, 
             >
               Đóng
             </button>
-            <button
-              className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold shadow-lg"
-            >
-              Đặt lịch ngay
-            </button>
+            <Link to="/booking" className="bg-gradient-to-r from-orange-600 to-blue-600 text-white rounded-lg hover:from-orange-700 hover:to-blue-700 transition-all font-semibold shadow-lg flex-1 flex items-center justify-center px-6 py-3">
+               Đặt lịch ngay
+            </Link>
+          </div>
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

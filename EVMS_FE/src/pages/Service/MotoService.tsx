@@ -119,7 +119,7 @@ export const MotoService: React.FC = () => {
 
                 {/* Packages and Services Sections */}
                 <section className='py-20 bg-white packages-section'>
-                    <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                    <div className="max-w-7xl mx-auto">
                         <div className='text-center'>
                             <h2 className="text-5xl font-bold text-blue-900 mb-4 border-b-8 border-orange-500 inline-block px-4 py-2 rounded-xl">Gói dịch vụ</h2>
                         </div>
