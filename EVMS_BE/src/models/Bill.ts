@@ -22,6 +22,7 @@ export interface IBill extends Document {
   tax: number;
   totalAmount: number;
   status: BillStatus;
+  description?: string; // Ghi chú/mô tả cho bill (dùng cho PayOS description)
 }
 
 const BillItemSchema = new Schema<BillItem>(
@@ -48,6 +49,7 @@ const BillSchema = new Schema<IBill>(
     tax: { type: Number, required: true, min: 0, default: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     status: { type: String, required: true, enum: ['pending', 'paid', 'overdue', 'cancelled'], default: 'pending', index: true },
+    description: { type: String, trim: true }, // Ghi chú/mô tả cho bill (optional)
   },
   { timestamps: true }
 );

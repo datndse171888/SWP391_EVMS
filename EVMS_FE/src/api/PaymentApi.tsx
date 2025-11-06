@@ -1,6 +1,14 @@
 import type { CheckingResponse } from '../types/DataResponse'
 import { api } from '../utils/Axios'
 
+// Simplified item interface - chỉ cần partID và quantity
+// Backend sẽ tự động lấy thông tin Part từ database
+export interface PaymentItem {
+  partID: string
+  quantity: number
+  inventoryID?: string // optional
+}
+
 export interface CreatePaymentRequest {
   appointmentId: string
   amount: number
@@ -8,12 +16,18 @@ export interface CreatePaymentRequest {
   returnUrl: string
   cancelUrl: string
   note?: string
+  // Bill information for PayOS payment - chỉ cần partID và quantity
+  items?: PaymentItem[]
+  subtotal?: number
+  tax?: number
+  totalAmount?: number
 }
 
 export interface PayOSPaymentResponse {
   paymentLinkId: string
   checkoutUrl: string
   qrCode: string
+  billId?: string
 }
 
 export interface PaymentResponse {

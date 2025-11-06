@@ -58,13 +58,13 @@ Khi chạy local, PayOS không thể trực tiếp gọi về `localhost`. Bạn
 
 2. Chạy tunnel cho Backend:
    ```bash
-   cloudflared tunnel --url http://localhost:4000
+   cloudflared-windows-amd64.exe tunnel --url http://localhost:4000
    ```
    Sẽ nhận được URL dạng: `https://xxxx-xx-xx-xx-xx.xx.trycloudflare.com`
 
 3. Chạy tunnel cho Frontend (nếu cần):
    ```bash
-   cloudflared tunnel --url http://localhost:5173
+   cloudflared-windows-amd64.exe tunnel --url http://localhost:5173
    ```
    Sẽ nhận được URL dạng: `https://yyyy-yy-yy-yy-yy.yy.trycloudflare.com`
 

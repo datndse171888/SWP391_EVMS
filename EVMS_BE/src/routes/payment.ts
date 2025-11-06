@@ -19,8 +19,8 @@ paymentRouter.post('/payos/create', authMiddleware, createPayOSPayment);
 // Xác nhận thanh toán tiền mặt (cần auth)
 paymentRouter.post('/cash/confirm', authMiddleware, confirmCashPayment);
 
-// Xác nhận PayOS payment từ callback (cần auth)
-paymentRouter.post('/payos/confirm/:paymentLinkId', authMiddleware, confirmPayOSPayment);
+// Xác nhận PayOS payment từ callback (không cần auth - PayOS redirect về URL công khai)
+paymentRouter.post('/payos/confirm/:paymentLinkId', confirmPayOSPayment);
 
 // Lấy trạng thái payment (cần auth)
 paymentRouter.get('/status/:paymentLinkId', authMiddleware, getPaymentStatus);

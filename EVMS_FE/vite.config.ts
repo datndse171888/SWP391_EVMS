@@ -8,4 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  server: {
+    host: true, // Allow external connections
+    allowedHosts: [
+      'localhost',
+      '.trycloudflare.com', // Allow all Cloudflare tunnel subdomains
+    ],
+  },
 })

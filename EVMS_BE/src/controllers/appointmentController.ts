@@ -1154,3 +1154,126 @@ export async function updateAppointmentStatus(req: Request, res: Response) {
   }
 }
 
+// Get Service or ServicePackage by Appointment ID API
+export async function getServiceByAppointmentId(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+
+    // Find appointment
+    const appointment = await Appointment.findById(appointmentId)
+      .select('serviceID servicePackageID userID')
+      .lean() as any;
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    // Check permissions
+    const role = req.user.role;
+    const isOwner = String(appointment.userID) === req.user.id;
+
+    // Admin and staff can view any appointment's service/package
+    // Customer can only view their own appointment's service/package
+    // Technician can view if they are assigned to the appointment
+    if (role === 'customer' && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn chỉ có thể xem dịch vụ của lịch hẹn của chính mình'
+      });
+    }
+
+    // If technician, check if they are assigned to this appointment
+    if (role === 'technician') {
+      const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) })
+        .select('_id')
+        .lean() as any;
+      
+      if (techDoc) {
+        const technicianId = String(techDoc._id);
+        const fullAppointment = await Appointment.findById(appointmentId)
+          .select('technicianLeaderID technicianSupport1ID technicianSupport2ID')
+          .lean() as any;
+        
+        if (fullAppointment) {
+          const isAssigned = 
+            String(fullAppointment.technicianLeaderID) === technicianId ||
+            String(fullAppointment.technicianSupport1ID) === technicianId ||
+            String(fullAppointment.technicianSupport2ID) === technicianId;
+          
+          if (!isAssigned) {
+            return res.status(403).json({
+              success: false,
+              message: 'Bạn chỉ có thể xem dịch vụ của lịch hẹn được phân công cho bạn'
+            });
+          }
+        }
+      }
+    }
+
+    // Check if appointment has serviceID or servicePackageID
+    if (appointment.serviceID) {
+      const { Service } = await import('../models/Service.js');
+      const service = await Service.findById(appointment.serviceID).lean();
+
+      if (!service) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy dịch vụ'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thông tin dịch vụ thành công',
+        data: {
+          type: 'service',
+          service: service
+        }
+      });
+    } else if (appointment.servicePackageID) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const servicePackage = await ServicePackage.findById(appointment.servicePackageID)
+        .populate('services', '_id name price duration description vehicleCategory')
+        .lean();
+
+      if (!servicePackage) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy gói dịch vụ'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thông tin gói dịch vụ thành công',
+        data: {
+          type: 'servicePackage',
+          servicePackage: servicePackage
+        }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Lịch hẹn không có dịch vụ hoặc gói dịch vụ'
+      });
+    }
+
+  } catch (error) {
+    console.error('Get service by appointment ID error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy thông tin dịch vụ'
+    });
+  }
+}
+

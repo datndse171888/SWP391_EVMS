@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AppointmentApi } from '../../api/AppointmentApi'
 import { BillApi } from '../../api/BillApi'
 import { UserApi } from '../../api/UserApi'
@@ -7,6 +8,7 @@ import { ServicePackageApi } from '../../api/ServicePackageApi'
 import { InventoryApi, type InventoryItemResponse } from '../../api/Inventory'
 import { VehicleApi } from '../../api/VehicleApi'
 import { PaymentApi } from '../../api/PaymentApi'
+import { PartApi } from '../../api/PartApi'
 import type { Part } from '../../types/Part'
 import type { VehicleResponse } from '../../types/Vehicle'
 
@@ -89,7 +91,7 @@ const BookingPage: React.FC = () => {
       const userCache = new Map<string, { fullName?: string; userName?: string; phoneNumber?: string }>()
       await Promise.all(uniqueUserIds.map(async (uid: string) => {
         try {
-          const ures = await UserApi.getUserById(uid)
+          const ures = await UserApi.getById(uid)
           userCache.set(uid, {
             fullName: ures?.data?.fullName,
             userName: ures?.data?.userName,
@@ -255,6 +257,462 @@ const BookingPage: React.FC = () => {
     }
   }, [activeStep])
 
+  // Handle payment callback from PayOS
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    const paymentSuccessParam = searchParams.get('paymentSuccess')
+    const paymentFailedParam = searchParams.get('paymentFailed')
+    const paymentCanceledParam = searchParams.get('paymentCanceled')
+    const appointmentIdParam = searchParams.get('appointmentId')
+    const billIdParam = searchParams.get('billId')
+
+    // Reset isPaying khi component mount hoặc khi có callback (tránh stuck state)
+    setIsPaying(false)
+
+    // Check localStorage for payment success info
+    const paymentInfoStr = localStorage.getItem('paymentSuccess')
+    
+    if (paymentSuccessParam === 'true' || paymentInfoStr) {
+      // Payment successful - restore state and show step 4
+      let paymentInfo: { appointmentId?: string; billId?: string; billNumber?: string; paymentMethod?: string } = {}
+      
+      if (paymentInfoStr) {
+        try {
+          paymentInfo = JSON.parse(paymentInfoStr)
+          // Clear localStorage after reading
+          localStorage.removeItem('paymentSuccess')
+        } catch (e) {
+          console.error('Failed to parse payment info:', e)
+        }
+      }
+
+      const finalAppointmentId = appointmentIdParam || paymentInfo.appointmentId
+      const finalBillId = billIdParam || paymentInfo.billId
+
+      if (finalAppointmentId) {
+        // Find and select the appointment
+        const appointment = appointments.find(a => a.id === finalAppointmentId)
+        if (appointment) {
+          // Nếu appointment không có servicePrice, fetch lại bằng getServiceByAppointmentId
+          const finalAppointment = appointment
+          if (!appointment.servicePrice && (appointment.kind === 'service' || appointment.kind === 'package')) {
+            AppointmentApi.getServiceByAppointmentId(finalAppointmentId).then((serviceRes) => {
+              if (serviceRes.data?.success && serviceRes.data.data) {
+                const { type, service, servicePackage } = serviceRes.data.data
+                if (type === 'service' && service) {
+                  console.log('✅ Fetched service for appointment (in list):', service.name, service.price)
+                  const updatedAppointment = {
+                    ...appointment,
+                    servicePrice: service.price,
+                    descriptionText: service.name,
+                    vehicleCategory: service.vehicleCategory,
+                    kind: 'service' as const,
+                  }
+                  setSelectedAppointment(updatedAppointment)
+                } else if (type === 'servicePackage' && servicePackage) {
+                  console.log('✅ Fetched servicePackage for appointment (in list):', servicePackage.name, servicePackage.price)
+                  const updatedAppointment = {
+                    ...appointment,
+                    servicePrice: servicePackage.price,
+                    descriptionText: servicePackage.name,
+                    vehicleCategory: servicePackage.vehicleCategory,
+                    kind: 'package' as const,
+                  }
+                  setSelectedAppointment(updatedAppointment)
+                }
+              }
+            }).catch((e: unknown) => {
+              console.error('❌ Failed to fetch service for appointment:', e)
+            })
+          }
+          
+          setSelectedAppointment(finalAppointment)
+          setPaymentMethod(paymentInfo.paymentMethod as 'PAYOS' || 'PAYOS')
+          setPaymentSuccess(true)
+          
+          if (finalBillId) {
+            setBillId(finalBillId)
+            // Fetch bill to get billNumber and restore cartLines
+            BillApi.getById(finalBillId).then(async (res) => {
+              console.log('📄 Bill response:', res.data)
+              if (res.data?.data) {
+                const bill = res.data.data
+                console.log('📄 Bill data:', bill)
+                if (bill.billNumber) {
+                  setBillNumber(bill.billNumber)
+                  console.log('✅ Bill number set:', bill.billNumber)
+                }
+                
+                // Fetch service từ appointmentID trong bill
+                if (bill.appointmentID) {
+                  const appointmentIdStr = typeof bill.appointmentID === 'string' 
+                    ? bill.appointmentID 
+                    : (bill.appointmentID as { toString?: () => string; _id?: string })?.toString?.() 
+                      || (bill.appointmentID as { _id?: string })?._id 
+                      || String(bill.appointmentID)
+                  
+                  console.log('🔍 Fetching service from appointmentID:', appointmentIdStr)
+                  try {
+                    const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
+                    if (serviceRes.data?.success && serviceRes.data.data) {
+                      const { type, service, servicePackage } = serviceRes.data.data
+                      if (type === 'service' && service) {
+                        console.log('✅ Fetched service:', service.name, service.price)
+                        // Update selectedAppointment với service info
+                        if (finalAppointment) {
+                          setSelectedAppointment({
+                            ...finalAppointment,
+                            servicePrice: service.price,
+                            descriptionText: service.name,
+                            vehicleCategory: service.vehicleCategory,
+                            kind: 'service',
+                          })
+                        }
+                      } else if (type === 'servicePackage' && servicePackage) {
+                        console.log('✅ Fetched servicePackage:', servicePackage.name, servicePackage.price)
+                        // Update selectedAppointment với servicePackage info
+                        if (finalAppointment) {
+                          setSelectedAppointment({
+                            ...finalAppointment,
+                            servicePrice: servicePackage.price,
+                            descriptionText: servicePackage.name,
+                            vehicleCategory: servicePackage.vehicleCategory,
+                            kind: 'package',
+                          })
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.error('❌ Failed to fetch service from appointmentID:', e)
+                  }
+                }
+                
+                // Restore cartLines from bill items
+                if (bill.items && Array.isArray(bill.items) && bill.items.length > 0) {
+                  console.log('📦 Restoring cartLines from bill items:', bill.items.length, 'items')
+                  try {
+                    // Fetch parts to populate cartLines
+                    const partIds = bill.items.map((item: { partID?: string | { toString?: () => string } }) => {
+                      // partID có thể là ObjectId hoặc string
+                      const pid = item.partID
+                      if (!pid) return null
+                      return typeof pid === 'string' ? pid : (pid as unknown as { toString?: () => string })?.toString?.() || String(pid)
+                    }).filter((id): id is string => Boolean(id))
+                    console.log('📦 Part IDs to fetch:', partIds)
+                    const partsMap = new Map<string, Part>()
+                    
+                    // Fetch each part (you might want to optimize this with a batch API)
+                    await Promise.all(partIds.map(async (partId: string) => {
+                      try {
+                        const partRes = await PartApi.getPartById(partId)
+                        if (partRes.data?.part) {
+                          partsMap.set(partId, partRes.data.part)
+                          console.log(`✅ Fetched part ${partId}:`, partRes.data.part.name)
+                        }
+                      } catch (e) {
+                        console.error(`❌ Failed to fetch part ${partId}:`, e)
+                      }
+                    }))
+                    
+                    // Rebuild cartLines from bill items
+                    const restoredCartLines: CartLine[] = bill.items
+                      .map((item: { partID?: string | { toString?: () => string; _id?: string | { toString?: () => string } }; quantity?: number }) => {
+                        const pid = item.partID
+                        let partIdStr = ''
+                        if (typeof pid === 'string') {
+                          partIdStr = pid
+                        } else if (pid) {
+                          // ObjectId có thể có _id hoặc toString
+                          const obj = pid as { toString?: () => string; _id?: string | { toString?: () => string } }
+                          if (obj._id) {
+                            partIdStr = typeof obj._id === 'string' ? obj._id : obj._id.toString?.() || String(obj._id)
+                          } else {
+                            partIdStr = obj.toString?.() || String(pid)
+                          }
+                        }
+                        if (!partIdStr) {
+                          console.warn('⚠️ Invalid partID:', pid)
+                          return null
+                        }
+                        // Try to find part by exact match or by comparing all keys
+                        let part = partsMap.get(partIdStr)
+                        if (!part) {
+                          // Try to find by comparing all part IDs in map
+                          for (const [key, value] of partsMap.entries()) {
+                            if (key === partIdStr || String(key) === String(partIdStr) || value.id === partIdStr) {
+                              part = value
+                              break
+                            }
+                          }
+                        }
+                        if (part) {
+                          return {
+                            part,
+                            quantity: item.quantity || 1,
+                          }
+                        }
+                        console.warn('⚠️ Part not found for partID:', partIdStr, 'Available parts:', Array.from(partsMap.keys()))
+                        return null
+                      })
+                      .filter((line): line is CartLine => line !== null)
+                    
+                    console.log('✅ Restored cartLines:', restoredCartLines.length, 'items')
+                    setCartLines(restoredCartLines)
+                  } catch (e) {
+                    console.error('❌ Failed to restore cartLines:', e)
+                  }
+                } else {
+                  console.log('ℹ️ Bill has no items or items is empty')
+                }
+              }
+            }).catch((e: unknown) => {
+              console.error('❌ Failed to fetch bill:', e)
+            })
+          } else if (paymentInfo.billNumber) {
+            setBillNumber(paymentInfo.billNumber)
+          }
+          
+          console.log('📊 State before step 4:')
+          console.log('- selectedAppointment:', selectedAppointment)
+          console.log('- serviceFee:', serviceFee)
+          console.log('- cartLines:', cartLines.length)
+          console.log('- partsTotal:', partsTotal)
+          console.log('- grandTotal:', grandTotal)
+          console.log('- billNumber:', billNumber)
+          console.log('- billId:', billId)
+          
+          setActiveStep(4)
+        } else {
+          // Appointment not found in current list, try to fetch it with full details
+          AppointmentApi.getAppointmentById(finalAppointmentId).then(async (res) => {
+            if (res.data) {
+              type BackendAppointment = { 
+                _id?: string; 
+                id?: string; 
+                userID?: string; 
+                vehicleID?: string; 
+                bookingDate?: string; 
+                status?: string;
+                serviceID?: unknown;
+                serviceId?: unknown;
+                service?: unknown;
+                servicePackageID?: unknown;
+                servicePackageId?: unknown;
+                servicePackage?: unknown;
+              }
+              const apt = res.data as BackendAppointment
+              
+              // Fetch user info
+              let customerName = 'Khách hàng'
+              let customerPhone = '—'
+              if (apt.userID) {
+                try {
+                  const userRes = await UserApi.getById(apt.userID)
+                  customerName = userRes.data?.fullName || userRes.data?.userName || customerName
+                  customerPhone = userRes.data?.phoneNumber || customerPhone
+                } catch (e) {
+                  console.error('Failed to fetch user:', e)
+                }
+              }
+              
+              // Fetch service/servicePackage info từ appointmentID (dùng getServiceByAppointmentId)
+              let descriptionText: string | undefined
+              let servicePrice: number | undefined
+              let vehicleCategory: string | undefined
+              let kind: 'service' | 'package' = 'service'
+              
+              try {
+                const appointmentIdStr = String(apt._id || apt.id || '')
+                console.log('🔍 Fetching service from appointmentID (not in list):', appointmentIdStr)
+                const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
+                if (serviceRes.data?.success && serviceRes.data.data) {
+                  const { type, service, servicePackage } = serviceRes.data.data
+                  if (type === 'service' && service) {
+                    console.log('✅ Fetched service (not in list):', service.name, service.price)
+                    descriptionText = service.name
+                    servicePrice = service.price
+                    vehicleCategory = service.vehicleCategory
+                    kind = 'service'
+                  } else if (type === 'servicePackage' && servicePackage) {
+                    console.log('✅ Fetched servicePackage (not in list):', servicePackage.name, servicePackage.price)
+                    descriptionText = servicePackage.name
+                    servicePrice = servicePackage.price
+                    vehicleCategory = servicePackage.vehicleCategory
+                    kind = 'package'
+                  }
+                }
+              } catch (e) {
+                console.error('❌ Failed to fetch service from appointmentID:', e)
+              }
+              
+              const newAppointment: AppointmentLite = {
+                id: String(apt._id || apt.id || ''),
+                userID: apt.userID,
+                vehicleID: apt.vehicleID,
+                customerName,
+                customerPhone,
+                bookingDateISO: apt.bookingDate,
+                dateText: apt.bookingDate ? new Date(apt.bookingDate).toLocaleDateString('vi-VN') : '',
+                timeText: apt.bookingDate ? new Date(apt.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+                status: apt.status,
+                descriptionText,
+                vehicleCategory,
+                kind,
+                servicePrice,
+              }
+              setSelectedAppointment(newAppointment)
+              setPaymentMethod('PAYOS')
+              setPaymentSuccess(true)
+              
+              // Fetch bill nếu có billId
+              if (finalBillId) {
+                setBillId(finalBillId)
+                BillApi.getById(finalBillId).then(async (billRes) => {
+                  if (billRes.data?.data) {
+                    const bill = billRes.data.data
+                    if (bill.billNumber) {
+                      setBillNumber(bill.billNumber)
+                    }
+                    
+                    // Fetch service từ appointmentID trong bill (nếu chưa có servicePrice)
+                    if (bill.appointmentID && !newAppointment.servicePrice) {
+                      const appointmentIdStr = typeof bill.appointmentID === 'string' 
+                        ? bill.appointmentID 
+                        : (bill.appointmentID as { toString?: () => string; _id?: string })?.toString?.() 
+                          || (bill.appointmentID as { _id?: string })?._id 
+                          || String(bill.appointmentID)
+                      
+                      console.log('🔍 Fetching service from bill.appointmentID:', appointmentIdStr)
+                      try {
+                        const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
+                        if (serviceRes.data?.success && serviceRes.data.data) {
+                          const { type, service, servicePackage } = serviceRes.data.data
+                          if (type === 'service' && service) {
+                            console.log('✅ Fetched service from bill:', service.name, service.price)
+                            setSelectedAppointment({
+                              ...newAppointment,
+                              servicePrice: service.price,
+                              descriptionText: service.name,
+                              vehicleCategory: service.vehicleCategory,
+                              kind: 'service',
+                            })
+                          } else if (type === 'servicePackage' && servicePackage) {
+                            console.log('✅ Fetched servicePackage from bill:', servicePackage.name, servicePackage.price)
+                            setSelectedAppointment({
+                              ...newAppointment,
+                              servicePrice: servicePackage.price,
+                              descriptionText: servicePackage.name,
+                              vehicleCategory: servicePackage.vehicleCategory,
+                              kind: 'package',
+                            })
+                          }
+                        }
+                      } catch (e) {
+                        console.error('❌ Failed to fetch service from bill.appointmentID:', e)
+                      }
+                    }
+                    
+                    // Restore cartLines from bill items
+                    if (bill.items && Array.isArray(bill.items) && bill.items.length > 0) {
+                      try {
+                        const partIds = bill.items.map((item: { partID?: string | { toString?: () => string; _id?: string | { toString?: () => string } } }) => {
+                          const pid = item.partID
+                          if (!pid) return null
+                          if (typeof pid === 'string') return pid
+                          const obj = pid as { toString?: () => string; _id?: string | { toString?: () => string } }
+                          if (obj._id) {
+                            return typeof obj._id === 'string' ? obj._id : obj._id.toString?.() || String(obj._id)
+                          }
+                          return obj.toString?.() || String(pid)
+                        }).filter((id): id is string => Boolean(id))
+                        console.log('📦 Part IDs to fetch (appointment not in list):', partIds)
+                        const partsMap = new Map<string, Part>()
+                        
+                        await Promise.all(partIds.map(async (partId: string) => {
+                          try {
+                            const partRes = await PartApi.getPartById(partId)
+                            if (partRes.data?.part) {
+                              partsMap.set(partId, partRes.data.part)
+                              console.log(`✅ Fetched part ${partId} (appointment not in list):`, partRes.data.part.name)
+                            }
+                          } catch (e) {
+                            console.error(`❌ Failed to fetch part ${partId}:`, e)
+                          }
+                        }))
+                        
+                        const restoredCartLines: CartLine[] = bill.items
+                          .map((item: { partID?: string | { toString?: () => string; _id?: string | { toString?: () => string } }; quantity?: number }) => {
+                            const pid = item.partID
+                            let partIdStr = ''
+                            if (typeof pid === 'string') {
+                              partIdStr = pid
+                            } else if (pid) {
+                              // ObjectId có thể có _id hoặc toString
+                              const obj = pid as { toString?: () => string; _id?: string | { toString?: () => string } }
+                              if (obj._id) {
+                                partIdStr = typeof obj._id === 'string' ? obj._id : obj._id.toString?.() || String(obj._id)
+                              } else {
+                                partIdStr = obj.toString?.() || String(pid)
+                              }
+                            }
+                            if (!partIdStr) {
+                              console.warn('⚠️ Invalid partID:', pid)
+                              return null
+                            }
+                            // Try to find part by exact match or by comparing all keys
+                            let part = partsMap.get(partIdStr)
+                            if (!part) {
+                              // Try to find by comparing all part IDs in map
+                              for (const [key, value] of partsMap.entries()) {
+                                if (key === partIdStr || String(key) === String(partIdStr) || value.id === partIdStr) {
+                                  part = value
+                                  break
+                                }
+                              }
+                            }
+                            if (part) {
+                              return {
+                                part,
+                                quantity: item.quantity || 1,
+                              }
+                            }
+                            console.warn('⚠️ Part not found for partID:', partIdStr, 'Available parts:', Array.from(partsMap.keys()))
+                            return null
+                          })
+                          .filter((line): line is CartLine => line !== null)
+                        
+                        console.log('✅ Restored cartLines (appointment not in list):', restoredCartLines.length, 'items')
+                        setCartLines(restoredCartLines)
+                      } catch (e) {
+                        console.error('Failed to restore cartLines:', e)
+                      }
+                    }
+                  }
+                }).catch((e: unknown) => {
+                  console.error('Failed to fetch bill:', e)
+                })
+              }
+              
+              setActiveStep(4)
+            }
+          }).catch((e: unknown) => {
+            console.error('Failed to fetch appointment:', e)
+          })
+        }
+      }
+      
+      // Clear URL params
+      setSearchParams({})
+    } else if (paymentFailedParam === 'true' || paymentCanceledParam === 'true') {
+      // Payment failed or canceled
+      setPaymentSuccess(false)
+      setActiveStep(4)
+      // Clear URL params
+      setSearchParams({})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, appointments, setSearchParams])
+
   // Load vehicle when entering step 3
   useEffect(() => {
     const loadVehicle = async () => {
@@ -351,13 +809,11 @@ const BookingPage: React.FC = () => {
         // 1) Tạo bill pending với items từ cart
         let billId = ''
         try {
+          // Chuẩn bị bill items từ cart - chỉ cần partID và quantity
+          // Backend sẽ tự động lấy thông tin Part từ database
           const billItems = cartLines.map(line => ({
             partID: line.part.id,
-            partName: line.part.name,
-            partNumber: line.part.partNumber || '',
-            unitPrice: line.part.price,
             quantity: line.quantity,
-            lineTotal: line.part.price * line.quantity,
           }))
           const billRes = await BillApi.createBill({
             appointmentID: selectedAppointment.id,
@@ -365,6 +821,7 @@ const BookingPage: React.FC = () => {
             subtotal: serviceFee + partsTotal,
             tax: 0,
             totalAmount: grandTotal,
+            description: note || undefined, // Lưu note vào bill description
           })
           billId = billRes.data.bill?._id || ''
           setBillId(billId)
@@ -390,10 +847,12 @@ const BookingPage: React.FC = () => {
             }
           }
           setPaymentSuccess(true)
+          setIsPaying(false) // Reset isPaying sau khi thanh toán thành công
           setActiveStep(4)
         } else {
           setError(payRes.data?.message || 'Thanh toán thất bại')
           setPaymentSuccess(false)
+          setIsPaying(false) // Reset isPaying khi thanh toán thất bại
           setActiveStep(4)
         }
       } else if (paymentMethod === 'PAYOS') {
@@ -403,6 +862,13 @@ const BookingPage: React.FC = () => {
         const returnUrl = `${frontendBaseUrl}/payment/callback?appointmentId=${selectedAppointment.id}`
         const cancelUrl = `${frontendBaseUrl}/staff/booking`
 
+        // Chuẩn bị bill items từ cart - chỉ cần partID và quantity
+        // Backend sẽ tự động lấy thông tin Part từ database
+        const billItems = cartLines.map(line => ({
+          partID: line.part.id,
+          quantity: line.quantity,
+        }))
+
         const res = await PaymentApi.createPayOSPayment({
           appointmentId: selectedAppointment.id,
           amount: grandTotal,
@@ -410,11 +876,23 @@ const BookingPage: React.FC = () => {
           returnUrl,
           cancelUrl,
           note: note || undefined,
+          // Bill information for PayOS payment
+          items: billItems,
+          subtotal: serviceFee + partsTotal,
+          tax: 0,
+          totalAmount: grandTotal,
         })
 
         if (res.data?.success && res.data.data?.checkoutUrl) {
+          // Lưu billId và billNumber nếu có (từ response)
+          const paymentData = res.data.data as { checkoutUrl: string; billId?: string; paymentLinkId?: string; qrCode?: string }
+          if (paymentData.billId) {
+            setBillId(paymentData.billId)
+          }
+          // Reset isPaying trước khi redirect (vì redirect sẽ mất state)
+          setIsPaying(false)
           // Redirect đến PayOS checkout page
-          window.location.href = res.data.data.checkoutUrl
+          window.location.href = paymentData.checkoutUrl
         } else {
           setError(res.data?.message || 'Không thể tạo liên kết thanh toán')
           setIsPaying(false)

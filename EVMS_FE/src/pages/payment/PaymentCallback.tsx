@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { PaymentApi } from '../../api/PaymentApi'
+import { BillApi } from '../../api/BillApi'
 
 const PaymentCallback: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -9,13 +10,29 @@ const PaymentCallback: React.FC = () => {
   const [message, setMessage] = useState('')
 
   const appointmentId = searchParams.get('appointmentId')
-  const paymentLinkId = searchParams.get('paymentLinkId') || searchParams.get('code')
+  // PayOS có thể gửi paymentLinkId hoặc code (orderCode) hoặc id trong URL
+  const paymentLinkId = searchParams.get('paymentLinkId') || searchParams.get('id') || searchParams.get('code')
+  const cancelParam = searchParams.get('cancel')
+  const statusParam = searchParams.get('status')
 
   useEffect(() => {
     const confirmPayment = async () => {
+      // Nếu cancel hoặc status không phải success
+      if (cancelParam === 'true' || (statusParam && statusParam !== 'PAID' && statusParam !== 'success')) {
+        setStatus('failed')
+        setMessage('Thanh toán đã bị hủy')
+        setTimeout(() => {
+          navigate('/staff/booking?paymentCanceled=true')
+        }, 2000)
+        return
+      }
+
       if (!appointmentId) {
         setStatus('failed')
         setMessage('Thiếu thông tin appointment')
+        setTimeout(() => {
+          navigate('/staff/booking')
+        }, 2000)
         return
       }
 
@@ -28,29 +45,68 @@ const PaymentCallback: React.FC = () => {
             setStatus('success')
             setMessage('Thanh toán thành công!')
             
-            // Redirect về booking page sau 2 giây
+            // Lấy thông tin bill từ payment để hiển thị
+            const payment = res.data.data as unknown as { billID?: string; billId?: string; [key: string]: unknown }
+            let billId = ''
+            let billNumber = ''
+            
+            // Nếu có billID trong payment (có thể là billID hoặc billId), fetch bill để lấy billNumber
+            const paymentBillId = payment.billID || payment.billId
+            if (paymentBillId) {
+              try {
+                const billRes = await BillApi.getById(paymentBillId)
+                if (billRes.data?.data) {
+                  billId = paymentBillId
+                  billNumber = billRes.data.data.billNumber || ''
+                }
+              } catch (e) {
+                console.error('Failed to fetch bill:', e)
+              }
+            }
+            
+            // Lưu thông tin vào localStorage để BookingPage có thể restore
+            const paymentInfo = {
+              success: true,
+              appointmentId,
+              billId,
+              billNumber,
+              paymentMethod: 'PAYOS',
+              timestamp: Date.now(),
+            }
+            localStorage.setItem('paymentSuccess', JSON.stringify(paymentInfo))
+            
+            // Redirect về booking page với step 4
             setTimeout(() => {
-              navigate('/staff/booking')
-            }, 2000)
+              navigate(`/staff/booking?paymentSuccess=true&appointmentId=${appointmentId}${billId ? `&billId=${billId}` : ''}`)
+            }, 1500)
           } else {
             setStatus('failed')
             setMessage(res.data?.message || 'Thanh toán chưa được xác nhận')
+            setTimeout(() => {
+              navigate('/staff/booking?paymentFailed=true')
+            }, 2000)
           }
         } catch (error) {
           console.error('Payment confirmation error:', error)
           const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Có lỗi xảy ra khi xác nhận thanh toán'
           setStatus('failed')
           setMessage(errorMessage)
+          setTimeout(() => {
+            navigate('/staff/booking?paymentFailed=true')
+          }, 2000)
         }
       } else {
         // Không có paymentLinkId, có thể đã cancel
         setStatus('failed')
         setMessage('Thanh toán đã bị hủy')
+        setTimeout(() => {
+          navigate('/staff/booking?paymentCanceled=true')
+        }, 2000)
       }
     }
 
     confirmPayment()
-  }, [appointmentId, paymentLinkId, navigate])
+  }, [appointmentId, paymentLinkId, cancelParam, statusParam, navigate])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

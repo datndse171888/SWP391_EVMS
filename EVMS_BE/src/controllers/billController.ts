@@ -1,19 +1,21 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Bill, IBill, BillStatus, BillItem } from '../models/Bill.js';
+import { Part } from '../models/Part.js';
 import { decreaseInventoryByPartId } from './inventoryController.js';
 
 // POST /api/bills
 // Tạo bill với status 'pending'
 export async function createBill(req: Request, res: Response) {
   try {
-    const { appointmentID, items, subtotal, tax, totalAmount, dueDate } = req.body as {
+    const { appointmentID, items, subtotal, tax, totalAmount, dueDate, description } = req.body as {
       appointmentID?: string;
       items?: BillItem[];
       subtotal?: number;
       tax?: number;
       totalAmount?: number;
       dueDate?: string | Date;
+      description?: string;
     };
 
     if (!appointmentID) {
@@ -34,25 +36,38 @@ export async function createBill(req: Request, res: Response) {
       return res.status(400).json({ message: 'totalAmount không hợp lệ' });
     }
 
-    // Validate items nếu có
-    const billItems: BillItem[] = items || [];
-    if (Array.isArray(items)) {
+    // Validate và populate thông tin Part từ database
+    const billItems: BillItem[] = [];
+    if (Array.isArray(items) && items.length > 0) {
       for (const item of items) {
+        // Chỉ cần partID và quantity từ frontend
         if (!item.partID || !mongoose.Types.ObjectId.isValid(item.partID)) {
           return res.status(400).json({ message: 'items[].partID không hợp lệ' });
-        }
-        if (!item.partName || !item.partNumber) {
-          return res.status(400).json({ message: 'items[].partName và partNumber là bắt buộc' });
-        }
-        if (isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) {
-          return res.status(400).json({ message: 'items[].unitPrice không hợp lệ' });
         }
         if (isNaN(Number(item.quantity)) || Number(item.quantity) < 1) {
           return res.status(400).json({ message: 'items[].quantity phải >= 1' });
         }
-        if (isNaN(Number(item.lineTotal)) || Number(item.lineTotal) < 0) {
-          return res.status(400).json({ message: 'items[].lineTotal không hợp lệ' });
+
+        // Lấy thông tin Part từ database
+        const part = await Part.findById(item.partID);
+        if (!part) {
+          return res.status(404).json({ message: `Không tìm thấy linh kiện với ID: ${item.partID}` });
         }
+
+        // Tính toán lineTotal từ price và quantity
+        const unitPrice = part.price;
+        const quantity = Number(item.quantity);
+        const lineTotal = unitPrice * quantity;
+
+        billItems.push({
+          partID: new mongoose.Types.ObjectId(item.partID),
+          inventoryID: item.inventoryID ? new mongoose.Types.ObjectId(item.inventoryID) : undefined,
+          partName: part.name,
+          partNumber: part.partNumber || part._id.toString(), // Dùng partNumber hoặc partID làm fallback
+          unitPrice: unitPrice,
+          quantity: quantity,
+          lineTotal: lineTotal,
+        });
       }
     }
 
@@ -65,19 +80,12 @@ export async function createBill(req: Request, res: Response) {
       billNumber: generatedNumber,
       issueDate: issue,
       dueDate: due,
-      items: billItems.map(item => ({
-        partID: new mongoose.Types.ObjectId(item.partID),
-        inventoryID: item.inventoryID ? new mongoose.Types.ObjectId(item.inventoryID) : undefined,
-        partName: item.partName,
-        partNumber: item.partNumber,
-        unitPrice: Number(item.unitPrice),
-        quantity: Number(item.quantity),
-        lineTotal: Number(item.lineTotal),
-      })),
+      items: billItems,
       subtotal: Number(subtotal),
       tax: taxValue,
       totalAmount: computedTotal,
       status: 'pending',
+      description: description || undefined, // Ghi chú/mô tả cho bill
     } as Partial<IBill>);
 
     return res.status(201).json({ message: 'Tạo hoá đơn thành công', bill });
@@ -139,6 +147,28 @@ export async function updateBillStatus(req: Request, res: Response) {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   } finally {
     session.endSession();
+  }
+}
+
+// GET /api/bills/:id
+// Lấy thông tin bill theo ID
+export async function getBillById(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'ID không hợp lệ' });
+    }
+
+    const bill = await Bill.findById(id);
+    if (!bill) {
+      return res.status(404).json({ message: 'Không tìm thấy hoá đơn' });
+    }
+
+    return res.json({ data: bill });
+  } catch (error: any) {
+    console.error('Error getting bill:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
 

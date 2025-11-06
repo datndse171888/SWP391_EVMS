@@ -1,5 +1,7 @@
 import type { AppointmentResponse, AppointmentStatus, CreateAppointmentRequest, UpdateAppointmentStatusRequest } from "../types/Appoitment";
-import type { FilteredDataResponse } from "../types/DataResponse";
+import type { FilteredDataResponse, CheckingResponse } from "../types/DataResponse";
+import type { ServiceResponse } from "../types/Service";
+import type { ServicePackageResponse } from "../types/ServicePackage";
 import { api } from "../utils/Axios";
 
 export const AppointmentApi = {
@@ -37,5 +39,13 @@ export const AppointmentApi = {
 
   cancelAppointment: (appointmentId: string) => {
     return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/cancel`);
+  },
+
+  getServiceByAppointmentId: (appointmentId: string) => {
+    return api.get<CheckingResponse<{
+      type: 'service' | 'servicePackage';
+      service?: ServiceResponse;
+      servicePackage?: ServicePackageResponse;
+    }>>(`/appointments/${appointmentId}/service`);
   }
 };
