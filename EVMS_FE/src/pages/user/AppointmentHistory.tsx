@@ -392,7 +392,7 @@ const AppointmentHistory = () => {
                 </button>
               </div>
             ) : (
-              <div className="h-100 scroll-auto">
+              <div className="h-100 scroll-auto" style={{ paddingBottom: '28rem' }}>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {paginatedAppointments.map((appointment) => (
                     <AppointmentCard
@@ -406,7 +406,9 @@ const AppointmentHistory = () => {
                 </div>
 
                 {/* Pagination */}
+                <div className="mt-6 mb-8">
                 {renderPagination()}
+                </div>
 
               </div>
             )}

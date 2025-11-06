@@ -37,7 +37,7 @@ export const UserProfileLayout: React.FC<UserProfileLayoutProps> = ({ children }
             <img
               src={carImage}
               alt="Electric car decoration"
-              className="absolute right-6 bottom-0 w-64 md:w-80 lg:w-96 h-auto opacity-95"
+              className="absolute right-6 -bottom-8 w-64 md:w-80 lg:w-96 h-auto opacity-95"
             />
           </div>
         </div>

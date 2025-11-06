@@ -12,6 +12,7 @@ import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { VehicleApi } from '../../api/VehicleApi';
 import { UserApi } from '../../api/UserApi';
+import { AppointmentApi } from '../../api/AppointmentApi';
 import { getStatusColor, getStatusLabel, randomColor } from '../../utils/Appointment';
 
 interface AppointmentCardProps {
@@ -61,21 +62,48 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
             const vehicleData: VehicleResponse = vehicleResponse.data;
             setVehicle(vehicleData);
 
-            if (appointment.servicePackageID) {
-                const servicePackageResponse = await ServicePackageApi.getServicePackageById(appointment.servicePackageID);
-                const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
-                setServicePackage(servicePackageData);
-            } else if (appointment.serviceID) {
-                const serviceResponse = await ServiceApi.getServiceById(appointment.serviceID);
-                const serviceData: ServiceResponse = serviceResponse.data;
-                setService(serviceData);
+            // Fetch service/servicePackage using getServiceByAppointmentId API
+            try {
+                const serviceResponse = await AppointmentApi.getServiceByAppointmentId(appointment._id);
+                const serviceData = serviceResponse.data.data;
+                
+                if (serviceData.type === 'service' && serviceData.service) {
+                    setService(serviceData.service);
+                } else if (serviceData.type === 'servicePackage' && serviceData.servicePackage) {
+                    setServicePackage(serviceData.servicePackage);
+                }
+            } catch (serviceError) {
+                console.error('Error fetching service/servicePackage:', serviceError);
+                // Fallback to old method if API fails
+                if (appointment.servicePackageID) {
+                    try {
+                        const servicePackageResponse = await ServicePackageApi.getServicePackageById(
+                            typeof appointment.servicePackageID === 'string' 
+                                ? appointment.servicePackageID 
+                                : (appointment.servicePackageID as any)?._id || appointment.servicePackageID
+                        );
+                        const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
+                        setServicePackage(servicePackageData);
+                    } catch (error) {
+                        console.error('Error fetching service package:', error);
+                    }
+                } else if (appointment.serviceID) {
+                    try {
+                        const serviceResponse = await ServiceApi.getServiceById(
+                            typeof appointment.serviceID === 'string' 
+                                ? appointment.serviceID 
+                                : (appointment.serviceID as any)?._id || appointment.serviceID
+                        );
+                        const serviceData: ServiceResponse = serviceResponse.data;
+                        setService(serviceData);
+                    } catch (error) {
+                        console.error('Error fetching service:', error);
+                    }
+                }
             }
         } catch (error) {
             console.error('Error fetching appointment details ', appointment._id, ':', error);
         }
-
-        console.log(service);
-        
     };
 
     // ===================================
@@ -136,21 +164,25 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     </div>}
 
                 {/* Service/Package Info */}
-                {appointment.servicePackageID && (
+                {servicePackage && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Package className="w-4 h-4 mr-2 text-gray-400" />
                         <span className="truncate">
-                            {servicePackage?.name && servicePackage.name.length > 25
+                            {servicePackage.name && servicePackage.name.length > 40
                                 ? `${servicePackage.name.substring(0, 40)} ...`
-                                : servicePackage?.name}
+                                : servicePackage.name}
                         </span>
                     </div>
                 )}
 
-                {appointment.serviceID && (
+                {service && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Wrench className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="truncate">{service?.name}</span>
+                        <span className="truncate">
+                            {service.name && service.name.length > 40
+                                ? `${service.name.substring(0, 40)} ...`
+                                : service.name}
+                        </span>
                     </div>
                 )}
 

@@ -368,22 +368,49 @@ export async function getVehiclePeriodicStatus(req: Request, res: Response) {
     if (servicePackageId) filter.servicePackageID = servicePackageId;
     if (serviceId) filter.serviceID = serviceId;
 
-    const [firstCompleted, visitsUsed] = await Promise.all([
+    const [firstCompleted, visitsUsed, firstPendingOrConfirmed] = await Promise.all([
       Appointment.findOne(filter).sort({ bookingDate: 1 }).select('bookingDate').lean(),
-      Appointment.countDocuments(filter)
+      Appointment.countDocuments(filter),
+      // Check for pending or confirmed appointments to use as reference date
+      Appointment.findOne({
+        ...filter,
+        status: { $in: ['pending', 'confirmed'] }
+      }).sort({ bookingDate: 1 }).select('bookingDate').lean()
     ]);
 
     const startDate = firstCompleted?.bookingDate || null;
     const remainingVisits = Math.max(0, (config.defaultTotalVisits || 0) - (visitsUsed || 0));
 
     // Compute next due based on startDate and number used
+    // nextDueDate = startDate + intervalMonths * (visitsUsed + 1)
+    // This calculates when the NEXT appointment should be scheduled
     let nextDueDate: Date | null = null;
-    if (startDate) {
-      const base = new Date(startDate as any);
-      const months = (config.intervalMonths || 0) * (visitsUsed || 0);
-      const d = new Date(base);
-      d.setMonth(d.getMonth() + months);
-      nextDueDate = d;
+    
+    if (remainingVisits > 0) {
+      if (startDate && visitsUsed > 0) {
+        // Case: Has completed appointments - calculate from startDate
+        const base = new Date(startDate as any);
+        // Calculate: startDate + intervalMonths * (visitsUsed + 1)
+        // visitsUsed + 1 because we want the date for the NEXT appointment
+        const months = (config.intervalMonths || 0) * (visitsUsed + 1);
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      } else if (firstPendingOrConfirmed?.bookingDate) {
+        // Case: No completed appointments but has pending/confirmed - use that as reference
+        const base = new Date(firstPendingOrConfirmed.bookingDate as any);
+        const months = config.intervalMonths || 0;
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      } else if (visitsUsed === 0) {
+        // Case: No appointments at all - use current date as base for first due date
+        const base = new Date();
+        const months = config.intervalMonths || 0;
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      }
     }
 
     return res.status(200).json({
