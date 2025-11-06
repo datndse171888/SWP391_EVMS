@@ -97,23 +97,13 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
     return `${duration}m`;
   };
 
-  const getTotalOriginalPrice = () => {
-    if (!servicePackage.services || servicePackage.services.length === 0) {
-      return servicePackage.price;
-    }
-    return servicePackage.services.reduce((total, service) => total + service.price, 0);
+  const getFinalPrice = () => {
+    return servicePackage.price - getDiscountAmount();
   };
 
   const getDiscountAmount = () => {
-    const originalPrice = getTotalOriginalPrice();
-    return originalPrice - servicePackage.price;
-  };
-
-  const getDiscountPercentage = () => {
-    const originalPrice = getTotalOriginalPrice();
-    if (originalPrice === 0) return 0;
-    return Math.round((getDiscountAmount() / originalPrice) * 100);
-  };
+    return servicePackage.price * (servicePackage.discount ? servicePackage.discount / 100 : 0);
+  }
 
   return (
     <div
@@ -140,7 +130,7 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
           </h3>
           {servicePackage.discount && servicePackage.discount > 0 && (
             <span className="bg-red-100 text-red-600 text-xs font-medium px-2 py-1 rounded-full">
-              -{getDiscountPercentage()}%
+              -{servicePackage.discount}%
             </span>
           )}
         </div>
@@ -176,11 +166,11 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
           <div className="text-right">
             {getDiscountAmount() > 0 && (
               <div className="text-sm text-gray-500 line-through">
-                {formatPrice(getTotalOriginalPrice())}
+                {formatPrice(servicePackage.price)}
               </div>
             )}
             <div className="text-xl font-bold text-orange-600">
-              {formatPrice(servicePackage.price)}
+              {formatPrice(getFinalPrice())}
             </div>
             {getDiscountAmount() > 0 && (
               <div className="text-xs text-green-600">

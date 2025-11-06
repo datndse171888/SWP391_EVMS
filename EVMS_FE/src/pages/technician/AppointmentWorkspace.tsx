@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { technicianApi } from '../../api/TechnicianApi';
-import type { ChecklistResponse, Task, TaskStatus } from '../../types/Checklist';
+import type { ChecklistRequest, ChecklistResponse, Task, TaskStatus } from '../../types/Checklist';
 import type { TechnicianResponse } from '../../types/Technician';
 import type { CheckingResponse } from '../../types/DataResponse';
 import { AppointmentApi } from '../../api/AppointmentApi';
@@ -47,17 +47,17 @@ const AppointmentWorkspace: React.FC = () => {
 
   // UI state
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1); // 1: Before report, 2: Checklist, 3: After report
-  
+
   // Report states
   const [beforeReport, setBeforeReport] = useState<ReportResponse | null>(null);
   const [afterReport, setAfterReport] = useState<ReportResponse | null>(null);
   const [showBeforeReportForm, setShowBeforeReportForm] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  
+
   // Form data for before report
   const [beforeReportDetails, setBeforeReportDetails] = useState('');
   const [beforeReportImage, setBeforeReportImage] = useState<string>('');
-  
+
   // Form data for after report
   const [showAfterReportForm, setShowAfterReportForm] = useState(false);
   const [afterReportDetails, setAfterReportDetails] = useState('');
@@ -66,19 +66,14 @@ const AppointmentWorkspace: React.FC = () => {
   // Checklist states - Multiple tasks support
   const [showCreateTaskForm, setShowCreateTaskForm] = useState(false);
   const [isCreatingTasks, setIsCreatingTasks] = useState(false);
-  const [draftTasks, setDraftTasks] = useState<Array<{
-    taskName: string;
-    description: string;
-    note: string;
-    technicianID: string;
-  }>>([]);
-  
+  const [draftTasks, setDraftTasks] = useState<Task[]>([]);
+
   // Current task being edited in form
   const [currentTaskName, setCurrentTaskName] = useState('');
   const [currentTaskDescription, setCurrentTaskDescription] = useState('');
   const [currentTaskNote, setCurrentTaskNote] = useState('');
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>(''); // For creating task
-  
+
   // Team technicians for assignment
   const [teamTechnicians, setTeamTechnicians] = useState<Array<{ id: string; name: string; role: string }>>([]);
   const [isRefreshingChecklist, setIsRefreshingChecklist] = useState(false);
@@ -101,16 +96,16 @@ const AppointmentWorkspace: React.FC = () => {
     const completedTasksCount = checklist.filter(task => task.status === 'completed').length;
     const allTasksCompleted = checklist.length > 0 && completedTasksCount === checklist.length;
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Auto-updating step:', { 
-        beforeReport: !!beforeReport, 
-        checklistLength: checklist.length,
-        completedTasksCount,
-        allTasksCompleted,
-        afterReport: !!afterReport,
-        currentStep 
-      });
-    }
+    // if (process.env.NODE_ENV === 'development') {
+    //   console.log('Auto-updating step:', {
+    //     beforeReport: !!beforeReport,
+    //     checklistLength: checklist.length,
+    //     completedTasksCount,
+    //     allTasksCompleted,
+    //     afterReport: !!afterReport,
+    //     currentStep
+    //   });
+    // }
 
     let nextStep: 1 | 2 | 3 = 1;
     if (beforeReport) {
@@ -137,7 +132,7 @@ const AppointmentWorkspace: React.FC = () => {
       const techInfoResponse = await technicianApi.getTechnicianInfo(user?.id || '');
       const techInfoData: CheckingResponse<any> = techInfoResponse.data;
       console.log('TechInfo response:', techInfoData);
-      
+
       // Backend returns: { success: true, data: { technician: { id, role, ... } } }
       if (techInfoData.data && techInfoData.data.technician) {
         const technicianData = techInfoData.data.technician;
@@ -158,7 +153,7 @@ const AppointmentWorkspace: React.FC = () => {
       if (!appointmentId) {
         throw new Error('Appointment ID is required');
       }
-      
+
       console.log('Fetching appointment for technician flow:', { appointmentId });
       let appointmentData: AppointmentResponse | null = null;
 
@@ -197,12 +192,12 @@ const AppointmentWorkspace: React.FC = () => {
       if (!appointmentData) {
         throw new Error('Appointment not found or access denied');
       }
-      
+
       // Fetch customer data - always fetch to ensure we have the data
       if (appointmentData && appointmentData.userID) {
         try {
           console.log('Appointment userID:', appointmentData.userID, 'Type:', typeof appointmentData.userID);
-          
+
           // Check if already populated
           if (typeof appointmentData.userID === 'object' && appointmentData.userID !== null && 'fullName' in appointmentData.userID) {
             console.log('Using populated customer data:', appointmentData.userID);
@@ -219,11 +214,11 @@ const AppointmentWorkspace: React.FC = () => {
             console.log('Fetching customer data for userId:', userId);
             const customerResponse = await UserApi.getById(userId);
             console.log('Customer API response:', customerResponse);
-      const customerData: UserResponse = customerResponse.data;
+            const customerData: UserResponse = customerResponse.data;
             console.log('Customer data received:', customerData);
-      if (customerData) {
+            if (customerData) {
               console.log('Setting customer state:', customerData);
-        setCustomer(customerData);
+              setCustomer(customerData);
             } else {
               console.warn('Customer data is empty or null');
             }
@@ -243,10 +238,10 @@ const AppointmentWorkspace: React.FC = () => {
           const vehicleId = typeof appointmentData.vehicleID === 'string' ? appointmentData.vehicleID : String(appointmentData.vehicleID);
           console.log('Fetching vehicle data for vehicleId:', vehicleId);
           const vehicleResponse = await VehicleApi.getVehicleById(vehicleId);
-      const vehicleData: VehicleResponse = vehicleResponse.data;
+          const vehicleData: VehicleResponse = vehicleResponse.data;
           console.log('Vehicle data received:', vehicleData);
-      if (vehicleData) {
-        setVehicle(vehicleData);
+          if (vehicleData) {
+            setVehicle(vehicleData);
           } else {
             console.warn('Vehicle data is empty');
           }
@@ -266,9 +261,9 @@ const AppointmentWorkspace: React.FC = () => {
           try {
             const packageId = typeof appointmentData.servicePackageID === 'string' ? appointmentData.servicePackageID : String(appointmentData.servicePackageID);
             const servicePackageResponse = await ServicePackageApi.getServicePackageById(packageId);
-        const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
-        if (servicePackageData) {
-          setInfo(servicePackageData);
+            const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
+            if (servicePackageData) {
+              setInfo(servicePackageData);
             }
           } catch (error) {
             console.error('Failed to fetch service package data:', error);
@@ -281,9 +276,9 @@ const AppointmentWorkspace: React.FC = () => {
           try {
             const serviceId = typeof appointmentData.serviceID === 'string' ? appointmentData.serviceID : String(appointmentData.serviceID);
             const serviceResponse = await ServiceApi.getServiceById(serviceId);
-        const serviceData: ServiceResponse = serviceResponse.data;
-        if (serviceData) {
-          setInfo(serviceData);
+            const serviceData: ServiceResponse = serviceResponse.data;
+            if (serviceData) {
+              setInfo(serviceData);
             }
           } catch (error) {
             console.error('Failed to fetch service data:', error);
@@ -298,8 +293,8 @@ const AppointmentWorkspace: React.FC = () => {
       try {
         const checklistResponse = await ChecklistApi.getByAppointmentId(appointmentId || '');
         // Backend returns array directly, not wrapped in { data }
-        const checklistData: ChecklistResponse[] = Array.isArray(checklistResponse.data) 
-          ? checklistResponse.data 
+        const checklistData: ChecklistResponse[] = Array.isArray(checklistResponse.data)
+          ? checklistResponse.data
           : [];
         console.log('Fetched checklist data:', checklistData);
         if (checklistData && checklistData.length > 0) {
@@ -326,7 +321,7 @@ const AppointmentWorkspace: React.FC = () => {
       // Fetch team technicians from appointment
       if (appointmentData) {
         const teamTechs: Array<{ id: string; name: string; role: string }> = [];
-        
+
         // Helper function to extract technician info
         // Appointment may have technicians populated or just IDs
         const extractTechnicianInfo = async (technician: any, role: 'leader' | 'member', label: string) => {
@@ -334,15 +329,15 @@ const AppointmentWorkspace: React.FC = () => {
             console.log(`No ${label} assigned`);
             return;
           }
-          
+
           let technicianId: string;
           let userName: string = '';
-          
+
           // Check if technician is populated (object) or just ID (string)
           if (typeof technician === 'object' && technician !== null) {
             technicianId = String(technician._id || technician.id);
             console.log(`${label} populated:`, { technicianId, hasUserID: !!technician.userID, userIDType: typeof technician.userID });
-            
+
             // If userID is populated with user object (from include=technicians with populate userID)
             if (technician.userID && typeof technician.userID === 'object') {
               userName = (technician.userID as any).fullName || (technician.userID as any).userName || '';
@@ -383,7 +378,7 @@ const AppointmentWorkspace: React.FC = () => {
               userName = technicianId; // Fallback to ID
             }
           }
-          
+
           if (technicianId) {
             teamTechs.push({
               id: technicianId,
@@ -392,7 +387,7 @@ const AppointmentWorkspace: React.FC = () => {
             });
           }
         };
-        
+
         // Extract technicians from appointment
         await Promise.all([
           extractTechnicianInfo(appointmentData.technicianLeaderID, 'leader', 'Leader'),
@@ -405,7 +400,7 @@ const AppointmentWorkspace: React.FC = () => {
 
         console.log('Team technicians extracted:', teamTechs);
         setTeamTechnicians(teamTechs);
-        
+
         // Set default selected technician to leader (current user) if available
         if (teamTechs.length > 0) {
           if (techInfo?._id) {
@@ -428,13 +423,13 @@ const AppointmentWorkspace: React.FC = () => {
         try {
           const reportsResponse = await ReportApi.getReportsByAppointment(appointmentId);
           const reportsData: ReportResponse[] = reportsResponse.data?.data || [];
-          
+
           const before = reportsData.find(r => r.stage === 'before-service');
           const after = reportsData.find(r => r.stage === 'after-service');
-          
+
           if (before) setBeforeReport(before);
           if (after) setAfterReport(after);
-          
+
           // Determine current step based on reports (only for leader)
           // Note: isLeader is calculated from techInfo, so we need to check techInfo here
           const isLeaderCheck = techInfo?.role === 'leader';
@@ -444,7 +439,7 @@ const AppointmentWorkspace: React.FC = () => {
                 // Check if all tasks are completed
                 const completedTasksCount = latestChecklist.filter(task => task.status === 'completed').length;
                 const allTasksCompleted = completedTasksCount === latestChecklist.length;
-                
+
                 if (allTasksCompleted) {
                   // All tasks completed, can move to step 3
                   if (after) {
@@ -508,13 +503,13 @@ const AppointmentWorkspace: React.FC = () => {
 
       const response = await ReportApi.createReport(reportData);
       const createdReport: ReportResponse = response.data;
-      
+
       setBeforeReport(createdReport);
       setShowBeforeReportForm(false);
       setBeforeReportDetails('');
       setBeforeReportImage('');
       setCurrentStep(2); // Move to next step
-      
+
       // Refresh data
       await fetchData();
     } catch (error: any) {
@@ -543,15 +538,15 @@ const AppointmentWorkspace: React.FC = () => {
 
       const response = await ReportApi.createReport(reportData);
       const createdReport: ReportResponse = response.data;
-      
+
       setAfterReport(createdReport);
       setShowAfterReportForm(false);
       setAfterReportDetails('');
       setAfterReportImage('');
-      
+
       // Backend already updates status to awaiting_payment. Update local state optimistically.
       setAppointment(prev => prev ? { ...prev, status: 'awaiting_payment' } as any : prev);
-      
+
       // Refresh data
       await fetchData();
     } catch (error: any) {
@@ -582,7 +577,7 @@ const AppointmentWorkspace: React.FC = () => {
     };
 
     setDraftTasks([...draftTasks, newTask]);
-    
+
     // Reset form for next task
     setCurrentTaskName('');
     setCurrentTaskDescription('');
@@ -609,29 +604,29 @@ const AppointmentWorkspace: React.FC = () => {
 
     setIsCreatingTasks(true);
     try {
-      const request = {
+      const request: ChecklistRequest = {
         appointmentID: appointmentId,
         tasks: draftTasks.map(task => ({
           taskName: task.taskName,
           description: task.description,
-          note: task.note || undefined,
+          note: task.note,
           technicianID: task.technicianID
         }))
       };
 
       const response = await ChecklistApi.createChecklist(request);
       const createdTasks: ChecklistResponse[] = response.data;
-      
+
       // Refresh checklist
       await fetchData();
-      
+
       // Reset everything
       setDraftTasks([]);
       setCurrentTaskName('');
       setCurrentTaskDescription('');
       setCurrentTaskNote('');
       setShowCreateTaskForm(false);
-      
+
       alert(`Đã tạo thành công ${createdTasks.length} task(s)!`);
     } catch (error: any) {
       console.error('Failed to create tasks:', error);
@@ -676,24 +671,23 @@ const AppointmentWorkspace: React.FC = () => {
   const isLeader = techInfo?.role === 'leader';
 
   // Debug logs
-  if (process.env.NODE_ENV === 'development') {
-    console.log('AppointmentWorkspace Debug:', {
-      isLeader,
-      techInfoRole: techInfo?.role,
-      currentStep,
-      beforeReport: !!beforeReport,
-      showBeforeReportForm,
-      appointmentId,
-      checklistLength: checklist.length,
-      checklist: checklist
-    });
-  }
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('AppointmentWorkspace Debug:', {
+  //     isLeader,
+  //     techInfoRole: techInfo?.role,
+  //     currentStep,
+  //     beforeReport: !!beforeReport,
+  //     showBeforeReportForm,
+  //     appointmentId,
+  //     checklistLength: checklist.length,
+  //     checklist: checklist
+  //   });
+  // }
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm text-gray-500">Appointment</div>
 
           {appointment?.servicePackageID && info &&
             <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
@@ -713,23 +707,23 @@ const AppointmentWorkspace: React.FC = () => {
               {(info as ServiceResponse).description}
             </div>}
 
-          {appointment?.servicePackageID && info &&
+          {/* {appointment?.servicePackageID && info &&
             <div className="text-xs text-gray-400">
-              {(info as ServicePackageResponse).duration} phút
+              Thời lượng: {(info as ServicePackageResponse).duration} phút
             </div>}
           {appointment?.serviceID && info &&
             <div className="text-xs text-gray-400">
-              {(info as ServiceResponse).duration} phút
-            </div>}
+              Thời lượng: {(info as ServiceResponse).duration} phút
+            </div>} */}
         </div>
         <button className="px-3 py-2 rounded-lg bg-gray-100" onClick={() => navigate(-1)}>Quay lại</button>
       </div>
 
       {/* Info Card - Common for both leader and member */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="text-xs text-gray-400">Khách hàng</div>
+      <div className="bg-white rounded-2xl shadow-sm p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-gray-400">Khách hàng</div>
             {customer ? (
               <>
                 <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
@@ -738,14 +732,14 @@ const AppointmentWorkspace: React.FC = () => {
             ) : (
               <div className="text-sm text-gray-400">Đang tải...</div>
             )}
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Xe</div>
-                <div className="font-medium" style={{ color: '#014091' }}>{vehicle?.brand}</div>
-                <div className="text-sm text-gray-500">Biển số: {vehicle?.plateNumber}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Dịch vụ</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-400">Xe</div>
+            <div className="font-medium" style={{ color: '#014091' }}>{vehicle?.brand}</div>
+            <div className="text-sm text-gray-500">Biển số: {vehicle?.plateNumber}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-400">Dịch vụ</div>
             <div className="font-medium" style={{ color: '#014091' }}>
               {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).name : (info as ServiceResponse).name)}
             </div>
@@ -764,12 +758,12 @@ const AppointmentWorkspace: React.FC = () => {
       ) : isLeader ? (
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
           {/* Debug info */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-gray-400 mb-2">
               Debug: isLeader={String(isLeader)}, currentStep={currentStep}, beforeReport={String(!!beforeReport)}, techInfoRole={techInfo?.role}
             </div>
-          )}
-          
+          )} */}
+
           {/* Progress Steps */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1">
@@ -813,7 +807,7 @@ const AppointmentWorkspace: React.FC = () => {
                   <span className="text-sm text-green-600">✓ Đã hoàn thành</span>
                 )}
               </div>
-              
+
               {beforeReport ? (
                 <div className="border rounded-xl p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
@@ -848,8 +842,8 @@ const AppointmentWorkspace: React.FC = () => {
                           value={beforeReportDetails}
                           onChange={(e) => setBeforeReportDetails(e.target.value)}
                         />
-            </div>
-                  <div>
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
                           Hình ảnh (tùy chọn)
                         </label>
@@ -861,7 +855,7 @@ const AppointmentWorkspace: React.FC = () => {
                           onChange={(e) => setBeforeReportImage(e.target.value)}
                         />
                         <p className="text-xs text-gray-500 mt-1">Nhập URL hình ảnh (ví dụ: https://example.com/image.jpg)</p>
-                  </div>
+                      </div>
                       <div className="flex items-center justify-end gap-2">
                         <button
                           className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition"
@@ -939,136 +933,136 @@ const AppointmentWorkspace: React.FC = () => {
                       + Tạo Checklist (nhiều tasks)
                     </button>
                   ) : (
-                <div className="border rounded-xl p-4 space-y-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-md" style={{ color: '#014091' }}>
-                      Thêm task vào checklist
-                    </h4>
-                    {draftTasks.length > 0 && (
-                      <span className="text-sm text-gray-500">{draftTasks.length} task(s) đã thêm</span>
-                    )}
-                  </div>
+                    <div className="border rounded-xl p-4 space-y-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-md" style={{ color: '#014091' }}>
+                          Thêm task vào checklist
+                        </h4>
+                        {draftTasks.length > 0 && (
+                          <span className="text-sm text-gray-500">{draftTasks.length} task(s) đã thêm</span>
+                        )}
+                      </div>
 
-                  {/* Form to add single task */}
-                  <div className="border-t pt-4 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
-                        Tên task <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ví dụ: Xịt nước lên xe"
-                        value={currentTaskName}
-                        onChange={(e) => setCurrentTaskName(e.target.value)}
-                      />
-                </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
-                        Mô tả <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nhập mô tả chi tiết về task..."
-                        value={currentTaskDescription}
-                        onChange={(e) => setCurrentTaskDescription(e.target.value)}
-                      />
-            </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
-                        Ghi chú (tùy chọn)
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nhập ghi chú..."
-                        value={currentTaskNote}
-                        onChange={(e) => setCurrentTaskNote(e.target.value)}
-                      />
-          </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
-                        Gán cho technician <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={selectedTechnicianId}
-                        onChange={(e) => setSelectedTechnicianId(e.target.value)}
-                        required
-                      >
-                        <option value="">-- Chọn technician --</option>
-                        {teamTechnicians.map((tech) => (
-                          <option key={tech.id} value={tech.id}>
-                            {tech.name}
-                          </option>
-                        ))}
-                      </select>
-        </div>
-                    <button
-                      className="w-full px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={handleAddTaskToDraft}
-                      disabled={!currentTaskName.trim() || !currentTaskDescription.trim() || !selectedTechnicianId}
-                    >
-                      + Thêm task này vào danh sách
-              </button>
-          </div>
+                      {/* Form to add single task */}
+                      <div className="border-t pt-4 space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                            Tên task <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Ví dụ: Xịt nước lên xe"
+                            value={currentTaskName}
+                            onChange={(e) => setCurrentTaskName(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                            Mô tả <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Nhập mô tả chi tiết về task..."
+                            value={currentTaskDescription}
+                            onChange={(e) => setCurrentTaskDescription(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                            Ghi chú (tùy chọn)
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Nhập ghi chú..."
+                            value={currentTaskNote}
+                            onChange={(e) => setCurrentTaskNote(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                            Gán cho technician <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={selectedTechnicianId}
+                            onChange={(e) => setSelectedTechnicianId(e.target.value)}
+                            required
+                          >
+                            <option value="">-- Chọn technician --</option>
+                            {teamTechnicians.map((tech) => (
+                              <option key={tech.id} value={tech.id}>
+                                {tech.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          className="w-full px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleAddTaskToDraft}
+                          disabled={!currentTaskName.trim() || !currentTaskDescription.trim() || !selectedTechnicianId}
+                        >
+                          + Thêm task này vào danh sách
+                        </button>
+                      </div>
 
-                  {/* Draft Tasks List */}
-                  {draftTasks.length > 0 && (
-                    <div className="border-t pt-4 space-y-2">
-                      <h5 className="font-medium text-sm" style={{ color: '#014091' }}>
-                        Danh sách tasks đã thêm ({draftTasks.length}):
-                      </h5>
-                      {draftTasks.map((task, index) => {
-                        const assignedTech = teamTechnicians.find(t => t.id === task.technicianID);
-                        return (
-                          <div key={index} className="flex items-start justify-between bg-white border rounded-lg p-3">
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">{task.taskName}</div>
-                              <div className="text-xs text-gray-600 mt-1">{task.description}</div>
-                              {task.note && (
-                                <div className="text-xs text-gray-500 mt-1">Ghi chú: {task.note}</div>
-                              )}
-                              {assignedTech && (
-                                <div className="text-xs text-gray-500 mt-1">Gán cho: {assignedTech.name}</div>
-                              )}
-                </div>
-                            <button
-                              className="ml-2 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition"
-                              onClick={() => handleRemoveDraftTask(index)}
-                            >
-                              ✕ Xóa
-                            </button>
-                </div>
-                        );
-                      })}
-                  </div>
-                  )}
+                      {/* Draft Tasks List */}
+                      {draftTasks.length > 0 && (
+                        <div className="border-t pt-4 space-y-2">
+                          <h5 className="font-medium text-sm" style={{ color: '#014091' }}>
+                            Danh sách tasks đã thêm ({draftTasks.length}):
+                          </h5>
+                          {draftTasks.map((task, index) => {
+                            const assignedTech = teamTechnicians.find(t => t.id === task.technicianID);
+                            return (
+                              <div key={index} className="flex items-start justify-between bg-white border rounded-lg p-3">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{task.taskName}</div>
+                                  <div className="text-xs text-gray-600 mt-1">{task.description}</div>
+                                  {task.note && (
+                                    <div className="text-xs text-gray-500 mt-1">Ghi chú: {task.note}</div>
+                                  )}
+                                  {assignedTech && (
+                                    <div className="text-xs text-gray-500 mt-1">Gán cho: {assignedTech.name}</div>
+                                  )}
+                                </div>
+                                <button
+                                  className="ml-2 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition"
+                                  onClick={() => handleRemoveDraftTask(index)}
+                                >
+                                  ✕ Xóa
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-2 border-t pt-4">
-                    <button
-                      className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition"
-                      onClick={() => {
-                        setShowCreateTaskForm(false);
-                        setDraftTasks([]);
-                        setCurrentTaskName('');
-                        setCurrentTaskDescription('');
-                        setCurrentTaskNote('');
-                      }}
-                      disabled={isCreatingTasks}
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={handleCreateAllTasks}
-                      disabled={isCreatingTasks || draftTasks.length === 0}
-                    >
-                      {isCreatingTasks ? 'Đang tạo...' : `Tạo tất cả ${draftTasks.length} task(s)`}
-                    </button>
-                  </div>
-                </div>
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end gap-2 border-t pt-4">
+                        <button
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition"
+                          onClick={() => {
+                            setShowCreateTaskForm(false);
+                            setDraftTasks([]);
+                            setCurrentTaskName('');
+                            setCurrentTaskDescription('');
+                            setCurrentTaskNote('');
+                          }}
+                          disabled={isCreatingTasks}
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleCreateAllTasks}
+                          disabled={isCreatingTasks || draftTasks.length === 0}
+                        >
+                          {isCreatingTasks ? 'Đang tạo...' : `Tạo tất cả ${draftTasks.length} task(s)`}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </>
               )}
@@ -1091,32 +1085,31 @@ const AppointmentWorkspace: React.FC = () => {
                     const taskTechnicianId = typeof task.technicianID === 'object' && task.technicianID !== null
                       ? String((task.technicianID as any)._id || (task.technicianID as any).id)
                       : String(task.technicianID);
-                    
+
                     const assignedTech = teamTechnicians.find(t => t.id === taskTechnicianId);
                     // Only the assigned technician can mark task as completed (including leader if assigned to them)
                     const isAssignedToMe = taskTechnicianId === techInfo?._id;
-                    
+
                     return (
                       <div key={task._id} className="border rounded-xl p-4 bg-white">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="font-medium text-lg" style={{ color: '#014091' }}>
                               {task.taskName}
-            </div>
+                            </div>
                             <div className="text-sm text-gray-600 mt-1">{task.description}</div>
                             {task.note && (
                               <div className="text-xs text-gray-500 mt-1">Ghi chú: {task.note}</div>
                             )}
                           </div>
                           <div className="ml-4">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              task.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
+                            <span className={`text-xs px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-gray-100 text-gray-700'
+                              }`}>
                               {task.status === 'completed' ? 'Hoàn thành' :
-                               task.status === 'pending' ? 'Chờ làm' :
-                               task.status === 'skipped' ? 'Bỏ qua' : task.status}
+                                task.status === 'pending' ? 'Chờ làm' :
+                                  task.status === 'skipped' ? 'Bỏ qua' : task.status}
                             </span>
                           </div>
                         </div>
@@ -1141,7 +1134,7 @@ const AppointmentWorkspace: React.FC = () => {
                                 Bỏ qua
                               </button>
                             )}
-              </div>
+                          </div>
                         )}
 
                         {/* Show message if not assigned to me */}
@@ -1174,7 +1167,7 @@ const AppointmentWorkspace: React.FC = () => {
                   <span className="text-sm text-green-600">✓ Đã hoàn thành</span>
                 )}
               </div>
-              
+
               {afterReport ? (
                 <div className="border rounded-xl p-4 bg-gray-50 space-y-3">
                   <div className="flex items-center justify-between mb-2">
@@ -1207,18 +1200,18 @@ const AppointmentWorkspace: React.FC = () => {
                   {(() => {
                     const completedCount = checklist.filter(t => t.status === 'completed').length;
                     const allCompleted = checklist.length > 0 && completedCount === checklist.length;
-                    
+
                     if (!allCompleted && checklist.length > 0) {
                       return (
                         <div className="border rounded-xl p-4 bg-yellow-50">
                           <div className="text-sm text-yellow-700">
-                            ⚠️ Vui lòng hoàn thành tất cả tasks trước khi chuyển sang bước này. 
+                            ⚠️ Vui lòng hoàn thành tất cả tasks trước khi chuyển sang bước này.
                             Hiện tại: {completedCount}/{checklist.length} task(s) đã hoàn thành.
                           </div>
                         </div>
                       );
                     }
-                    
+
                     return !showAfterReportForm ? (
                       <button
                         className="w-full px-4 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
@@ -1228,7 +1221,7 @@ const AppointmentWorkspace: React.FC = () => {
                       </button>
                     ) : (
                       <div className="border rounded-xl p-4 space-y-4">
-                    <div>
+                        <div>
                           <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
                             Mô tả tình trạng xe <span className="text-red-500">*</span>
                           </label>
@@ -1238,7 +1231,7 @@ const AppointmentWorkspace: React.FC = () => {
                             value={afterReportDetails}
                             onChange={(e) => setAfterReportDetails(e.target.value)}
                           />
-                    </div>
+                        </div>
                         <div>
                           <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
                             Hình ảnh (tùy chọn)
@@ -1309,10 +1302,10 @@ const AppointmentWorkspace: React.FC = () => {
                     const taskTechnicianId = typeof task.technicianID === 'object' && task.technicianID !== null
                       ? String((task.technicianID as any)._id || (task.technicianID as any).id)
                       : String(task.technicianID);
-                    
+
                     const assignedTech = teamTechnicians.find(t => t.id === taskTechnicianId);
                     const isAssignedToMe = taskTechnicianId === techInfo?._id;
-                    
+
                     return (
                       <div key={task._id} className="border rounded-xl p-4 bg-white">
                         <div className="flex items-start justify-between mb-2">
@@ -1326,14 +1319,13 @@ const AppointmentWorkspace: React.FC = () => {
                             )}
                           </div>
                           <div className="ml-4">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              task.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
+                            <span className={`text-xs px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-gray-100 text-gray-700'
+                              }`}>
                               {task.status === 'completed' ? 'Hoàn thành' :
-                               task.status === 'pending' ? 'Chờ làm' :
-                               task.status === 'skipped' ? 'Bỏ qua' : task.status}
+                                task.status === 'pending' ? 'Chờ làm' :
+                                  task.status === 'skipped' ? 'Bỏ qua' : task.status}
                             </span>
                           </div>
                         </div>

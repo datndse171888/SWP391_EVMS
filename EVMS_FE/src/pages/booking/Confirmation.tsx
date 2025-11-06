@@ -323,7 +323,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 <div>
                   <p className="text-sm text-gray-500">Giá dịch vụ</p>
                   <p className="font-medium text-orange-600 text-lg">
-                    {periodicInfo?.periodicEnabled ? formatPrice(0) : formatPrice(service?.price || servicePackage?.price || 0)}
+                    {formatPrice(service?.price || servicePackage?.price || 0)}
                   </p>
                 </div>
               </div>
@@ -405,7 +405,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 </span>
               </div>
               <span className="font-bold text-orange-600 whitespace-nowrap">
-                {periodicInfo?.periodicEnabled ? formatPrice(0) : formatPrice(service?.price || servicePackage?.price || 0)}
+                {formatPrice(service?.price || servicePackage?.price || 0)} 
               </span>
             </div>
           </div>

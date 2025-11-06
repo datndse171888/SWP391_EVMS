@@ -356,7 +356,7 @@ const Service: React.FC<ServicePropsExtended> = ({ vehicleCategory, formData, on
           size="sm"
           type="button"
           onClick={handleNext}
-          disabled={!selectedId || !selectedType || (activePeriodicKey && (
+          disabled={!selectedId || !selectedType || (!!activePeriodicKey && (
             selectedType === 'service' ? servicesPeriodic.some(s => s._id === selectedId) : packagesPeriodic.some(p => p._id === selectedId)
           ))}
         >

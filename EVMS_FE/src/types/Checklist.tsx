@@ -23,5 +23,6 @@ export interface ChecklistResponse {
 export interface Task {
     taskName: string;
     description: string;
-    note: string;
+    note?: string;
+    technicianID: string;
 }
