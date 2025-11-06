@@ -17,12 +17,16 @@ export const AppointmentApi = {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
-  getAppointmentByTechnician: () => {
-    return api.get<AppointmentResponse[]>('/appointments/technician/me');
+  getAppointmentByTechnician: (status?: AppointmentStatus) => {
+    const statusQuery = status ? `status=${status}` : '';
+    const includeQuery = 'include=user,service,package,technicians';
+    const query = [statusQuery, includeQuery].filter(Boolean).join('&');
+    return api.get<AppointmentResponse[]>(`/appointments/technician/me${query ? `?${query}` : ''}`);
   },
 
-  getAppointmentById: (appointmentId: string) => {
-    return api.get<AppointmentResponse>(`/appointments/${appointmentId}`);
+  getAppointmentById: (appointmentId: string, include?: string) => {
+    const query = include ? `?include=${include}` : '';
+    return api.get<{ data: AppointmentResponse }>(`/appointments/${appointmentId}${query}`);
   },
 
   getTodayAwaitingPayment: () => {

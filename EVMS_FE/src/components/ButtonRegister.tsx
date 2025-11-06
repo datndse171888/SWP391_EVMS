@@ -10,7 +10,7 @@ const FixedRegisterButton: React.FC = () => {
     return (
         <div
             aria-hidden={!visible}
-            className="fixed inset-x-4 md:inset-x-auto md:right-6 bottom-6 z-50 flex justify-center md:justify-end "
+            className="fixed inset-x-4 md:inset-x-auto md:right-6 bottom-6 z-50 flex justify-center md:justify-end"
         >
             <div className="relative w-full md:w-auto  hover:scale-105 transition-transform duration-300 hover:rotate-z-10 animate-bounce">
                 {/* decorative colorful pings */}

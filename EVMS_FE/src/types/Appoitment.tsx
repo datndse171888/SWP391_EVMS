@@ -16,8 +16,8 @@ export interface AppointmentResponse {
     serviceID?: string;
     servicePackageID?: string;
     technicianLeaderID?: string;
-    technicianSupport1?: string;
-    technicianSupport2?: string;
+    technicianSupport1ID?: string;
+    technicianSupport2ID?: string;
     bookingDate: string;
     status: AppointmentStatus;
     createdAt?: string;

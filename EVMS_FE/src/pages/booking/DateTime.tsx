@@ -111,8 +111,6 @@ const DateTime: React.FC<DateTimeProps> = ({
 
   useEffect(() => {
     if (!selectedDate || !vehicleCategory) return;
-    // Chỉ fetch khi đã có ít nhất một trong serviceID/servicePackageID
-    // để backend tính đúng tổng thời lượng dịch vụ (có thể chiếm nhiều slot)
     if (!formData.serviceID && !formData.servicePackageID) return;
     fetchAvailableSlots(selectedDate);
   }, [selectedDate, vehicleCategory, formData.serviceID, formData.servicePackageID]);

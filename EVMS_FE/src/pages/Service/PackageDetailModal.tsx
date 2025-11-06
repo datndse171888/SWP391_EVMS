@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Check, DollarSign, Package, Tag } from 'lucide-react';
 import type { ServicePackageResponse } from '../../types/ServicePackage';
+import { Link } from 'react-router-dom';
 
 interface PackageDetailModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({ isOpen, 
   const savings = totalServicePrice - discountPrice;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-opacity-50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-orange-500 to-blue-600 rounded-t-2xl p-8 text-white">
@@ -151,11 +152,9 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({ isOpen, 
             >
               Đóng
             </button>
-            <button
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-600 to-blue-600 text-white rounded-lg hover:from-orange-700 hover:to-blue-700 transition-all font-semibold shadow-lg"
-            >
-              Chọn gói này
-            </button>
+            <Link to="/booking" className="bg-gradient-to-r from-orange-600 to-blue-600 text-white rounded-lg hover:from-orange-700 hover:to-blue-700 transition-all font-semibold shadow-lg flex-1 flex items-center justify-center px-6 py-3">
+               Đặt lịch ngay
+            </Link>
           </div>
         </div>
       </div>

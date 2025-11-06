@@ -25,7 +25,10 @@ appointmentRouter.get('/user/:userId', authMiddleware, getAppointmentsByUserId);
 // Get service or servicePackage by appointment id (must be before /:id route)
 appointmentRouter.get('/:id/service', authMiddleware, getServiceByAppointmentId);
 
-// Get appointment by id
+// Get available technicians (admin/staff only) - MUST be before /:id route
+appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
+
+// Get appointment by id - MUST be after all specific routes
 appointmentRouter.get('/:id', authMiddleware, getAppointmentById);
 
 // Cancel appointment
@@ -36,8 +39,5 @@ appointmentRouter.patch('/:id/assign-technician', authMiddleware, assignTechnici
 
 // Update appointment status (admin/staff/technician)
 appointmentRouter.patch('/:id/status', authMiddleware, updateAppointmentStatus);
-
-// Get available technicians (admin/staff only)
-appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
 
 

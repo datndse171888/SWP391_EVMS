@@ -1,14 +1,14 @@
 export interface Part {
-  id: string;
+  _id: string;
   name: string;
   description?: string;
   manufacturer?: string;
   partNumber?: string;
   price: number;
-  status: 'active' | 'inactive' | 'hidden';
+  status: 'active' | 'inactive';
   warrantyPeriod?: number;
   warrantyCondition?: string;
-  stockQuantity?: number;
+  category?: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
   createdAt: string;
   updatedAt: string;
 }

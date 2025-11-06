@@ -10,6 +10,9 @@ export interface IService extends Document {
   duration: number;
   description?: string;
   image?: string;
+  periodicEnabled?: boolean;
+  intervalMonths?: number;
+  defaultTotalVisits?: number;
 }
 
 const ServiceSchema = new Schema<IService>(
@@ -21,6 +24,9 @@ const ServiceSchema = new Schema<IService>(
     duration: { type: Number, required: true, min: 1 },
     description: { type: String, trim: true },
     image: { type: String, trim: true },
+    periodicEnabled: { type: Boolean, default: false, index: true },
+    intervalMonths: { type: Number, min: 1, max: 24 },
+    defaultTotalVisits: { type: Number, min: 1, max: 60 },
   },
   { timestamps: true }
 );

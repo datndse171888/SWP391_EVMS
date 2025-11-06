@@ -15,7 +15,7 @@ const PartCard: React.FC<PartCardProps> = ({ part }) => {
     <article
       className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 overflow-hidden border border-transparent hover:border-orange-100"
       role="article"
-      aria-labelledby={`part-${part.id}-title`}
+      aria-labelledby={`part-${part._id}-title`}
     >
       {/* Top section with icon/placeholder */}
       <div className="relative h-40 bg-gradient-to-br from-blue-50 to-orange-50">
@@ -43,7 +43,7 @@ const PartCard: React.FC<PartCardProps> = ({ part }) => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h4
-              id={`part-${part.id}-title`}
+              id={`part-${part._id}-title`}
               className="text-lg lg:text-xl font-extrabold text-slate-900 break-words mb-2"
             >
               {part.name}
@@ -85,7 +85,7 @@ const PartCard: React.FC<PartCardProps> = ({ part }) => {
         {/* Action Buttons */}
         <div className="mt-4 pt-4 border-t border-gray-200">
           <Link
-            to={`/part/${part.id}`}
+            to={`/part/${part._id}`}
             className="w-full block px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 font-semibold text-center"
           >
             Xem chi tiết

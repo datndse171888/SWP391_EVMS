@@ -80,7 +80,7 @@ export const TechnicianDetailModal: React.FC<Props> = ({ isOpen, onClose, techni
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString() : '—';
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4  bg-opacity-50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Chi tiết kỹ thuật viên"

@@ -14,6 +14,9 @@ export interface IServicePackage extends Document {
   status: ServicePackageStatus;
   createAt?: Date;
   updateAt?: Date;
+  periodicEnabled?: boolean;
+  intervalMonths?: number;
+  defaultTotalVisits?: number;
 }
 
 const ServicePackageSchema = new Schema<IServicePackage>(
@@ -37,6 +40,9 @@ const ServicePackageSchema = new Schema<IServicePackage>(
       }
     ],
     status: { type: String, enum: ['active', 'inactive', 'hidden'], default: 'active', index: true },
+    periodicEnabled: { type: Boolean, default: false, index: true },
+    intervalMonths: { type: Number, min: 1, max: 24 },
+    defaultTotalVisits: { type: Number, min: 1, max: 60 },
   },
   { timestamps: { createdAt: 'createAt', updatedAt: 'updateAt' } }
 );

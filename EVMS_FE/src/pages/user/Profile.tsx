@@ -1,5 +1,5 @@
 // src/pages/user/Profile.tsx - Updated with new layout
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { authApi } from "../../api/AuthApi";
 import { compressImage } from "../../api/UploadApi";
@@ -177,6 +177,7 @@ export default function Profile() {
     });
     setFieldError({});
   };
+
 
   const handleChangePassword = async () => {
     setPwdError("");
@@ -528,6 +529,8 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          {/* Maintenance moved to its own page (/maintenance) */}
         </div>
       </div>
 

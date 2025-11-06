@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
+import { Vehicle } from '../models/Vehicle.js';
+import { getDefaultMaintenanceCycleMonths, computeNextMaintenanceDate, isDue } from '../utils/maintenance.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
 import { selectTechniciansForSlot } from '../services/technicianAssignment.js';
@@ -50,6 +52,73 @@ export async function createAppointment(req: Request, res: Response) {
       }
     } catch (error) {
       return res.status(400).json({ message: 'bookingDate không hợp lệ' });
+    }
+
+    // ============================================
+    // VALIDATION: Prevent creating a new periodic plan while another is active for the vehicle
+    // Allow scheduling for the SAME active plan
+    // ============================================
+    try {
+      if (vehicleID && (serviceID || servicePackageID)) {
+        // Load selected config
+        let selectedPeriodic = false;
+        let selectedKey = '';
+        if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
+          const { ServicePackage } = await import('../models/ServicePackage.js');
+          const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          if (pkg?.periodicEnabled) { selectedPeriodic = true; selectedKey = `P:${servicePackageID}`; }
+        } else if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
+          const { Service } = await import('../models/Service.js');
+          const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          if (svc?.periodicEnabled) { selectedPeriodic = true; selectedKey = `S:${serviceID}`; }
+        }
+
+        if (selectedPeriodic) {
+          // Find existing periodic subscriptions for this vehicle based on completed appointments
+          const all = await Appointment.find({
+            vehicleID: new mongoose.Types.ObjectId(vehicleID),
+            status: 'completed',
+            $or: [{ serviceID: { $ne: null } }, { servicePackageID: { $ne: null } }]
+          }).select('serviceID servicePackageID bookingDate').lean();
+
+          // Group counts
+          type Key = string; interface Group { first: Date; count: number; key: string; serviceID?: any; servicePackageID?: any }
+          const groups = new Map<Key, Group>();
+          const toKey = (a: any) => (a.serviceID ? `S:${a.serviceID}` : `P:${a.servicePackageID}`);
+          for (const a of all) {
+            const k = toKey(a);
+            const g = groups.get(k);
+            if (!g) groups.set(k, { first: a.bookingDate as any, count: 1, key: k, serviceID: a.serviceID, servicePackageID: a.servicePackageID });
+            else { g.count += 1; if (new Date(a.bookingDate as any) < new Date(g.first)) g.first = a.bookingDate as any; }
+          }
+
+          // Evaluate each group to see if active
+          for (const [, g] of groups) {
+            let cfg: any = null;
+            if (g.serviceID) {
+              const { Service } = await import('../models/Service.js');
+              cfg = await Service.findById(g.serviceID).select('periodicEnabled defaultTotalVisits').lean();
+            } else if (g.servicePackageID) {
+              const { ServicePackage } = await import('../models/ServicePackage.js');
+              cfg = await ServicePackage.findById(g.servicePackageID).select('periodicEnabled defaultTotalVisits').lean();
+            }
+            if (!cfg?.periodicEnabled || !cfg?.defaultTotalVisits) continue;
+            const remaining = Math.max(0, Number(cfg.defaultTotalVisits) - g.count);
+            if (remaining > 0) {
+              // There is an active periodic plan
+              if (g.key !== selectedKey) {
+                return res.status(409).json({
+                  success: false,
+                  message: 'Xe này đang có gói định kỳ còn hiệu lực. Vui lòng hoàn tất hoặc chọn gói/dịch vụ không định kỳ.'
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Periodic validation error:', e);
+      // continue without blocking if validation fails unexpectedly
     }
 
     // ============================================
@@ -357,9 +426,21 @@ function buildPopulate(includeParam?: string) {
     populates.push({ path: 'servicePackageID', select: '_id name price description' });
   }
   if (include.has('technicians')) {
-    populates.push({ path: 'technicianLeaderID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport1ID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport2ID', select: '_id fullName phoneNumber' });
+    populates.push({ 
+      path: 'technicianLeaderID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport1ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport2ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
   }
   return populates;
 }
@@ -513,7 +594,9 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
     }
 
     // Resolve technicianId from current user
-    const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
     if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
     const technicianId = String(techDoc._id);
 
@@ -552,6 +635,10 @@ export async function getAppointmentById(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
     const id = String(req.params.id);
+    console.log('getAppointmentById - Requested ID:', id);
+    console.log('getAppointmentById - User role:', req.user.role);
+    console.log('getAppointmentById - User ID:', req.user.id);
+    
     const includeParam = (req.query.include as string | undefined)?.trim();
     const fieldsParam = (req.query.fields as string | undefined)?.trim();
     const select = buildSelect(fieldsParam);
@@ -560,20 +647,59 @@ export async function getAppointmentById(req: Request, res: Response) {
     let query = Appointment.findById(id);
     if (select) query = query.select(select);
     let doc = await query.populate(populates);
-    if (!doc) return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    
+    if (!doc) {
+      console.log('getAppointmentById - Appointment not found in database');
+      return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    }
+
+    console.log('getAppointmentById - Appointment found:', {
+      id: doc._id,
+      userID: doc.userID,
+      technicianLeaderID: doc.technicianLeaderID,
+      technicianSupport1ID: doc.technicianSupport1ID,
+      technicianSupport2ID: doc.technicianSupport2ID
+    });
 
     const role = req.user.role;
     if (role === 'admin' || role === 'staff') {
       return res.json({ data: doc });
     }
 
-    // Tối thiểu: chỉ cho phép chủ sở hữu xem; có thể mở rộng cho technician khi có liên kết user-technician
+    // Allow customer to view their own appointments
     if (role === 'customer' && String(doc.userID) === req.user.id) {
-      return res.json( doc );
+      return res.json({ data: doc });
+    }
+
+    // Allow technician to view appointments they are assigned to
+    if (role === 'technician') {
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+      if (!techDoc) {
+        console.log('getAppointmentById - Technician profile not found');
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      const technicianId = String(techDoc._id);
+      console.log('getAppointmentById - Technician ID:', technicianId);
+      
+      const isAssigned = 
+        String(doc.technicianLeaderID) === technicianId ||
+        String(doc.technicianSupport1ID) === technicianId ||
+        String(doc.technicianSupport2ID) === technicianId;
+      
+      console.log('getAppointmentById - Is assigned:', isAssigned);
+      
+      if (isAssigned) {
+        return res.json({ data: doc });
+      } else {
+        console.log('getAppointmentById - Technician not assigned to this appointment');
+      }
     }
 
     return res.status(403).json({ message: 'Insufficient permissions' });
   } catch (error) {
+    console.error('getAppointmentById error:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
@@ -1139,6 +1265,25 @@ export async function updateAppointmentStatus(req: Request, res: Response) {
       { path: 'servicePackageID', select: 'name price duration description' },
       { path: 'technicianLeaderID', select: 'userID', populate: { path: 'userID', select: 'userName fullName' } }
     ]);
+
+    // Maintenance: vehicle-first-appointment logic (default cycle by vehicle type)
+    if (status === 'completed' && updated && updated.vehicleID) {
+      try {
+        const vehicle = await Vehicle.findById(updated.vehicleID);
+        if (vehicle) {
+          const cycleMonths = vehicle.maintenanceCycleMonths || getDefaultMaintenanceCycleMonths(vehicle.vehicleCategory as any);
+          const last = new Date();
+          const next = computeNextMaintenanceDate(last, cycleMonths);
+          vehicle.lastMaintenanceDate = last;
+          vehicle.maintenanceCycleMonths = cycleMonths;
+          vehicle.nextMaintenanceDate = next;
+          vehicle.isMaintenanceDue = isDue(next);
+          await vehicle.save();
+        }
+      } catch (e) {
+        console.error('Failed to update vehicle maintenance info:', e);
+      }
+    }
 
     return res.status(200).json({
       success: true,

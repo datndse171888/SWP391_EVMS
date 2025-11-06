@@ -73,6 +73,9 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         } catch (error) {
             console.error('Error fetching appointment details ', appointment._id, ':', error);
         }
+
+        console.log(service);
+        
     };
 
     // ===================================
@@ -147,7 +150,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 {appointment.serviceID && (
                     <div className="flex items-center text-sm text-gray-600">
                         <Wrench className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="truncate">Dịch vụ: {service?.name}</span>
+                        <span className="truncate">{service?.name}</span>
                     </div>
                 )}
 

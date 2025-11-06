@@ -35,7 +35,7 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
   const mapped: Part[] = (raw.items || []).map((it) => {
     const obj = it as Record<string, unknown>
     return {
-      id: obj._id as string,
+      _id: obj._id as string,
       name: obj.name as string,
       description: obj.description as string,
       manufacturer: obj.manufacturer as string,
@@ -103,7 +103,7 @@ export const PartApi = {
     return api.get<{ part: Part }>(`/parts/${id}`)
   },
   createPart: (params: Part) => {
-    return api.post('/parts', params)
+    return api.post('/parts/with-inventory', params)
   },
   createPartWithInventory: (params: CreatePartWithInventoryParams) => {
     return api.post<{ message: string; part: Part; inventory: unknown }>('/parts/with-inventory', params)

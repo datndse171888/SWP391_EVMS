@@ -1,6 +1,6 @@
 // src/components/layout/UserLayout.tsx
 import React from 'react';
-import whaleLogo from '../../assets/images/whale.png';
+import carImage from '../../assets/images/car.png';
 
 interface UserProfileLayoutProps {
   children: React.ReactNode;
@@ -35,10 +35,9 @@ export const UserProfileLayout: React.FC<UserProfileLayoutProps> = ({ children }
               ></path>
             </svg>
             <img
-              src={whaleLogo}
-              alt="Whale decoration"
-              className="absolute right-16 bottom-4 w-32 h-auto opacity-80"
-              style={{ transform: "scaleX(-1)" }}
+              src={carImage}
+              alt="Electric car decoration"
+              className="absolute right-6 bottom-0 w-64 md:w-80 lg:w-96 h-auto opacity-95"
             />
           </div>
         </div>

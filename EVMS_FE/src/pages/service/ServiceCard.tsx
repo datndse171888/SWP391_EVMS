@@ -75,11 +75,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onViewDetail 
           >
             Chi tiết
           </button>
-          <button
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 font-semibold"
-          >
-            Chọn gói
-          </button>
         </div>
       </div>
     </article>

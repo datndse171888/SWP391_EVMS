@@ -80,7 +80,7 @@ export const Parts: React.FC = () => {
     } else {
       try {
         // Call API to update part
-        const response = await PartApi.updatePart(partData.id!, partData as Part);
+        const response = await PartApi.updatePart(partData._id!, partData as Part);
 
         if (!response.status) {
           throw new Error('Failed to update part');
@@ -197,7 +197,7 @@ export const Parts: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {parts.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-200">
+                      <tr key={p._id} className="hover:bg-gray-50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <div className="font-semibold text-gray-800">{p.name}</div>
                           <div className="text-sm text-gray-500 max-w-xl line-clamp-2">{p.description || '—'}</div>
@@ -229,7 +229,7 @@ export const Parts: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(p.id)}
+                              onClick={() => handleDelete(p._id)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >

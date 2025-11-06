@@ -1,0 +1,29 @@
+.mtl-card{border:1px solid #e5e7eb;border-radius:8px;padding:12px;overflow:hidden}
+.mtl-header .mtl-title{font-weight:600}
+.mtl-sub{color:#6b7280;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.mtl-due-chip{margin-left:8px;padding:2px 8px;border-radius:999px;font-size:12px}
+.mtl-due-chip.soon{background:#fff7ed;color:#b45309;border:1px solid #fdba74}
+.mtl-due-chip.over{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}
+.mtl-row{display:flex;align-items:center;gap:8px;margin-top:12px;overflow:hidden}
+.mtl-grid{display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;padding:4px}
+.mtl-grid::-webkit-scrollbar{height:6px}
+.mtl-grid::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:6px}
+.mtl-slot{flex:0 0 auto;min-width:160px;padding:10px;border-radius:8px;border:1px dashed #e5e7eb;text-align:center;position:relative}
+.mtl-arrow{border:1px solid #e5e7eb;background:#fff;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#374151;cursor:pointer}
+.mtl-arrow:hover{background:#f3f4f6}
+.mtl-slot .mtl-date{font-size:12px;color:#374151}
+.mtl-slot .mtl-year{font-size:11px;color:#6b7280;margin-top:2px}
+.mtl-slot.completed{background:#ecfeff;border-color:#a5f3fc}
+.mtl-slot.upcoming{background:#fff3c4;border-color:#f59e0b;box-shadow:0 0 0 2px #fde68a inset}
+.mtl-slot.dueToday{background:#ecfeff;border-color:#06b6d4;box-shadow:0 0 0 2px #06b6d4 inset}
+.mtl-slot.overdue{background:#fef2f2;border-color:#fecaca}
+.mtl-slot.future{background:#f9fafb;border-color:#e5e7eb}
+.mtl-book{margin-top:8px;font-size:12px;padding:6px 10px;border-radius:6px;background:#2563eb;color:#fff;border:none;cursor:pointer}
+.mtl-legend{display:flex;gap:12px;align-items:center;margin-top:12px;font-size:12px;color:#4b5563;flex-wrap:wrap}
+.mtl-legend .dot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:6px;border:1px solid #d1d5db;vertical-align:middle}
+.mtl-legend .completed{background:#a5f3fc}
+.mtl-legend .upcoming{background:#fde68a}
+.mtl-legend .dueToday{background:#06b6d4}
+.mtl-legend .overdue{background:#fecaca}
+.mtl-legend .future{background:#e5e7eb}
+

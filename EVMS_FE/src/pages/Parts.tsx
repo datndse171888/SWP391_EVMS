@@ -149,7 +149,7 @@ export const Parts: React.FC = () => {
           {!loading && parts.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               {parts.map((part) => (
-                <PartCard key={part.id} part={part} />
+                <PartCard key={part._id} part={part} />
               ))}
             </div>
           )}

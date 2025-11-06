@@ -7,13 +7,13 @@ interface PartModalProps {
     onClose: () => void;
     onSave: (part: Partial<Part>) => void;
     part?: Part | null;
-    mode: 'create' | 'edit'| 'view';
+    mode: 'create' | 'edit' | 'view';
 }
 
 export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, part, mode }: PartModalProps) => {
 
     const [formData, setFormData] = useState<Part>({
-        id: '',
+        _id: '',
         name: '',
         description: '',
         manufacturer: '',
@@ -22,6 +22,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
         status: 'active',
         warrantyPeriod: 0,
         warrantyCondition: '',
+        category: 'accessories',
         createdAt: '',
         updatedAt: '',
     });
@@ -31,7 +32,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
     useEffect(() => {
         if (part && mode === 'edit') {
             setFormData({
-                id: part.id,
+                _id: part._id,
                 name: part.name,
                 description: part.description,
                 manufacturer: part.manufacturer,
@@ -45,7 +46,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
             });
         } else {
             setFormData({
-                id: '',
+                _id: '',
                 name: '',
                 description: '',
                 manufacturer: '',
@@ -54,6 +55,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                 status: 'active',
                 warrantyPeriod: 0,
                 warrantyCondition: '',
+                category: 'accessories',
                 createdAt: '',
                 updatedAt: '',
             });
@@ -126,7 +128,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
         return nextErrors;
     };
 
-    
+
     const handleChange = (key: keyof Part, value: any) => {
         // sanitize text fields to remove special characters for specific keys
         const sanitizeText = (v: any) => String(v ?? '').replace(/[^\p{L}\d _-]/gu, '');
@@ -178,9 +180,9 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
             status: formData.status,
             warrantyPeriod: Number(formData.warrantyPeriod),
             warrantyCondition: formData.warrantyCondition,
-            stockQuantity: formData.stockQuantity,
-            createdAt: formData.createdAt,
-            updatedAt: formData.updatedAt,
+            category: formData.category,
+            createdAt: formData.createdAt || '',
+            updatedAt: formData.updatedAt || '',
         });
     };
 
@@ -261,7 +263,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             />
                             {errors.partNumber && <p className="text-red-600 text-sm mt-1">{errors.partNumber}</p>}
                         </div>
-                       
+
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
@@ -283,7 +285,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
                         </div>
 
-                        
+
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -298,16 +300,39 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             >
                                 <option value="active">Hoạt động</option>
                                 <option value="inactive">Không hoạt động</option>
-                                <option value="hidden">Ẩn</option>
                             </select>
                             {errors.status && <p className="text-red-600 text-sm mt-1">{errors.status}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Danh mục *
+                            </label>
+                            <select
+                                name="category"
+                                required
+                                value={formData.category}
+                                onChange={(e) => handleChange('category', e.target.value as any)}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none ${errors.status ? 'border-red-400' : 'border-gray-300'}`}
+                            >
+                                <option value="tires">Lốp xe</option>
+                                <option value="oil">Dầu nhớt</option>
+                                <option value="filters">Lọc</option>
+                                <option value="brakes">Phanh</option>
+                                <option value="electrical">Điện</option>
+                                <option value="cooling">Làm mát</option>
+                                <option value="suspension">Giảm xóc</option>
+                                <option value="transmission">Truyền động</option>
+                                <option value="accessories">Phụ kiện</option>
+                            </select>
+                            {errors.category && <p className="text-red-600 text-sm mt-1">{errors.category}</p>}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Thời gian bảo hành (tháng)
+                                Thời gian bảo hành
                             </label>
                             <input
                                 name="warrantyPeriod"
@@ -323,7 +348,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Điều kiện bảo hành
+                                Đơn vị
                             </label>
                             <input
                                 name="warrantyCondition"
@@ -336,7 +361,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Ngày tạo
@@ -364,7 +389,7 @@ export const PartModal: React.FC<PartModalProps> = ({ isOpen, onClose, onSave, p
                             />
                             {errors.updatedAt && <p className="text-red-600 text-sm mt-1">{errors.updatedAt}</p>}
                         </div>
-                    </div>
+                    </div> */}
 
                     <div className="flex gap-3 pt-4">
                         <button
