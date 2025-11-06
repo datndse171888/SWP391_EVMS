@@ -38,4 +38,5 @@ router.use('/vehicles', vehicleRouter);
 router.use('/slottimes', slotTimeRouter);
 router.use('/payments', paymentRouter);
 router.use('/bills', billRouter);
+router.use('/vehicle-condition-reports', vehicleConditionReportRouter);
 // router.use('/service-orders', serviceOrderRouter);

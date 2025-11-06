@@ -16,7 +16,8 @@ import { UserApi } from '../../api/UserApi';
 import type { UserResponse } from '../../types/Account';
 import type { VehicleResponse } from '../../types/Vehicle';
 import { VehicleApi } from '../../api/VehicleApi';
-import type { ReportRequest } from '../../types/Report';
+import type { ReportRequest, ReportResponse } from '../../types/Report';
+import { ReportApi } from '../../api/ReportApi';
 
 type ReportStage = 'before-service' | 'after-service';
 
@@ -34,7 +35,6 @@ const AppointmentWorkspace: React.FC = () => {
 
   // search & filter
   const [searchParams] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
 
   const { user } = useAuth();
 
@@ -46,13 +46,17 @@ const AppointmentWorkspace: React.FC = () => {
   const [vehicle, setVehicle] = useState<VehicleResponse>();
 
   // UI state
-  const [leaderTab, setLeaderTab] = useState<'info' | 'tasks' | 'reports'>('info');
-  const [showCreateTask, setShowCreateTask] = useState(false);
-  const [showCreateReport, setShowCreateReport] = useState<null | ReportStage>(null);
-
-  // data
-  const [task, setTask] = useState<Task[]>([]);
-  const [report, setReport] = useState<ReportRequest>();
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1); // 1: Before report, 2: Checklist, 3: After report
+  
+  // Report states
+  const [beforeReport, setBeforeReport] = useState<ReportResponse | null>(null);
+  const [afterReport, setAfterReport] = useState<ReportResponse | null>(null);
+  const [showBeforeReportForm, setShowBeforeReportForm] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  
+  // Form data for before report
+  const [beforeReportDetails, setBeforeReportDetails] = useState('');
+  const [beforeReportImage, setBeforeReportImage] = useState<string>('');
 
 
   // ==================================
@@ -63,13 +67,36 @@ const AppointmentWorkspace: React.FC = () => {
     fetchData();
   }, []);
 
+  // Set initial step when techInfo is loaded and user is leader
+  useEffect(() => {
+    if (techInfo?.role === 'leader' && currentStep === 1 && !beforeReport) {
+      // If techInfo just loaded and is leader, and no before report exists, stay at step 1
+      // This ensures the form is visible
+      console.log('TechInfo loaded, isLeader, setting step to 1 if needed');
+    }
+  }, [techInfo, currentStep, beforeReport]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
       const techInfoResponse = await technicianApi.getTechnicianInfo(user?.id || '');
-      const techInfoData: CheckingResponse<TechnicianResponse> = techInfoResponse.data;
-      if (techInfoData.data) {
-        setTechInfo(techInfoData.data);
+      const techInfoData: CheckingResponse<any> = techInfoResponse.data;
+      console.log('TechInfo response:', techInfoData);
+      
+      // Backend returns: { success: true, data: { technician: { id, role, ... } } }
+      if (techInfoData.data && techInfoData.data.technician) {
+        const technicianData = techInfoData.data.technician;
+        // Map to TechnicianResponse format
+        const mappedTechInfo: TechnicianResponse = {
+          _id: technicianData.id,
+          userID: user?.id || '',
+          role: technicianData.role, // 'leader' | 'member'
+          description: technicianData.introduction
+        };
+        console.log('Mapped techInfo:', mappedTechInfo);
+        setTechInfo(mappedTechInfo);
+      } else {
+        console.warn('TechInfo data structure unexpected:', techInfoData);
       }
 
       // Fetch appointment with populated user, service/package info
@@ -218,10 +245,87 @@ const AppointmentWorkspace: React.FC = () => {
         setChecklist(checklistData);
       }
 
+      // Fetch vehicle condition reports (only for leader)
+      if (appointmentId) {
+        try {
+          const reportsResponse = await ReportApi.getReportsByAppointment(appointmentId);
+          const reportsData: ReportResponse[] = reportsResponse.data?.data || [];
+          
+          const before = reportsData.find(r => r.stage === 'before-service');
+          const after = reportsData.find(r => r.stage === 'after-service');
+          
+          if (before) setBeforeReport(before);
+          if (after) setAfterReport(after);
+          
+          // Determine current step based on reports (only for leader)
+          // Note: isLeader is calculated from techInfo, so we need to check techInfo here
+          const isLeaderCheck = techInfo?.role === 'leader';
+          if (isLeaderCheck) {
+            if (before) {
+              if (checklistData && checklistData.length > 0) {
+                if (after) {
+                  setCurrentStep(3); // All done
+                } else {
+                  setCurrentStep(3); // Ready for after report
+                }
+              } else {
+                setCurrentStep(2); // Ready for checklist
+              }
+            } else {
+              setCurrentStep(1); // Need before report
+            }
+          } else if (isLeaderCheck === false) {
+            // Not a leader, don't show steps
+          } else {
+            // techInfo not loaded yet, default to step 1 for leader
+            if (techInfo && techInfo.role === 'leader') {
+              setCurrentStep(1);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch reports:', error);
+        }
+      }
+
     } catch (error) {
       console.error('Failed to fetch appointment data:', error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Handle create before report
+  const handleCreateBeforeReport = async () => {
+    if (!appointmentId || !beforeReportDetails.trim()) {
+      alert('Vui lòng nhập mô tả tình trạng xe');
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    try {
+      const reportData: ReportRequest = {
+        appointmentID: appointmentId,
+        stage: 'before-service',
+        details: beforeReportDetails.trim(),
+        image: beforeReportImage || undefined
+      };
+
+      const response = await ReportApi.createReport(reportData);
+      const createdReport: ReportResponse = response.data;
+      
+      setBeforeReport(createdReport);
+      setShowBeforeReportForm(false);
+      setBeforeReportDetails('');
+      setBeforeReportImage('');
+      setCurrentStep(2); // Move to next step
+      
+      // Refresh data
+      await fetchData();
+    } catch (error: any) {
+      console.error('Failed to create report:', error);
+      alert(error.response?.data?.message || 'Không thể tạo báo cáo. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingReport(false);
     }
   }
 
@@ -238,6 +342,16 @@ const AppointmentWorkspace: React.FC = () => {
   // }
 
   const isLeader = techInfo?.role === 'leader';
+
+  // Debug logs
+  console.log('AppointmentWorkspace Debug:', {
+    isLeader,
+    techInfoRole: techInfo?.role,
+    currentStep,
+    beforeReport: !!beforeReport,
+    showBeforeReportForm,
+    appointmentId
+  });
 
   return (
     <div className="p-4 space-y-4">
@@ -275,240 +389,197 @@ const AppointmentWorkspace: React.FC = () => {
         <button className="px-3 py-2 rounded-lg bg-gray-100" onClick={() => navigate(-1)}>Quay lại</button>
       </div>
 
-      {/* Role-aware layout */}
-      {!(isLeader) ? (
-        <div className="space-y-4">
-          {/* Info Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="text-xs text-gray-400">Khách hàng</div>
-                {customer ? (
-                  <>
-                    <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
-                    <div className="text-sm text-gray-500">{customer.phoneNumber || 'Chưa có số điện thoại'}</div>
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-400">Đang tải...</div>
+      {/* Info Card - Common for both leader and member */}
+      <div className="bg-white rounded-2xl shadow-sm p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-gray-400">Khách hàng</div>
+            {customer ? (
+              <>
+                <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
+                <div className="text-sm text-gray-500">{customer.phoneNumber || 'Chưa có số điện thoại'}</div>
+              </>
+            ) : (
+              <div className="text-sm text-gray-400">Đang tải...</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-gray-400">Xe</div>
+            <div className="font-medium" style={{ color: '#014091' }}>{vehicle?.brand}</div>
+            <div className="text-sm text-gray-500">Biển số: {vehicle?.plateNumber}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-400">Dịch vụ</div>
+            <div className="font-medium" style={{ color: '#014091' }}>
+              {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).name : (info as ServiceResponse).name)}
+            </div>
+            <div className="text-sm text-gray-500">Thời lượng ~
+              {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).duration : (info as ServiceResponse).duration)}
+              phút</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3-Step Process - Only for Leader */}
+      {techInfo === undefined ? (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <div className="text-sm text-gray-500">Đang tải thông tin...</div>
+        </div>
+      ) : isLeader ? (
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
+          {/* Debug info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-400 mb-2">
+              Debug: isLeader={String(isLeader)}, currentStep={currentStep}, beforeReport={String(!!beforeReport)}, techInfoRole={techInfo?.role}
+            </div>
+          )}
+          
+          {/* Progress Steps */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 flex-1">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                {beforeReport ? '✓' : '1'}
+              </div>
+              <div className="flex-1 h-1 bg-gray-200">
+                <div className={`h-full ${beforeReport ? 'bg-blue-600' : ''}`} style={{ width: beforeReport ? '100%' : '0%' }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 2 && beforeReport ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                2
+              </div>
+              <div className="flex-1 h-1 bg-gray-200">
+                <div className={`h-full ${checklist.length > 0 ? 'bg-blue-600' : ''}`} style={{ width: checklist.length > 0 ? '100%' : '0%' }}></div>
+              </div>
+            </div>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 3 && afterReport ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+              {afterReport ? '✓' : '3'}
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className={`text-center flex-1 ${currentStep === 1 ? 'font-semibold' : ''}`} style={{ color: currentStep === 1 ? '#014091' : '#6b7280' }}>
+              Ghi report trước khi sửa
+            </div>
+            <div className={`text-center flex-1 ${currentStep === 2 ? 'font-semibold' : ''}`} style={{ color: currentStep === 2 ? '#014091' : '#6b7280' }}>
+              Tạo Checklist task
+            </div>
+            <div className={`text-center flex-1 ${currentStep === 3 ? 'font-semibold' : ''}`} style={{ color: currentStep === 3 ? '#014091' : '#6b7280' }}>
+              Ghi report sau khi sửa
+            </div>
+          </div>
+
+          {/* Step 1: Before Service Report */}
+          {currentStep === 1 && (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg" style={{ color: '#014091' }}>Bước 1: Ghi report tình trạng xe trước khi sửa</h3>
+                {beforeReport && (
+                  <span className="text-sm text-green-600">✓ Đã hoàn thành</span>
                 )}
               </div>
-              <div>
-                <div className="text-xs text-gray-400">Xe</div>
-                <div className="font-medium" style={{ color: '#014091' }}>{vehicle?.brand}</div>
-                <div className="text-sm text-gray-500">Biển số: {vehicle?.plateNumber}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Dịch vụ</div>
-
-                {appointment?.servicePackageID && info &&
-                  <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
-                    {(info as ServicePackageResponse).name}
-                  </h1>}
-                {appointment?.serviceID && info &&
-                  <h1 className="text-xl font-semibold" style={{ color: '#014091' }}>
-                    {(info as ServiceResponse).name}
-                  </h1>}
-
-                {appointment?.servicePackageID && info &&
-                  <div className="text-xs text-gray-400">
-                    {(info as ServicePackageResponse).duration} phút
-                  </div>}
-                {appointment?.serviceID && info &&
-                  <div className="text-xs text-gray-400">
-                    {(info as ServiceResponse).duration} phút
-                  </div>}
-              </div>
-            </div>
-          </div>
-
-          {/* Tasks */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-semibold" style={{ color: '#014091' }}>Tasks của bạn</div>
-              <select
-                className="text-sm border border-gray-200 rounded-lg px-2 py-1"
-                value={statusFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as TaskStatus | 'all')}
-              >
-                <option value="all">Tất cả</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="skipped">Skipped</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              Chỗ này show những task có thể thấy
-              {/* {visibleTasks.length === 0 ? (
-                <div className="text-sm text-gray-400 border border-dashed rounded-xl p-4 text-center">Không có task</div>
-              ) : visibleTasks.map(t => (
-                <div key={t.id} className="flex items-center justify-between border rounded-xl px-3 py-2">
-                  <div>
-                    <div className="font-medium" style={{ color: '#014091' }}>{t.taskName}</div>
-                    <div className="text-xs text-gray-400">{t.startedAt && `Start: ${formatTime(t.startedAt)}`} {t.completedAt && ` • Done: ${formatTime(t.completedAt)}`}</div>
+              
+              {beforeReport ? (
+                <div className="border rounded-xl p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium" style={{ color: '#014091' }}>Báo cáo đã được tạo</span>
+                    <span className="text-xs text-gray-500">{new Date(beforeReport.createdAt).toLocaleString('vi-VN')}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(t.status)}`}>{getStatusLabel(t.status)}</span>
-                    {t.status === 'pending' && (
-                      <button className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white" onClick={() => onQuickStatus(t.id, 'in_progress')}>Start</button>
-                    )}
-                    {t.status === 'in_progress' && (
-                      <button className="text-xs px-3 py-1 rounded-lg bg-green-600 text-white" onClick={() => onQuickStatus(t.id, 'completed')}>Complete</button>
-                    )}
-                    {t.status !== 'completed' && (
-                      <button className="text-xs px-3 py-1 rounded-lg bg-gray-100" onClick={() => onQuickStatus(t.id, 'skipped')}>Skip</button>
-                    )}
-                  </div>
-                </div>
-              ))} */}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Leader Tabs */}
-          <div className="bg-white rounded-2xl p-2 flex gap-2 w-full">
-            {(['info', 'tasks', 'reports'] as const).map((key) => (
-              <button key={key} className={`px-4 py-2 rounded-lg text-sm ${leaderTab === key ? 'bg-blue-100' : 'bg-gray-100'}`} style={{ color: leaderTab === key ? '#3b82f6' : '#014091' }} onClick={() => setLeaderTab(key)}>
-                {key === 'info' ? 'Info' : key === 'tasks' ? 'Tasks' : 'Reports'}
-              </button>
-            ))}
-          </div>
-
-          {leaderTab === 'info' && (
-            <div className="bg-white rounded-2xl shadow-sm p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-xs text-gray-400">Khách hàng</div>
-                  {customer ? (
-                    <>
-                      <div className="font-medium" style={{ color: '#014091' }}>{customer.fullName || customer.userName || 'Không có tên'}</div>
-                      <div className="text-sm text-gray-500">{customer.phoneNumber || 'Chưa có số điện thoại'}</div>
-                    </>
-                  ) : (
-                    <div className="text-sm text-gray-400">Đang tải...</div>
+                  <div className="text-sm text-gray-700 whitespace-pre-wrap">{beforeReport.details}</div>
+                  {beforeReport.image && (
+                    <div className="mt-3">
+                      <img src={beforeReport.image} alt="Vehicle condition" className="max-w-full h-auto rounded-lg" />
+                    </div>
                   )}
                 </div>
-                <div>
-                  <div className="text-xs text-gray-400">Xe</div>
-                  <div className="font-medium" style={{ color: '#014091' }}>{vehicle?.brand}</div>
-                  <div className="text-sm text-gray-500">Biển số: {vehicle?.plateNumber}</div>
+              ) : (
+                <div className="space-y-4">
+                  {!showBeforeReportForm ? (
+                    <button
+                      className="w-full px-4 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+                      onClick={() => setShowBeforeReportForm(true)}
+                    >
+                      + Ghi report tình trạng xe trước khi sửa
+                    </button>
+                  ) : (
+                    <div className="border rounded-xl p-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                          Mô tả tình trạng xe <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Nhập mô tả chi tiết về tình trạng xe trước khi sửa..."
+                          value={beforeReportDetails}
+                          onChange={(e) => setBeforeReportDetails(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#014091' }}>
+                          Hình ảnh (tùy chọn)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Nhập URL hình ảnh..."
+                          value={beforeReportImage}
+                          onChange={(e) => setBeforeReportImage(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Nhập URL hình ảnh (ví dụ: https://example.com/image.jpg)</p>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition"
+                          onClick={() => {
+                            setShowBeforeReportForm(false);
+                            setBeforeReportDetails('');
+                            setBeforeReportImage('');
+                          }}
+                          disabled={isSubmittingReport}
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleCreateBeforeReport}
+                          disabled={isSubmittingReport || !beforeReportDetails.trim()}
+                        >
+                          {isSubmittingReport ? 'Đang tạo...' : 'Tạo báo cáo'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-xs text-gray-400">Dịch vụ</div>
-                  <div className="font-medium" style={{ color: '#014091' }}>
-                    {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).name : (info as ServiceResponse).name)}
-                  </div>
-                  <div className="text-sm text-gray-500">Thời lượng ~
-                    {info && (appointment?.servicePackageID ? (info as ServicePackageResponse).duration : (info as ServiceResponse).duration)}
-                    phút</div>
-                </div>
-                {/* <div>
-                  <div className="text-xs text-gray-400">Team</div>
-                  <div className="text-sm text-gray-600">{info.team.map(t => t.name).join(', ')}</div>
-                </div> */}
-              </div>
+              )}
             </div>
           )}
 
-          {leaderTab === 'tasks' && (
-            <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold" style={{ color: '#014091' }}>Tasks của team</div>
-                <div className="flex items-center gap-2">
-                  <select
-                    className="text-sm border border-gray-200 rounded-lg px-2 py-1"
-                    value={statusFilter}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as TaskStatus | 'all')}
-                  >
-                    <option value="all">Tất cả</option>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="skipped">Skipped</option>
-                  </select>
-                  <button className="px-3 py-2 rounded-lg bg-blue-600 text-white" onClick={() => setShowCreateTask(true)}>+ Add Checklist</button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                Chỗ này show những task có thể thấy
-                {/* {visibleTasks.length === 0 ? (
-                  <div className="text-sm text-gray-400 border border-dashed rounded-xl p-4 text-center">Không có task</div>
-                ) : visibleTasks.map(t => (
-                  <div key={t.id} className="flex items-center justify-between border rounded-xl px-3 py-2">
-                    <div>
-                      <div className="font-medium" style={{ color: '#014091' }}>{t.taskName}</div>
-                      <div className="text-xs text-gray-400">{t.startedAt && `Start: ${formatTime(t.startedAt)}`} {t.completedAt && ` • Done: ${formatTime(t.completedAt)}`}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select className="text-xs border border-gray-200 rounded-lg px-2 py-1" value={t.technicianId} onChange={e => onAssign(t.id, e.target.value)}>
-                        {info.team.map(tech => (
-                          <option key={tech.id} value={tech.id}>{tech.name}</option>
-                        ))}
-                      </select>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(t.status)}`}>{getStatusLabel(t.status)}</span>
-                      {t.status === 'pending' && (
-                        <button className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white" onClick={() => onQuickStatus(t.id, 'in_progress')}>Start</button>
-                      )}
-                      {t.status === 'in_progress' && (
-                        <button className="text-xs px-3 py-1 rounded-lg bg-green-600 text-white" onClick={() => onQuickStatus(t.id, 'completed')}>Complete</button>
-                      )}
-                      {t.status !== 'completed' && (
-                        <button className="text-xs px-3 py-1 rounded-lg bg-gray-100" onClick={() => onQuickStatus(t.id, 'skipped')}>Skip</button>
-                      )}
-                    </div>
-                  </div>
-                ))} */}
-              </div>
-
-              {/* Create Task Modal */}
-              Chỗ này show task create modal
-              {/* {showCreateTask && (
-                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowCreateTask(false)}>
-                  <div className="bg-white rounded-2xl p-4 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                    <div className="text-lg font-semibold mb-3" style={{ color: '#014091' }}>Add Checklist</div>
-                    <TaskCreateForm team={info.team} onCancel={() => setShowCreateTask(false)} onSubmit={(name, tech) => { handleCreateTask(name, tech); setShowCreateTask(false); }} />
-                  </div>
-                </div>
-              )} */}
+          {/* Step 2: Checklist (Placeholder) */}
+          {currentStep === 2 && (
+            <div className="border-t pt-4">
+              <h3 className="font-semibold text-lg mb-4" style={{ color: '#014091' }}>Bước 2: Tạo Checklist task</h3>
+              <div className="text-sm text-gray-500">Bước này sẽ được triển khai tiếp theo...</div>
             </div>
           )}
 
-          {leaderTab === 'reports' && (
-            <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-2 rounded-lg bg-gray-100" onClick={() => setShowCreateReport('before-service')}>+ Before-Service</button>
-                <button className="px-3 py-2 rounded-lg bg-gray-100" onClick={() => setShowCreateReport('after-service')}>+ After-Service</button>
-              </div>
-
-              <div className="space-y-2">
-                Chỗ này show reports
-                {/* {reports.length === 0 ? (
-                  <div className="text-sm text-gray-400 border border-dashed rounded-xl p-4 text-center">Chưa có report</div>
-                ) : reports.map(r => (
-                  <div key={r.id} className="border rounded-2xl px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium" style={{ color: '#014091' }}>{r.stage}</div>
-                      <div className="text-xs text-gray-400">{formatTime(r.createdAt)}</div>
-                    </div>
-                    <div className="text-sm text-gray-600">{r.details}</div>
-                  </div>
-                ))} */}
-              </div>
-
-              Chỗ này show task create modal
-              {/* {showCreateReport && (
-                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowCreateReport(null)}>
-                  <div className="bg-white rounded-2xl p-4 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                    <div className="text-lg font-semibold mb-3" style={{ color: '#014091' }}>Create Report</div>
-                    <ReportCreateForm stage={showCreateReport} onCancel={() => setShowCreateReport(null)} onSubmit={(details) => { handleCreateReport(showCreateReport, details); setShowCreateReport(null); }} />
-                  </div>
-                </div>
-              )} */}
+          {/* Step 3: After Service Report (Placeholder) */}
+          {currentStep === 3 && (
+            <div className="border-t pt-4">
+              <h3 className="font-semibold text-lg mb-4" style={{ color: '#014091' }}>Bước 3: Ghi report tình trạng xe sau khi sửa</h3>
+              <div className="text-sm text-gray-500">Bước này sẽ được triển khai tiếp theo...</div>
             </div>
           )}
         </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <div className="text-sm text-gray-500">
+            Bạn không có quyền truy cập tính năng này. (Role: {techInfo?.role || 'unknown'})
+          </div>
+          <div className="text-xs text-gray-400 mt-2">
+            Chỉ technician leader mới có thể tạo vehicle condition reports và quản lý checklist.
+          </div>
+        </div>
       )}
+
     </div>
   );
 };

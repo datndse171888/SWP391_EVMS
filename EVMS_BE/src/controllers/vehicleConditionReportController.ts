@@ -4,6 +4,88 @@ import { VehicleConditionReport } from '../models/VehicleConditionReport.js';
 import { Appointment } from '../models/Appointment.js';
 import { Technician } from '../models/Technician.js';
 
+// GET /api/vehicle-condition-reports/appointment/:appointmentId - Lấy danh sách reports của appointment
+export async function getVehicleConditionReportsByAppointment(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const { appointmentId } = req.params;
+
+    // Validation ObjectId
+    if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentId không hợp lệ'
+      });
+    }
+
+    // Kiểm tra appointment tồn tại và technician có được assign không
+    const appointment = await Appointment.findById(appointmentId).lean();
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy appointment'
+      });
+    }
+
+    // Nếu là technician, kiểm tra có được assign vào appointment không
+    if (req.user.role === 'technician') {
+      const technician = await Technician.findOne({ userID: req.user.id }).select('_id').lean();
+      if (!technician) {
+        return res.status(403).json({
+          success: false,
+          message: 'Không tìm thấy technician record'
+        });
+      }
+
+      const technicianId = String(technician._id);
+      const isAssigned = 
+        String(appointment.technicianLeaderID) === technicianId ||
+        String(appointment.technicianSupport1ID) === technicianId ||
+        String(appointment.technicianSupport2ID) === technicianId;
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'Không có quyền xem reports của appointment này'
+        });
+      }
+    }
+
+    // Lấy tất cả reports của appointment
+    const reports = await VehicleConditionReport.find({
+      appointmentID: new mongoose.Types.ObjectId(appointmentId)
+    })
+      .populate({
+        path: 'appointmentID',
+        select: 'userID vehicleID bookingDate status'
+      })
+      .populate({
+        path: 'technicianId',
+        select: 'userID role fullName'
+      })
+      .sort({ createdAt: -1 }) // Mới nhất trước
+      .lean();
+
+    return res.json({
+      success: true,
+      data: reports
+    });
+  } catch (error: any) {
+    console.error('Error getting vehicle condition reports:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy danh sách báo cáo',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}
+
 export async function createVehicleConditionReport(req: Request, res: Response) {
   try {
     const { appointmentID, technicianId: technicianIdFromBody, stage, details, image } = req.body;
