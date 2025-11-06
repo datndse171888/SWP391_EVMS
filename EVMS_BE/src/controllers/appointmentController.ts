@@ -426,9 +426,21 @@ function buildPopulate(includeParam?: string) {
     populates.push({ path: 'servicePackageID', select: '_id name price description' });
   }
   if (include.has('technicians')) {
-    populates.push({ path: 'technicianLeaderID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport1ID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport2ID', select: '_id fullName phoneNumber' });
+    populates.push({ 
+      path: 'technicianLeaderID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport1ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport2ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
   }
   return populates;
 }
@@ -582,7 +594,9 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
     }
 
     // Resolve technicianId from current user
-    const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
     if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
     const technicianId = String(techDoc._id);
 
@@ -659,7 +673,9 @@ export async function getAppointmentById(req: Request, res: Response) {
 
     // Allow technician to view appointments they are assigned to
     if (role === 'technician') {
-      const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
       if (!techDoc) {
         console.log('getAppointmentById - Technician profile not found');
         return res.status(403).json({ message: 'Insufficient permissions' });

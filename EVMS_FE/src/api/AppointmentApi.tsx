@@ -17,7 +17,7 @@ export const AppointmentApi = {
 
   getAppointmentByTechnician: (status?: AppointmentStatus) => {
     const statusQuery = status ? `status=${status}` : '';
-    const includeQuery = 'include=user,service,package';
+    const includeQuery = 'include=user,service,package,technicians';
     const query = [statusQuery, includeQuery].filter(Boolean).join('&');
     return api.get<AppointmentResponse[]>(`/appointments/technician/me${query ? `?${query}` : ''}`);
   },

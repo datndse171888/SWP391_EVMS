@@ -206,6 +206,20 @@ export async function createVehicleConditionReport(req: Request, res: Response) 
 
     const vehicleConditionReport = await VehicleConditionReport.create(reportData);
 
+    // Nếu tạo báo cáo sau sửa, chuyển trạng thái appointment sang chờ thanh toán
+    try {
+      if (stage === 'after-service') {
+        await Appointment.findByIdAndUpdate(
+          appointmentID,
+          { $set: { status: 'awaiting_payment' } },
+          { new: true }
+        );
+      }
+    } catch (statusErr) {
+      console.error('Failed to update appointment status to awaiting_payment:', statusErr);
+      // Không throw để không làm fail việc tạo report; FE có thể tự đồng bộ lại trạng thái
+    }
+
     // Populate để trả về thông tin đầy đủ
     const populatedReport = await VehicleConditionReport.findById(vehicleConditionReport._id)
       .populate({

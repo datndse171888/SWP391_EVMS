@@ -70,11 +70,12 @@ const TechnicianSchedule: React.FC = () => {
     fetchAppointments();
   }, []);
 
-  // fetch function - only fetch confirmed appointments
+  // fetch function - fetch appointments (all relevant statuses)
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      const response = await AppointmentApi.getAppointmentByTechnician('confirmed');
+      // Fetch without status to include awaiting_payment/completed
+      const response = await AppointmentApi.getAppointmentByTechnician();
       const data: AppointmentResponse[] = response.data;
       setAppointments(data);
     } catch (error) {
@@ -275,7 +276,7 @@ const TechnicianSchedule: React.FC = () => {
 
                         // Get status color class
                         const statusBgClass =
-                          appointment.status === 'completed' ? 'bg-green-50' :
+                          (appointment.status === 'completed' || appointment.status === 'awaiting_payment') ? 'bg-green-50' :
                             appointment.status === 'confirmed' ? 'bg-blue-50' :
                               appointment.status === 'pending' ? 'bg-yellow-50' :
                                 appointment.status === 'in_progress' ? 'bg-purple-50' :
@@ -289,7 +290,8 @@ const TechnicianSchedule: React.FC = () => {
                           'completed': 'Hoàn thành',
                           'cancelled': 'Đã hủy',
                           'no_show': 'Không đến',
-                          'awaiting_payment': 'Chờ thanh toán'
+                          // Treat awaiting_payment as completed on schedule view
+                          'awaiting_payment': 'Đã hoàn thành'
                         };
 
                         return (
