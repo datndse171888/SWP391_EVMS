@@ -17,7 +17,7 @@ export const UserProfileLayout: React.FC<UserProfileLayoutProps> = ({ children }
       <div className="absolute top-1/2 right-[-100px] w-72 h-72 bg-[#e3f2fd] rounded-full opacity-20 blur-2xl z-0"></div>
       <div className="absolute bottom-10 right-[-60px] w-44 h-44 bg-[#b3e5fc] rounded-full opacity-20 blur-2xl z-0"></div>
 
-      <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-7xl overflow-visible relative min-h-[calc(100vh-2rem)]">
+      <div className="bg-white rounded-3xl shadow-sm flex flex-col w-full max-w-7xl overflow-hidden relative h-[calc(100vh-2rem)]">
         {children}
 
         {/* Bottom wave decoration */}

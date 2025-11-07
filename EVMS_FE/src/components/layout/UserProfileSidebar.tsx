@@ -104,6 +104,30 @@ export const UserProfileSidebar: React.FC = () => {
         >
           Lịch hẹn
         </Link>
+
+        <Link
+          to="/my-vehicles"
+          className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+            isActive('/my-vehicles')
+              ? 'bg-white shadow-sm'
+              : 'text-gray-600 hover:bg-opacity-10'
+          }`}
+          style={{ 
+            color: isActive('/my-vehicles') ? '#014091' : '#5f6777'
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive('/my-vehicles')) {
+              e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive('/my-vehicles')) {
+              e.currentTarget.style.backgroundColor = '';
+            }
+          }}
+        >
+          Phương tiện của tôi
+        </Link>
       </nav>
     </div>
   );

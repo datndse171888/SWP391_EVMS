@@ -272,11 +272,12 @@ const AppointmentHistory = () => {
     <UserProfileLayout>
       {AlertComponent}
 
-      <div className="flex flex-row w-full">
+      <div className="flex flex-row w-full h-full">
         <UserProfileSidebar />
 
-        <div className="flex-1">
-          <div className="w-full px-8 py-8">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="w-full px-8 py-8 flex flex-col h-full">
+            <div className="flex-shrink-0">
             <UserProfileHeader
               title="Lịch hẹn của bạn"
               description="Quản lý và theo dõi các lịch hẹn dịch vụ"
@@ -358,10 +359,13 @@ const AppointmentHistory = () => {
                       }
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="py-12">
                 <Loading />
@@ -392,7 +396,7 @@ const AppointmentHistory = () => {
                 </button>
               </div>
             ) : (
-              <div className="h-100 scroll-auto" style={{ paddingBottom: '28rem' }}>
+                <div className="pb-96">
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {paginatedAppointments.map((appointment) => (
                     <AppointmentCard
@@ -406,12 +410,12 @@ const AppointmentHistory = () => {
                 </div>
 
                 {/* Pagination */}
-                <div className="mt-6 mb-8">
+                  <div className="mt-6">
                 {renderPagination()}
-                </div>
-
+                  </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -65,8 +65,23 @@ const Vehicle: React.FC<VehicleProps> = ({
 
   useEffect(() => {
     getVehicleOfUser();
-    handleVehicleSelect('new');
+    // Only auto-select 'new' if no vehicleID is preset
+    if (!formData.vehicleID) {
+      handleVehicleSelect('new');
+    }
   }, []);
+
+  // Auto-select vehicle when formData.vehicleID is set (from query params)
+  useEffect(() => {
+    if (formData.vehicleID && vehicles.length > 0) {
+      const vehicle = vehicles.find(v => v._id === formData.vehicleID);
+      if (vehicle) {
+        setSelectedVehicle(vehicle);
+        setShowNewVehicleForm(false);
+        setVehicleCategory(vehicle.vehicleCategory);
+      }
+    }
+  }, [formData.vehicleID, vehicles, setVehicleCategory]);
 
   const getVehicleOfUser = async () => {
     setIsLoading(true);

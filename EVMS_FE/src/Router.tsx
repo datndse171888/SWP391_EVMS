@@ -45,6 +45,8 @@ import Profile from './pages/user/Profile';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import Maintenance from './pages/user/Maintenance';
+import MyVehicles from './pages/user/MyVehicles';
+import AddVehicle from './pages/user/AddVehicle';
 import PaymentCallback from './pages/payment/PaymentCallback';
 import Contact from './pages/Contact';
 import ButtonRegister from './components/ButtonRegister';
@@ -94,6 +96,16 @@ export const Router: React.FC = () => {
         <Route path="/appointment-history" element={
           <PrivateRoute>
             <AppointmentHistory />
+          </PrivateRoute>
+        } />
+        <Route path="/my-vehicles" element={
+          <PrivateRoute>
+            <MyVehicles />
+          </PrivateRoute>
+        } />
+        <Route path="/add-vehicle" element={
+          <PrivateRoute>
+            <AddVehicle />
           </PrivateRoute>
         } />
 
