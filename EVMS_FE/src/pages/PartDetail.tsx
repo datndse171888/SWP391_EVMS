@@ -18,19 +18,19 @@ const PartDetail: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         if (!id) {
           setError('ID linh kiện không hợp lệ');
           setLoading(false);
           return;
         }
-        
+
         const response = await PartApi.getPartById(id);
         if (response.data?.part) {
           const partData = response.data.part;
           // Map data to match Part interface
           const mappedPart: Part = {
-            id: partData._id || partData.id || String(partData._id || partData.id),
+            _id: partData._id || partData._id || String(partData._id || partData._id),
             name: partData.name || '',
             description: partData.description || '',
             manufacturer: partData.manufacturer || '',
@@ -65,12 +65,12 @@ const PartDetail: React.FC = () => {
 
   // Lưu vào lịch sử xem riêng biệt để tránh infinite loop
   useEffect(() => {
-    if (part && part.id && hasAddedToViewed.current !== part.id) {
-      hasAddedToViewed.current = part.id;
+    if (part && part._id && hasAddedToViewed.current !== part._id) {
+      hasAddedToViewed.current = part._id;
       addToRecentlyViewed(part);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [part?.id]);
+  }, [part?._id]);
 
   if (loading) {
     return (
@@ -108,7 +108,7 @@ const PartDetail: React.FC = () => {
       inactive: { text: 'Tạm hết', color: 'bg-yellow-100 text-yellow-800' },
       hidden: { text: 'Ẩn', color: 'bg-gray-100 text-gray-800' }
     };
-    
+
     const config = statusConfig[status] || { text: 'Không xác định', color: 'bg-gray-100 text-gray-800' };
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
@@ -117,9 +117,9 @@ const PartDetail: React.FC = () => {
     );
   };
 
-  const currencyFormatter = new Intl.NumberFormat('vi-VN', { 
-    style: 'currency', 
-    currency: 'VND' 
+  const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
   });
 
   return (
@@ -146,7 +146,7 @@ const PartDetail: React.FC = () => {
           <div className="md:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Thông tin chung</h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tên linh kiện</label>
@@ -180,7 +180,7 @@ const PartDetail: React.FC = () => {
             {part.warrantyPeriod && (
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Thông tin bảo hành</h2>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -201,7 +201,7 @@ const PartDetail: React.FC = () => {
           <div>
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Giá bán</h2>
-              
+
               <div className="mb-6">
                 <p className="text-gray-600 text-sm mb-2">Giá hiện tại</p>
                 <p className="text-4xl font-bold" style={{ color: '#f6ae2d' }}>

@@ -1,4 +1,4 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled' | 'no_show';
 
 export interface CreateAppointmentRequest {
     userID: string;
@@ -15,10 +15,13 @@ export interface AppointmentResponse {
     vehicleID: string;
     serviceID?: string;
     servicePackageID?: string;
+    technicianLeaderID?: string;
+    technicianSupport1ID?: string;
+    technicianSupport2ID?: string;
     bookingDate: string;
     status: AppointmentStatus;
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface UpdateAppointmentStatusRequest {

@@ -7,7 +7,10 @@ export interface ServiceResponse {
   vehicleCategory: VehicleCategory;
   duration: number;
   description: string;
-  image: string;
+  image?: string;
+  periodicEnabled: boolean;
+  intervalMonths?: number;
+  defaultTotalVisits?: number;
 }
 
 

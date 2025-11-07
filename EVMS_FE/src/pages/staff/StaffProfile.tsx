@@ -40,13 +40,13 @@ export default function StaffProfile() {
     setTimeout(() => setToast(null), 3000); // Auto hide after 3 seconds
   };
 
-  // API function to update user account
-  const updateAccountApi = async (userId: string, data: Partial<User>) => {
-    const response = await authApi.updateUser(userId, {
+  // API function to update current profile (align with TechnicianProfile)
+  const updateProfileApi = async (data: Partial<User>) => {
+    const response = await authApi.updateProfile({
       fullName: data.fullName,
       phoneNumber: data.phoneNumber,
-      photoUrl: data.photoURL,
-      email: data.email,
+      photoURL: data.photoURL,
+      gender: (data as any)?.gender,
     });
     return response.data;
   };
@@ -73,11 +73,27 @@ export default function StaffProfile() {
     if (!(await validateProfile())) return;
     
     try {
-      // Update user profile logic here
-      setUser(editData as User);
+      await updateProfileApi({
+        fullName: editData.fullName,
+        phoneNumber: editData.phoneNumber,
+        photoURL: editData.photoURL,
+      });
+
+      // Refresh profile from server to ensure state is in sync
+      const profileResponse = await authApi.getProfile();
+      const updatedProfile = profileResponse.data?.data?.user || profileResponse.data?.user || profileResponse.data;
+
+      if (updatedProfile) {
+        setUser(updatedProfile as User);
+        setEditData(updatedProfile as User);
+      } else {
+        // Fallback to local state update
+        setUser(editData as User);
+      }
+
       setEditMode(false);
       setFieldError({});
-      // toast.success("Cập nhật thông tin thành công!");
+      showToast('success', 'Cập nhật thông tin thành công!');
     } catch (error: unknown) {
       const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       if (errorMessage?.toLowerCase().includes("số điện thoại")) {
@@ -86,6 +102,7 @@ export default function StaffProfile() {
           phoneNumber: errorMessage,
         }));
       }
+      showToast('error', errorMessage || 'Cập nhật thông tin thất bại!');
     }
   };
 
@@ -93,17 +110,28 @@ export default function StaffProfile() {
     setPwdError("");
     setPwdLoading(true);
     try {
-      // Change password logic here
+      if (pwdNew !== pwdConfirm) {
+        setPwdError("Mật khẩu xác nhận không khớp");
+        setPwdLoading(false);
+        return;
+      }
+
+      await authApi.changePassword({
+        currentPassword,
+        newPassword: pwdNew,
+      });
+
+      showToast('success', 'Đổi mật khẩu thành công!');
       setShowPwdModal(false);
       setCurrentPassword("");
       setPwdNew("");
       setPwdConfirm("");
-      // toast.success("Đổi mật khẩu thành công!");
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setPwdError(
         axiosErr?.response?.data?.message || "Đổi mật khẩu thất bại!"
       );
+      showToast('error', axiosErr?.response?.data?.message || 'Đổi mật khẩu thất bại!');
     }
     setPwdLoading(false);
   };
@@ -191,7 +219,7 @@ export default function StaffProfile() {
       // Step 3: Update profile
       console.log(`💾 Updating profile...`);
       const updateStart = performance.now();
-      await updateAccountApi(userId, { photoURL: uploadData.imageUrl });
+      await authApi.updateProfile({ photoURL: uploadData.imageUrl });
       const updateTime = ((performance.now() - updateStart) / 1000).toFixed(2);
       console.log(`✅ Profile updated in ${updateTime}s`);
 

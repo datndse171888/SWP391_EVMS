@@ -1,120 +1,116 @@
-import { Award, Mail, Phone, Shield } from 'lucide-react';
-import TeamMemberCard from '../components/TechnicianCard';
-import {
-  Zap,
-  Users,
-  Battery,
-  Settings,
-  CheckCircle,
-  ArrowRight
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mail, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import type { TechnicianInfo, TechnicianCertificate } from '../types/Technician';
 import schedule from '../assets/images/schedule.png'
+import TechnicianDetailModal from '../components/TechnicianDetailModal';
 
-interface Certificate {
-  name: string;
-  issuer: string;
-  year: number;
-}
+type TechnicianUser = {
+  _id: string;
+  fullName?: string;
+  userName?: string;
+  email?: string;
+  phoneNumber?: string;
+  photoURL?: string;
+  role?: string;
+};
 
-interface TeamMember {
-  id: number;
-  name: string;
-  role: string;
-  email: string;
-  phone: string;
-  image: string;
-  certificates: Certificate[];
-  specialization: string;
-}
+type TechnicianWithMeta = {
+  user: TechnicianUser;
+  info?: TechnicianInfo;
+  certificates: TechnicianCertificate[];
+};
 
-const teamMembers: TeamMember[] = [
-  {
-    id: 1,
-    name: 'Dr. Sarah Chen',
-    role: 'Director of Operations',
-    email: 'sarah.chen@evservice.com',
-    phone: '+1 (555) 123-4567',
-    image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'EV Systems Architecture & Battery Technology',
-    certificates: [
-      { name: 'Certified EV Technician Level 3', issuer: 'International EV Association', year: 2023 },
-      { name: 'Advanced Battery Management Systems', issuer: 'Tesla Institute', year: 2022 },
-      { name: 'ISO 9001 Quality Management', issuer: 'ISO Certification Board', year: 2021 },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Michael Rodriguez',
-    role: 'Chief Technical Engineer',
-    email: 'michael.r@evservice.com',
-    phone: '+1 (555) 234-5678',
-    image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'High Voltage Systems & Diagnostics',
-    certificates: [
-      { name: 'Master EV Technician Certification', issuer: 'National Institute for Automotive Service Excellence', year: 2023 },
-      { name: 'High Voltage Safety Specialist', issuer: 'EV Safety Council', year: 2022 },
-      { name: 'Advanced Powertrain Diagnostics', issuer: 'Automotive Training Institute', year: 2021 },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Emily Thompson',
-    role: 'Service Manager',
-    email: 'emily.t@evservice.com',
-    phone: '+1 (555) 345-6789',
-    image: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Customer Relations & Quality Assurance',
-    certificates: [
-      { name: 'Certified Service Manager', issuer: 'Professional Service Association', year: 2023 },
-      { name: 'Six Sigma Green Belt', issuer: 'American Society for Quality', year: 2022 },
-      { name: 'EV Customer Service Excellence', issuer: 'EV Training Academy', year: 2021 },
-    ],
-  },
-  {
-    id: 4,
-    name: 'David Park',
-    role: 'Senior Battery Specialist',
-    email: 'david.p@evservice.com',
-    phone: '+1 (555) 456-7890',
-    image: 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Battery Health & Energy Storage Systems',
-    certificates: [
-      { name: 'Certified Battery Systems Engineer', issuer: 'Battery Technology Institute', year: 2023 },
-      { name: 'Lithium-Ion Safety Certification', issuer: 'International Battery Association', year: 2022 },
-      { name: 'Energy Storage Management', issuer: 'Clean Energy Academy', year: 2021 },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Jessica Martinez',
-    role: 'Electrical Systems Lead',
-    email: 'jessica.m@evservice.com',
-    phone: '+1 (555) 567-8901',
-    image: 'https://images.pexels.com/photos/762020/pexels-photo-762020.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Power Electronics & Charging Infrastructure',
-    certificates: [
-      { name: 'Certified Electrical Engineer', issuer: 'Institute of Electrical Engineers', year: 2023 },
-      { name: 'EV Charging Systems Specialist', issuer: 'ChargePoint Institute', year: 2022 },
-      { name: 'Power Electronics Advanced', issuer: 'Technical University Consortium', year: 2021 },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Robert Kim',
-    role: 'Diagnostic Systems Expert',
-    email: 'robert.k@evservice.com',
-    phone: '+1 (555) 678-9012',
-    image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400',
-    specialization: 'Advanced Diagnostics & Software Systems',
-    certificates: [
-      { name: 'Master Diagnostic Technician', issuer: 'Automotive Diagnostic Association', year: 2023 },
-      { name: 'OEM Software Certification', issuer: 'Multiple EV Manufacturers', year: 2022 },
-      { name: 'CAN Bus & Network Analysis', issuer: 'Vehicle Network Institute', year: 2021 },
-    ],
-  },
-];
 
-function TeamPage() {
+
+export default function TechniciansPage() {
+  const [items, setItems] = useState<TechnicianWithMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [selectedTech, setSelectedTech] = useState<TechnicianWithMeta | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  // Mock certificate data
+  const mockCertificates: TechnicianCertificate[] = [
+    {
+      certificateID: '1',
+      issuedDate: '2023-01-15',
+      expiryDate: '2026-01-15',
+      status: 'active',
+      note: 'Renewal required every 3 years',
+      certificateImage: 'https://example.com/cert1.jpg'
+    },
+    {
+      certificateID: '2',
+      issuedDate: '2023-03-20',
+      expiryDate: '2026-03-20',
+      status: 'active',
+      note: 'Renewal required every 3 years',
+      certificateImage: 'https://example.com/cert2.jpg'
+    },
+    {
+      certificateID: '3',
+      issuedDate: '2023-06-10',
+      expiryDate: '2026-06-10',
+      status: 'active',
+      note: 'Renewal required every 3 years',
+      certificateImage: 'https://example.com/cert3.jpg'
+    }
+  ];
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const usersRes = await fetch(`http://localhost:4000/api/users?role=technician&limit=100`);
+        const usersJson = await usersRes.json();
+        const users: TechnicianUser[] = usersJson?.data?.users ?? [];
+
+        const promises = users.map(async (u) => {
+          let info: TechnicianInfo | undefined = undefined;
+          let certificates: TechnicianCertificate[] = [];
+
+          try {
+            const infoRes = await fetch(`http://localhost:4000/api/technicians/${u._id}/info`);
+            if (infoRes.ok) {
+              const j = await infoRes.json();
+              info = j?.data?.technician ?? undefined;
+            }
+          } catch (e) {
+          }
+
+          try {
+            const certRes = await fetch(`http://localhost:4000/api/technicians/${encodeURIComponent(u._id)}/certificates`);
+            if (certRes.ok) {
+              const j = await certRes.json();
+              certificates = j?.data?.certificates ?? [];
+            }
+          } catch (e) {
+
+          }
+
+          return { user: u, info, certificates } as TechnicianWithMeta;
+        });
+
+        const results = await Promise.all(promises);
+        if (!mounted) return;
+        setItems(results);
+      } catch (e) {
+        console.error(e);
+        if (mounted) setError('Không thể tải danh sách kỹ thuật viên.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Hero Section */}
@@ -130,62 +126,73 @@ function TeamPage() {
         </div>
       </section>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {teamMembers.map((member) => (
-            <TeamMemberCard key={member.id} member={member} />
-          ))}
-        </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">
-            Why Choose Our Certified Team?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-emerald-50 rounded-xl">
-              <Award className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Industry-Leading Certifications
-              </h3>
-              <p className="text-slate-600">
-                Our technicians hold the highest certifications from recognized automotive and EV institutions.
-              </p>
-            </div>
-            <div className="text-center p-6 bg-blue-50 rounded-xl">
-              <Shield className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Safety First Approach
-              </h3>
-              <p className="text-slate-600">
-                Specialized training in high-voltage systems ensures your vehicle and our team stay safe.
-              </p>
-            </div>
-            <div className="text-center p-6 bg-slate-50 rounded-xl">
-              <Mail className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Always Available
-              </h3>
-              <p className="text-slate-600">
-                Our team is ready to assist with your questions and service needs at any time.
-              </p>
-            </div>
-          </div>
-        </div>
+        {loading && <div className="py-16 text-center text-slate-500">Đang tải danh sách...</div>}
+        {error && <div className="text-red-600 py-4">{error}</div>}
 
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center space-x-6 bg-white px-8 py-4 rounded-xl shadow-md border border-slate-200">
-            <div className="flex items-center text-slate-700">
-              <Phone className="w-5 h-5 mr-2 text-emerald-600" />
-              <span className="font-medium">General Inquiries: +1 (555) 000-0000</span>
-            </div>
-            <div className="flex items-center text-slate-700">
-              <Mail className="w-5 h-5 mr-2 text-emerald-600" />
-              <span className="font-medium">info@evservice.com</span>
-            </div>
-          </div>
-        </div>
+        {!loading && !error && (
+          <>
+            {items.length === 0 ? (
+              <div className="py-12 text-center text-slate-500">Chưa có kỹ thuật viên để hiển thị.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {items.map(({ user, info, certificates }) => {
+                  const name = user.fullName || user.userName || 'Không tên';
+                  const photo = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D9488&color=fff`;
+                  return (
+                    <article key={user._id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                      <div className="h-44 bg-slate-100 flex items-center justify-center overflow-hidden">
+                        <img src={photo} alt={name} className="w-full h-full object-cover" />
+                      </div>
+
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-semibold text-slate-900 truncate">{name}</h3>
+                            <div className="text-sm text-slate-500 truncate">{info?.introduction ?? info?.id ?? user.role}</div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-sm text-slate-500">Kinh nghiệm</div>
+                            <div className="font-bold text-slate-900">{info?.experience ?? '—'} năm</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                          <a href={`mailto:${user.email}`} className="flex items-center gap-2 text-sm text-slate-600">
+                            <Mail className="w-4 h-4 text-slate-400" /> <span className="truncate">{user.email ?? '—'}</span>
+                          </a>
+                          <a href={`tel:${user.phoneNumber}`} className="flex items-center gap-2 text-sm text-slate-600">
+                            <Phone className="w-4 h-4 text-slate-400" /> <span>{user.phoneNumber ?? '—'}</span>
+                          </a>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedTech({ user, info, certificates });
+                              setIsDetailOpen(true);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-700"
+                          >
+                            Xem chi tiết
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
+      <TechnicianDetailModal
+        isOpen={isDetailOpen}
+        onClose={() => { setIsDetailOpen(false); setSelectedTech(null); }}
+        technician={selectedTech}
+      />
     </div>
+
   );
 }
-
-export default TeamPage;

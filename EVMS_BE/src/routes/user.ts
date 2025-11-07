@@ -8,7 +8,7 @@ export const userRouter = Router();
 userRouter.get('/', getAllUsers);
 userRouter.post('/', createUser);
 userRouter.get('/certificates', getCertificates);
-userRouter.get('/:userId', authMiddleware, staffOnly, getUserById);
+userRouter.get('/:userId', authMiddleware, getUserById);
 // Update user info - user can update their own info
 userRouter.put('/:userId', authMiddleware, updateUser);
 // Update user status (enable/disable) - admin only (the system has single admin)

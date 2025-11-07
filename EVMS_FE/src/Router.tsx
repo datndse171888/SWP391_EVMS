@@ -32,6 +32,7 @@ import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
+import BookingPage from './pages/staff/BookingPage';
 import Booking from './pages/booking/Booking'
 import PartsPage from './pages/Parts'
 import PartDetail from './pages/PartDetail'
@@ -43,6 +44,13 @@ import TechnicianProfile from './pages/technician/TechnicianProfile';
 import Profile from './pages/user/Profile';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
+import Maintenance from './pages/user/Maintenance';
+import MyVehicles from './pages/user/MyVehicles';
+import AddVehicle from './pages/user/AddVehicle';
+import PaymentCallback from './pages/payment/PaymentCallback';
+import Contact from './pages/Contact';
+import ButtonRegister from './components/ButtonRegister';
+import ChatboxButton from './components/ui/ChatboxButton'
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -55,22 +63,24 @@ export const Router: React.FC = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="/introduction" element={<Introduction />} />
-          <Route path="/service" element={<Service />} />
-          <Route path="/carService" element={<CarService />} />
-          <Route path="/bikeService" element={<BikeService />} />
-          <Route path="/motoService" element={<MotoService />} />
-          <Route path="/parts" element={<PartsPage />} />
-          <Route path="/part/:id" element={<PartDetail />} />
-          <Route path="/technicians" element={<TechniciansPage />} />
-          <Route path='/booking' element={<Booking />} />
-          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route index element={<><Home /> <ChatboxButton /> <ButtonRegister /> </>} />
+          <Route path="/introduction" element={<><Introduction /><ButtonRegister /></>} />
+          <Route path="/contact" element={<><Contact /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/service" element={<><Service /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/carService" element={<><CarService /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/bikeService" element={<><BikeService /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/motoService" element={<><MotoService /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/parts" element={<><PartsPage /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/part/:id" element={<><PartDetail /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/technicians" element={<><TechniciansPage /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path='/booking' element={<><Booking /> <ChatboxButton /> </>} />
+          <Route path="/feedback" element={<><FeedbackPage /> <ChatboxButton /> </>} />
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
         <Route path="/profile" element={
@@ -78,9 +88,24 @@ export const Router: React.FC = () => {
             <Profile />
           </PrivateRoute>
         } />
+        <Route path="/maintenance" element={
+          <PrivateRoute>
+            <Maintenance />
+          </PrivateRoute>
+        } />
         <Route path="/appointment-history" element={
           <PrivateRoute>
             <AppointmentHistory />
+          </PrivateRoute>
+        } />
+        <Route path="/my-vehicles" element={
+          <PrivateRoute>
+            <MyVehicles />
+          </PrivateRoute>
+        } />
+        <Route path="/add-vehicle" element={
+          <PrivateRoute>
+            <AddVehicle />
           </PrivateRoute>
         } />
 
@@ -130,6 +155,7 @@ export const Router: React.FC = () => {
                 <Route path="customers" element={<ChatWithCustomer />} />
                 <Route path="appointments" element={<ManageAppointment />} />
                 <Route path="parts" element={<ManagePart />} />
+                <Route path="booking" element={<BookingPage />} />
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
               </Routes>
@@ -145,7 +171,7 @@ export const Router: React.FC = () => {
                 <Route path="dashboard" element={<TechnicianDashboard />} />
                 <Route path="schedule" element={<TechnicianSchedule />} />
                 <Route path="profile" element={<TechnicianProfile />} />
-                <Route path="appointments/:id" element={<AppointmentWorkspace />} />
+                <Route path="appointments/:appointmentId" element={<AppointmentWorkspace />} />
                 <Route path="*" element={<Navigate to="/technician/dashboard" replace />} />
               </Routes>
             </TechnicianLayout>

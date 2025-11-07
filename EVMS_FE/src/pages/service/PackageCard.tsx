@@ -81,11 +81,6 @@ export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, onViewDe
           >
             Chi tiết
           </button>
-          <button
-            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
-          >
-            Chọn gói
-          </button>
         </div>
       </div>
     </div>

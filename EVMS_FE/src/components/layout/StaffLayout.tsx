@@ -49,6 +49,17 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         </svg>
       )
     },
+    {
+      name: 'Thanh toán',
+      path: '/staff/booking',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="3" y="6" width="18" height="12" rx="2" ry="2" strokeWidth={2} />
+          <circle cx="12" cy="12" r="3" strokeWidth={2} />
+          <path d="M6 9h0m12 6h0" strokeWidth={2} strokeLinecap="round" />
+        </svg>
+      )
+    },
   ];
 
   const isActive = (path: string) => {

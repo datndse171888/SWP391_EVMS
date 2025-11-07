@@ -63,9 +63,14 @@ axiosInstance.interceptors.response.use(
       switch (status) {
         case 401:
           // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+          // Skip redirect for payment callback endpoints (they don't require auth)
+          const isPaymentCallback = error.config?.url?.includes('/payments/payos/confirm') || 
+                                   error.config?.url?.includes('/payments/webhook');
+          if (!isPaymentCallback) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            window.location.href = '/login';
+          }
           break;
 
         case 403:

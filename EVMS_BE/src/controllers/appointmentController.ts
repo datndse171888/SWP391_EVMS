@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
+import { Vehicle } from '../models/Vehicle.js';
+import { getDefaultMaintenanceCycleMonths, computeNextMaintenanceDate, isDue } from '../utils/maintenance.js';
 import { Technician } from '../models/Technician.js';
 import { User } from '../models/User.js';
+import { selectTechniciansForSlot } from '../services/technicianAssignment.js';
 
 export async function createAppointment(req: Request, res: Response) {
   try {
@@ -49,6 +52,73 @@ export async function createAppointment(req: Request, res: Response) {
       }
     } catch (error) {
       return res.status(400).json({ message: 'bookingDate không hợp lệ' });
+    }
+
+    // ============================================
+    // VALIDATION: Prevent creating a new periodic plan while another is active for the vehicle
+    // Allow scheduling for the SAME active plan
+    // ============================================
+    try {
+      if (vehicleID && (serviceID || servicePackageID)) {
+        // Load selected config
+        let selectedPeriodic = false;
+        let selectedKey = '';
+        if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
+          const { ServicePackage } = await import('../models/ServicePackage.js');
+          const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          if (pkg?.periodicEnabled) { selectedPeriodic = true; selectedKey = `P:${servicePackageID}`; }
+        } else if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
+          const { Service } = await import('../models/Service.js');
+          const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          if (svc?.periodicEnabled) { selectedPeriodic = true; selectedKey = `S:${serviceID}`; }
+        }
+
+        if (selectedPeriodic) {
+          // Find existing periodic subscriptions for this vehicle based on completed appointments
+          const all = await Appointment.find({
+            vehicleID: new mongoose.Types.ObjectId(vehicleID),
+            status: 'completed',
+            $or: [{ serviceID: { $ne: null } }, { servicePackageID: { $ne: null } }]
+          }).select('serviceID servicePackageID bookingDate').lean();
+
+          // Group counts
+          type Key = string; interface Group { first: Date; count: number; key: string; serviceID?: any; servicePackageID?: any }
+          const groups = new Map<Key, Group>();
+          const toKey = (a: any) => (a.serviceID ? `S:${a.serviceID}` : `P:${a.servicePackageID}`);
+          for (const a of all) {
+            const k = toKey(a);
+            const g = groups.get(k);
+            if (!g) groups.set(k, { first: a.bookingDate as any, count: 1, key: k, serviceID: a.serviceID, servicePackageID: a.servicePackageID });
+            else { g.count += 1; if (new Date(a.bookingDate as any) < new Date(g.first)) g.first = a.bookingDate as any; }
+          }
+
+          // Evaluate each group to see if active
+          for (const [, g] of groups) {
+            let cfg: any = null;
+            if (g.serviceID) {
+              const { Service } = await import('../models/Service.js');
+              cfg = await Service.findById(g.serviceID).select('periodicEnabled defaultTotalVisits').lean();
+            } else if (g.servicePackageID) {
+              const { ServicePackage } = await import('../models/ServicePackage.js');
+              cfg = await ServicePackage.findById(g.servicePackageID).select('periodicEnabled defaultTotalVisits').lean();
+            }
+            if (!cfg?.periodicEnabled || !cfg?.defaultTotalVisits) continue;
+            const remaining = Math.max(0, Number(cfg.defaultTotalVisits) - g.count);
+            if (remaining > 0) {
+              // There is an active periodic plan
+              if (g.key !== selectedKey) {
+                return res.status(409).json({
+                  success: false,
+                  message: 'Xe này đang có gói định kỳ còn hiệu lực. Vui lòng hoàn tất hoặc chọn gói/dịch vụ không định kỳ.'
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Periodic validation error:', e);
+      // continue without blocking if validation fails unexpectedly
     }
 
     // ============================================
@@ -218,6 +288,32 @@ export async function createAppointment(req: Request, res: Response) {
       });
     }
 
+    // 10. Tự động gán technician theo tiêu chí “ít việc nhất trong tuần” nếu FE không truyền
+    let autoLeaderId: string | undefined = undefined;
+    let autoSupport1Id: string | undefined = undefined;
+    let autoSupport2Id: string | undefined = undefined;
+
+    const missingAllProvided = !technicianLeaderID && !technicianSupport1ID && !technicianSupport2ID;
+    if (missingAllProvided) {
+      // Lấy danh sách active leaders/supports từ bước 7
+      const pick = await selectTechniciansForSlot({
+        startTime: appointmentStart,
+        endTime: appointmentEnd,
+        vehicleCategory,
+        activeLeaders: activeLeaders.map(t => ({ _id: t._id as any, startDate: (t as any).startDate })) as any,
+        activeSupports: activeSupports.map(t => ({ _id: t._id as any, startDate: (t as any).startDate })) as any,
+        overlappingAppointments: actualOverlappingAppointments as any,
+      });
+
+      if (!pick.ok) {
+        return res.status(400).json({ message: 'Không đủ kỹ thuật viên khả dụng để tự động gán cho lịch này' });
+      }
+
+      autoLeaderId = pick.leaders[0];
+      autoSupport1Id = pick.supports[0];
+      autoSupport2Id = required.support > 1 ? pick.supports[1] : undefined;
+    }
+
     // ============================================
     // TẠO APPOINTMENT
     // ============================================
@@ -225,9 +321,9 @@ export async function createAppointment(req: Request, res: Response) {
     const appointment = await Appointment.create({
       userID: new mongoose.Types.ObjectId(userID),
       vehicleID: toObjectIdOrUndefined(vehicleID),
-      technicianLeaderID: toObjectIdOrUndefined(technicianLeaderID),
-      technicianSupport1ID: toObjectIdOrUndefined(technicianSupport1ID),
-      technicianSupport2ID: toObjectIdOrUndefined(technicianSupport2ID),
+      technicianLeaderID: toObjectIdOrUndefined(technicianLeaderID || autoLeaderId),
+      technicianSupport1ID: toObjectIdOrUndefined(technicianSupport1ID || autoSupport1Id),
+      technicianSupport2ID: toObjectIdOrUndefined(technicianSupport2ID || autoSupport2Id),
       serviceID: toObjectIdOrUndefined(serviceID),
       servicePackageID: toObjectIdOrUndefined(servicePackageID),
       bookingDate: parsedBookingDate,
@@ -330,9 +426,21 @@ function buildPopulate(includeParam?: string) {
     populates.push({ path: 'servicePackageID', select: '_id name price description' });
   }
   if (include.has('technicians')) {
-    populates.push({ path: 'technicianLeaderID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport1ID', select: '_id fullName phoneNumber' });
-    populates.push({ path: 'technicianSupport2ID', select: '_id fullName phoneNumber' });
+    populates.push({ 
+      path: 'technicianLeaderID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport1ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
+    populates.push({ 
+      path: 'technicianSupport2ID', 
+      select: '_id userID role introduction experience',
+      populate: { path: 'userID', select: 'userName fullName email phoneNumber' }
+    });
   }
   return populates;
 }
@@ -409,6 +517,32 @@ export async function listAppointments(req: Request, res: Response) {
   }
 }
 
+// List today's appointments with status awaiting_payment (admin/staff)
+export async function listTodayAwaitingPayment(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    const docs = await Appointment.find({
+      status: 'awaiting_payment',
+      bookingDate: { $gte: start, $lte: end }
+    }).sort({ bookingDate: 1 });
+
+    return res.json({ data: docs, pagination: { total: docs.length } });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 export async function listMyAppointments(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
@@ -450,10 +584,61 @@ export async function listMyAppointments(req: Request, res: Response) {
   }
 }
 
+// List appointments assigned to current technician
+export async function listMyAssignedAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'technician') {
+      return res.status(403).json({ message: 'Chỉ kỹ thuật viên được phép xem danh sách này' });
+    }
+
+    // Resolve technicianId from current user
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
+    const technicianId = String(techDoc._id);
+
+    const params = parseListParams(req);
+    const filter = buildBaseFilter(params);
+    filter.$or = [
+      { technicianLeaderID: technicianId },
+      { technicianSupport1ID: technicianId },
+      { technicianSupport2ID: technicianId },
+    ];
+
+    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
+    const populates = buildPopulate(params.includeParam);
+
+    const skip = (params.page - 1) * params.limit;
+    const [total, docs] = await Promise.all([
+      Appointment.countDocuments(filter),
+      (() => {
+        let query = Appointment.find(filter)
+          .sort(params.sort)
+          .skip(skip)
+          .limit(params.limit);
+        if (select) query = query.select(select);
+        return query.populate(populates);
+      })(),
+    ]);
+
+    // Technician: trả thẳng mảng dữ liệu
+    return res.json(docs);
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 export async function getAppointmentById(req: Request, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
     const id = String(req.params.id);
+    console.log('getAppointmentById - Requested ID:', id);
+    console.log('getAppointmentById - User role:', req.user.role);
+    console.log('getAppointmentById - User ID:', req.user.id);
+    
     const includeParam = (req.query.include as string | undefined)?.trim();
     const fieldsParam = (req.query.fields as string | undefined)?.trim();
     const select = buildSelect(fieldsParam);
@@ -462,20 +647,59 @@ export async function getAppointmentById(req: Request, res: Response) {
     let query = Appointment.findById(id);
     if (select) query = query.select(select);
     let doc = await query.populate(populates);
-    if (!doc) return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    
+    if (!doc) {
+      console.log('getAppointmentById - Appointment not found in database');
+      return res.status(404).json({ message: 'Không tìm thấy appointment' });
+    }
+
+    console.log('getAppointmentById - Appointment found:', {
+      id: doc._id,
+      userID: doc.userID,
+      technicianLeaderID: doc.technicianLeaderID,
+      technicianSupport1ID: doc.technicianSupport1ID,
+      technicianSupport2ID: doc.technicianSupport2ID
+    });
 
     const role = req.user.role;
     if (role === 'admin' || role === 'staff') {
       return res.json({ data: doc });
     }
 
-    // Tối thiểu: chỉ cho phép chủ sở hữu xem; có thể mở rộng cho technician khi có liên kết user-technician
+    // Allow customer to view their own appointments
     if (role === 'customer' && String(doc.userID) === req.user.id) {
       return res.json({ data: doc });
     }
 
+    // Allow technician to view appointments they are assigned to
+    if (role === 'technician') {
+    // Resolve technician profile by userID (accept both ObjectId and string)
+    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+      if (!techDoc) {
+        console.log('getAppointmentById - Technician profile not found');
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      const technicianId = String(techDoc._id);
+      console.log('getAppointmentById - Technician ID:', technicianId);
+      
+      const isAssigned = 
+        String(doc.technicianLeaderID) === technicianId ||
+        String(doc.technicianSupport1ID) === technicianId ||
+        String(doc.technicianSupport2ID) === technicianId;
+      
+      console.log('getAppointmentById - Is assigned:', isAssigned);
+      
+      if (isAssigned) {
+        return res.json({ data: doc });
+      } else {
+        console.log('getAppointmentById - Technician not assigned to this appointment');
+      }
+    }
+
     return res.status(403).json({ message: 'Insufficient permissions' });
   } catch (error) {
+    console.error('getAppointmentById error:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }
@@ -939,4 +1163,262 @@ export async function getAvailableTechnicians(req: Request, res: Response) {
   }
 }
 
+
+// Update Appointment Status API
+export async function updateAppointmentStatus(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Only admin, staff, technician can change status
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff' && role !== 'technician') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin, staff hoặc technician mới có thể thay đổi trạng thái'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+    const { status, reason, notes } = req.body as {
+      status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+      reason?: string;
+      notes?: string;
+    };
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu trường status'
+      });
+    }
+
+    const allowedStatuses = new Set(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']);
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Giá trị status không hợp lệ'
+      });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    const currentStatus = appointment.status;
+
+    // Disallow changes from terminal states except to keep same
+    if (currentStatus === 'completed' || currentStatus === 'cancelled') {
+      if (status !== currentStatus) {
+        return res.status(400).json({
+          success: false,
+          message: `Không thể chuyển trạng thái từ ${currentStatus}`
+        });
+      }
+    }
+
+    // Allowed transitions map
+    const allowedTransitions: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled', 'no_show'],
+      confirmed: ['in_progress', 'cancelled', 'no_show'],
+      in_progress: ['completed', 'cancelled', 'no_show'],
+      completed: [],
+      cancelled: [],
+      no_show: ['confirmed'] // allow re-confirming if customer returns
+    };
+
+    if (status !== currentStatus) {
+      const nexts = allowedTransitions[currentStatus] || [];
+      if (!nexts.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Chuyển trạng thái không hợp lệ: ${currentStatus} -> ${status}`
+        });
+      }
+    }
+
+    const updateData: any = { status };
+    if (reason) {
+      updateData.reason = appointment.reason ? `${appointment.reason} | ${reason}` : reason;
+    }
+    if (notes) {
+      updateData.reason = updateData.reason
+        ? `${updateData.reason} | Ghi chú: ${notes}`
+        : `Ghi chú: ${notes}`;
+    }
+
+    const updated = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      updateData,
+      { new: true }
+    ).populate([
+      { path: 'userID', select: 'userName email fullName phoneNumber' },
+      { path: 'serviceID', select: 'name price duration description' },
+      { path: 'servicePackageID', select: 'name price duration description' },
+      { path: 'technicianLeaderID', select: 'userID', populate: { path: 'userID', select: 'userName fullName' } }
+    ]);
+
+    // Maintenance: vehicle-first-appointment logic (default cycle by vehicle type)
+    if (status === 'completed' && updated && updated.vehicleID) {
+      try {
+        const vehicle = await Vehicle.findById(updated.vehicleID);
+        if (vehicle) {
+          const cycleMonths = vehicle.maintenanceCycleMonths || getDefaultMaintenanceCycleMonths(vehicle.vehicleCategory as any);
+          const last = new Date();
+          const next = computeNextMaintenanceDate(last, cycleMonths);
+          vehicle.lastMaintenanceDate = last;
+          vehicle.maintenanceCycleMonths = cycleMonths;
+          vehicle.nextMaintenanceDate = next;
+          vehicle.isMaintenanceDue = isDue(next);
+          await vehicle.save();
+        }
+      } catch (e) {
+        console.error('Failed to update vehicle maintenance info:', e);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật trạng thái lịch hẹn thành công',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Update appointment status error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi cập nhật trạng thái lịch hẹn'
+    });
+  }
+}
+
+// Get Service or ServicePackage by Appointment ID API
+export async function getServiceByAppointmentId(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const appointmentId = String(req.params.id);
+
+    // Find appointment
+    const appointment = await Appointment.findById(appointmentId)
+      .select('serviceID servicePackageID userID')
+      .lean() as any;
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lịch hẹn'
+      });
+    }
+
+    // Check permissions
+    const role = req.user.role;
+    const isOwner = String(appointment.userID) === req.user.id;
+
+    // Admin and staff can view any appointment's service/package
+    // Customer can only view their own appointment's service/package
+    // Technician can view if they are assigned to the appointment
+    if (role === 'customer' && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn chỉ có thể xem dịch vụ của lịch hẹn của chính mình'
+      });
+    }
+
+    // If technician, check if they are assigned to this appointment
+    if (role === 'technician') {
+      const techDoc = await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) })
+        .select('_id')
+        .lean() as any;
+      
+      if (techDoc) {
+        const technicianId = String(techDoc._id);
+        const fullAppointment = await Appointment.findById(appointmentId)
+          .select('technicianLeaderID technicianSupport1ID technicianSupport2ID')
+          .lean() as any;
+        
+        if (fullAppointment) {
+          const isAssigned = 
+            String(fullAppointment.technicianLeaderID) === technicianId ||
+            String(fullAppointment.technicianSupport1ID) === technicianId ||
+            String(fullAppointment.technicianSupport2ID) === technicianId;
+          
+          if (!isAssigned) {
+            return res.status(403).json({
+              success: false,
+              message: 'Bạn chỉ có thể xem dịch vụ của lịch hẹn được phân công cho bạn'
+            });
+          }
+        }
+      }
+    }
+
+    // Check if appointment has serviceID or servicePackageID
+    if (appointment.serviceID) {
+      const { Service } = await import('../models/Service.js');
+      const service = await Service.findById(appointment.serviceID).lean();
+
+      if (!service) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy dịch vụ'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thông tin dịch vụ thành công',
+        data: {
+          type: 'service',
+          service: service
+        }
+      });
+    } else if (appointment.servicePackageID) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const servicePackage = await ServicePackage.findById(appointment.servicePackageID)
+        .populate('services', '_id name price duration description vehicleCategory')
+        .lean();
+
+      if (!servicePackage) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy gói dịch vụ'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thông tin gói dịch vụ thành công',
+        data: {
+          type: 'servicePackage',
+          servicePackage: servicePackage
+        }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Lịch hẹn không có dịch vụ hoặc gói dịch vụ'
+      });
+    }
+
+  } catch (error) {
+    console.error('Get service by appointment ID error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi máy chủ khi lấy thông tin dịch vụ'
+    });
+  }
+}
 

@@ -35,12 +35,14 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
   const technicianMenuItems = [
     { name: 'Dashboard', path: '/technician/dashboard' },
     { name: 'Schedule', path: '/technician/schedule' },
-    { name: 'Service Orders', path: '/technician/service-orders' },
-    { name: 'Maintenance', path: '/technician/maintenance' },
-    { name: 'Team', path: '/technician/team' },
+    { name: 'Appointment', path: '/technician/appointments' },
   ];
 
   const isActive = (path: string) => {
+    // Mark Appointment tab active on any appointment workspace route
+    if (path === '/technician/appointments') {
+      return location.pathname.startsWith('/technician/appointments');
+    }
     return location.pathname === path;
   };
 

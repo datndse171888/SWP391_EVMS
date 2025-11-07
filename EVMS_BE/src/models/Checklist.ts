@@ -1,35 +1,77 @@
-import mongoose, { Schema, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-export type ChecklistStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+export type ChecklistStatus = 'pending' | 'completed' | 'skipped'; // pending = chưa làm, completed = đã làm, skipped = bỏ qua
 
 export interface IChecklist extends Document {
-  appointmentID: Types.ObjectId;
-  technicianID: Types.ObjectId;
+  appointmentID: mongoose.Types.ObjectId; // ref Appointment
+  technicianID: mongoose.Types.ObjectId; // ref Technician
   taskName: string;
-  description?: string;
+  description: string;
   status: ChecklistStatus;
   startedAt?: Date;
   completedAt?: Date;
   note?: string;
-  createAt?: Date;
-  updateAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ChecklistSchema = new Schema<IChecklist>(
   {
-    appointmentID: { type: Schema.Types.ObjectId, ref: 'Appointment', required: true, index: true },
-    technicianID: { type: Schema.Types.ObjectId, ref: 'Technician', required: true, index: true },
-    taskName: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    status: { type: String, enum: ['pending', 'in_progress', 'completed', 'skipped'], default: 'pending', index: true },
-    startedAt: { type: Date },
-    completedAt: { type: Date },
-    note: { type: String, trim: true },
+    appointmentID: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'Appointment',
+      index: true,
+    },
+    technicianID: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'Technician',
+      index: true,
+    },
+    taskName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ['pending', 'completed', 'skipped'], // pending = chưa làm, completed = đã làm, skipped = bỏ qua
+      default: 'pending',
+      index: true,
+    },
+    startedAt: {
+      type: Date,
+      required: false,
+    },
+    completedAt: {
+      type: Date,
+      required: false,
+    },
+    note: {
+      type: String,
+      required: false,
+      trim: true,
+    },
   },
-  { timestamps: { createdAt: 'createAt', updatedAt: 'updateAt' } }
+  {
+    timestamps: true, // Tự động tạo createdAt và updatedAt
+  }
 );
 
+// Compound indexes for queries
+ChecklistSchema.index({ appointmentID: 1, technicianID: 1 });
+ChecklistSchema.index({ technicianID: 1, status: 1 });
+ChecklistSchema.index({ appointmentID: 1, status: 1 });
+
 export const Checklist =
-  mongoose.models.Checklist || mongoose.model<IChecklist>('Checklist', ChecklistSchema);
+  mongoose.models.Checklist ||
+  mongoose.model<IChecklist>('Checklist', ChecklistSchema);
 
 

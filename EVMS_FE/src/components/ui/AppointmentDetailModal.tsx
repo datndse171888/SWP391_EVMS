@@ -10,21 +10,23 @@ import type { VehicleResponse } from '../../types/Vehicle';
 import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import { VehicleApi } from '../../api/VehicleApi';
+import { AppointmentApi } from '../../api/AppointmentApi';
 import { formatDate, formatPrice, formatTime } from '../../utils/DataFormat';
 import { Loading } from '../Loading';
 import { UserApi } from '../../api/UserApi';
-import type { CheckingResponse } from '../../types/DataResponse';
 
 interface AppointmentDetailModalProps {
     appointment: AppointmentResponse;
     isOpen: boolean;
     onClose: () => void;
+    varient: 'staff' | 'user';
 }
 
 const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
     appointment,
     isOpen,
-    onClose
+    onClose,
+    varient
 }) => {
     // ================================
     // States
@@ -56,22 +58,54 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
         setError(null);
 
         try {
-            const userResponse = await UserApi.getById(appointment.userID);
-            const userData: CheckingResponse<UserResponse> = userResponse.data;
-            setUser(userData.data);
+            if (varient === 'staff') {
+                const userResponse = await UserApi.getById(appointment.userID);
+                const userData: UserResponse = userResponse.data;
+                setUser(userData);
+            }
 
             const vehicleResponse = await VehicleApi.getVehicleById(appointment.vehicleID);
             const vehicleData: VehicleResponse = vehicleResponse.data;
             setVehicle(vehicleData);
 
-            if (appointment.servicePackageID) {
-                const servicePackageResponse = await ServicePackageApi.getServicePackageById(appointment.servicePackageID);
-                const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
-                setServicePackage(servicePackageData);
-            } else if (appointment.serviceID) {
-                const serviceResponse = await ServiceApi.getServiceById(appointment.serviceID);
-                const serviceData: ServiceResponse = serviceResponse.data;
-                setService(serviceData);
+            // Fetch service/servicePackage using getServiceByAppointmentId API
+            try {
+                const serviceResponse = await AppointmentApi.getServiceByAppointmentId(appointment._id);
+                const serviceData = serviceResponse.data.data;
+                
+                if (serviceData.type === 'service' && serviceData.service) {
+                    setService(serviceData.service);
+                } else if (serviceData.type === 'servicePackage' && serviceData.servicePackage) {
+                    setServicePackage(serviceData.servicePackage);
+                }
+            } catch (serviceError) {
+                console.error('Error fetching service/servicePackage:', serviceError);
+                // Fallback to old method if API fails
+                if (appointment.servicePackageID) {
+                    try {
+                        const servicePackageResponse = await ServicePackageApi.getServicePackageById(
+                            typeof appointment.servicePackageID === 'string' 
+                                ? appointment.servicePackageID 
+                                : (appointment.servicePackageID as any)?._id || appointment.servicePackageID
+                        );
+                        const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
+                        setServicePackage(servicePackageData);
+                    } catch (error) {
+                        console.error('Error fetching service package:', error);
+                    }
+                } else if (appointment.serviceID) {
+                    try {
+                        const serviceResponse = await ServiceApi.getServiceById(
+                            typeof appointment.serviceID === 'string' 
+                                ? appointment.serviceID 
+                                : (appointment.serviceID as any)?._id || appointment.serviceID
+                        );
+                        const serviceData: ServiceResponse = serviceResponse.data;
+                        setService(serviceData);
+                    } catch (error) {
+                        console.error('Error fetching service:', error);
+                    }
+                }
             }
 
         } catch (error) {
@@ -178,10 +212,11 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             </div>
                                         </div>
 
+                                        {appointment.createdAt && 
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Ngày tạo</label>
                                             <p className="text-gray-900">{formatDate(appointment.createdAt)}</p>
-                                        </div>
+                                        </div>}
                                     </div>
                                 </div>
 
@@ -210,8 +245,8 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             </div>
 
                                             <div>
-                                                <label className="text-sm font-medium text-gray-500">Tên đăng nhập</label>
-                                                <p className="text-gray-900">{user.userName}</p>
+                                                <label className="text-sm font-medium text-gray-500">Giới tính</label>
+                                                <p className="text-gray-900">{user.gender}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -236,10 +271,12 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                                 <p className="text-gray-900">{vehicle.plateNumber}</p>
                                             </div>
 
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-500">VIN</label>
-                                                <p className="text-gray-900 font-mono">{vehicle.VIN}</p>
-                                            </div>
+                                            {vehicle.VIN && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500">VIN</label>
+                                                    <p className="text-gray-900 font-mono">{vehicle.VIN}</p>
+                                                </div>
+                                            )}
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>

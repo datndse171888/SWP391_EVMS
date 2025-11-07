@@ -10,11 +10,11 @@ export const Parts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [totalPages, setTotalPages] = useState<number>(1)
   const limit = 10
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedPart, setSelectedPart] = useState<Part | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [selectedVehicleType, setSelectedVehicleType] = useState<string>('')
-  
+  const [selectedVehicleType, setSelectedVehicleType] = useState<string>('')
+
 
 
   const currencyFormatter = useMemo(() => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }), [])
@@ -49,64 +49,64 @@ export const Parts: React.FC = () => {
     loadData()
   }
 
-   const handleCreate = () => {
-      setModalMode('create');
-      setSelectedPart(null);
-      setIsModalOpen(true);
-    };
+  const handleCreate = () => {
+    setModalMode('create');
+    setSelectedPart(null);
+    setIsModalOpen(true);
+  };
 
-    const handleEdit = (part: Part) => {
-      setModalMode('edit');
-      setSelectedPart(part);
-      setIsModalOpen(true);
-    };
+  const handleEdit = (part: Part) => {
+    setModalMode('edit');
+    setSelectedPart(part);
+    setIsModalOpen(true);
+  };
 
   const handleSave = async (partData: Partial<Part>) => {
-      if (modalMode === 'create') {
-        try {
-          // Call API to create part
-          const response = await PartApi.createPart(partData as Part);
+    if (modalMode === 'create') {
+      try {
+        // Call API to create part
+        const response = await PartApi.createPart(partData as Part);
 
-          if (!response.status) {
-            throw new Error('Failed to create part');
-          }
-  
-          loadData();
-          setIsModalOpen(false);
-        } catch (error) {
-          console.error('Error creating part:', error);
-          alert('Failed to create part. Please try again.');
+        if (!response.status) {
+          throw new Error('Failed to create part');
         }
-      } else {
-        try {
-          // Call API to update part
-          const response = await PartApi.updatePart(partData.id!, partData as Part);
 
-          if (!response.status) {
-            throw new Error('Failed to update part');
-          }
-  
-          loadData();
-          setIsModalOpen(false);
-        } catch (error) {
-          console.error('Error updating part:', error);
-          alert('Failed to update part. Please try again.');
-        }
+        loadData();
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error('Error creating part:', error);
+        alert('Failed to create part. Please try again.');
       }
-    };
-    const handleDelete = async (id: string) => {
-        try {
-          // Call API to delete part
-          const response = await PartApi.deletePart(id);
-          if (!response.status) {
-            throw new Error('Failed to delete part');
-          }
-          loadData();
-        } catch (error) {
-          console.error('Error deleting part:', error);
-          alert('Failed to delete part. Please try again.');
+    } else {
+      try {
+        // Call API to update part
+        const response = await PartApi.updatePart(partData._id!, partData as Part);
+
+        if (!response.status) {
+          throw new Error('Failed to update part');
         }
-      };
+
+        loadData();
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error('Error updating part:', error);
+        alert('Failed to update part. Please try again.');
+      }
+    }
+  };
+  const handleDelete = async (id: string) => {
+    try {
+      // Call API to delete part
+      const response = await PartApi.deletePart(id);
+      if (!response.status) {
+        throw new Error('Failed to delete part');
+      }
+      loadData();
+    } catch (error) {
+      console.error('Error deleting part:', error);
+      alert('Failed to delete part. Please try again.');
+    }
+  };
 
   return (
     <div className="flex flex-col">
@@ -197,7 +197,7 @@ export const Parts: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {parts.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-200">
+                      <tr key={p._id} className="hover:bg-gray-50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <div className="font-semibold text-gray-800">{p.name}</div>
                           <div className="text-sm text-gray-500 max-w-xl line-clamp-2">{p.description || '—'}</div>
@@ -208,8 +208,8 @@ export const Parts: React.FC = () => {
                         <td className="py-4 px-6">{p.warrantyPeriod ? `${p.warrantyPeriod} ${p.warrantyCondition || ''}`.trim() : '—'}</td>
                         <td className="py-4 px-6">
                           <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${p.status === 'active' ? 'bg-green-100 text-green-800' :
-                              p.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
+                            p.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
                             }`}>
                             {p.status === 'active' ? 'Hoạt động' : p.status === 'inactive' ? 'Tạm dừng' : 'Ẩn'}
                           </span>
@@ -229,7 +229,7 @@ export const Parts: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(p.id)}
+                              onClick={() => handleDelete(p._id)}
                               className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                               title="Xóa"
                             >

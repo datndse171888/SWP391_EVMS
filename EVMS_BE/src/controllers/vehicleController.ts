@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Vehicle } from '../models/Vehicle.js';
 import { User } from '../models/User.js';
+import { Appointment } from '../models/Appointment.js';
+import { getDefaultMaintenanceCycleMonths, buildMaintenanceTimeline, daysBetween } from '../utils/maintenance.js';
 
 export async function createVehicle(req: Request, res: Response) {
   try {
@@ -16,11 +18,19 @@ export async function createVehicle(req: Request, res: Response) {
       status = 'active'
     } = req.body;
 
-    // Validation bắt buộc
-    if (!VIN || !vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
+    // Validation bắt buộc (VIN chỉ bắt buộc với CAR)
+    if (!vehicleCategory || !plateNumber || !brand || !year || !mileage || !batteryCapacity) {
       return res.status(400).json({
         success: false,
-        message: 'Thiếu thông tin bắt buộc: VIN, vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
+        message: 'Thiếu thông tin bắt buộc: vehicleCategory, plateNumber, brand, year, mileage, batteryCapacity'
+      });
+    }
+
+    // VIN chỉ bắt buộc khi là xe ô tô (CAR)
+    if (vehicleCategory === 'CAR' && (!VIN || typeof VIN !== 'string' || VIN.trim() === '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'VIN là bắt buộc đối với xe ô tô'
       });
     }
 
@@ -49,13 +59,15 @@ export async function createVehicle(req: Request, res: Response) {
       });
     }
 
-    // Kiểm tra VIN đã tồn tại
-    const existingVIN = await Vehicle.findOne({ VIN: VIN.toUpperCase() });
-    if (existingVIN) {
-      return res.status(400).json({
-        success: false,
-        message: 'VIN đã tồn tại trong hệ thống'
-      });
+    // Kiểm tra VIN đã tồn tại (chỉ khi có cung cấp VIN)
+    if (VIN && typeof VIN === 'string' && VIN.trim() !== '') {
+      const existingVIN = await Vehicle.findOne({ VIN: VIN.toUpperCase() });
+      if (existingVIN) {
+        return res.status(400).json({
+          success: false,
+          message: 'VIN đã tồn tại trong hệ thống'
+        });
+      }
     }
 
     // Kiểm tra biển số đã tồn tại
@@ -107,10 +119,9 @@ export async function createVehicle(req: Request, res: Response) {
       });
     }
 
-    // Tạo vehicle mới
-    const vehicle = await Vehicle.create({
+    // Tạo dữ liệu vehicle mới (VIN chỉ thêm khi có cung cấp)
+    const createPayload: any = {
       userID,
-      VIN: VIN.toUpperCase(),
       vehicleCategory,
       plateNumber: plateNumber.toUpperCase(),
       brand: brand.trim(),
@@ -118,7 +129,14 @@ export async function createVehicle(req: Request, res: Response) {
       mileage,
       batteryCapacity,
       status
-    });
+    };
+
+    if (VIN && typeof VIN === 'string' && VIN.trim() !== '') {
+      createPayload.VIN = VIN.toUpperCase();
+    }
+
+    // Tạo vehicle mới
+    const vehicle = await Vehicle.create(createPayload);
 
     // Populate thông tin user
     const populatedVehicle = await Vehicle.findById(vehicle._id)
@@ -231,6 +249,267 @@ export async function getVehicleByID(req: Request, res: Response) {
   } catch (error) {
     console.error('Lỗi khi lấy thông tin xe:', error);
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy thông tin xe' });
+  }
+}
+
+export async function getVehicleMaintenance(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID xe không hợp lệ' });
+    }
+
+    const vehicle = await Vehicle.findById(id).lean();
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy xe' });
+    }
+
+    const cycle = vehicle.maintenanceCycleMonths || getDefaultMaintenanceCycleMonths(vehicle.vehicleCategory as any);
+    const bookingUrl = `/appointments/new?vehicleId=${vehicle._id}`;
+    const now = new Date();
+    const daysUntilDue = vehicle.nextMaintenanceDate ? daysBetween(new Date(vehicle.nextMaintenanceDate), now) * -1 : null;
+    const timeline = buildMaintenanceTimeline({
+      lastMaintenanceDate: vehicle.lastMaintenanceDate || undefined,
+      nextMaintenanceDate: vehicle.nextMaintenanceDate || undefined,
+      cycleMonths: cycle,
+      slotsCount: 8,
+      upcomingDays: 7
+    }).map(s => ({ date: s.date, status: s.status }));
+
+    return res.status(200).json({
+      vehicleId: vehicle._id,
+      vehicleCategory: vehicle.vehicleCategory,
+      lastMaintenanceDate: vehicle.lastMaintenanceDate || null,
+      nextMaintenanceDate: vehicle.nextMaintenanceDate || null,
+      maintenanceCycleMonths: cycle,
+      isMaintenanceDue: Boolean(vehicle.isMaintenanceDue) || (vehicle.nextMaintenanceDate ? new Date(vehicle.nextMaintenanceDate) <= now : false),
+      daysUntilDue,
+      bookingUrl,
+      timeline
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy thông tin bảo dưỡng xe:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy thông tin bảo dưỡng xe' });
+  }
+}
+
+export async function getMyMaintenanceSummary(req: Request, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập' });
+    }
+    const userID = new mongoose.Types.ObjectId(req.user.id);
+    const vehicles = await Vehicle.find({ userID }).lean();
+    const now = new Date();
+    const items = vehicles.map(v => {
+      const cycle = v.maintenanceCycleMonths || getDefaultMaintenanceCycleMonths(v.vehicleCategory as any);
+      const daysUntilDue = v.nextMaintenanceDate ? daysBetween(new Date(v.nextMaintenanceDate), now) * -1 : null;
+      const timeline = buildMaintenanceTimeline({
+        lastMaintenanceDate: v.lastMaintenanceDate || undefined,
+        nextMaintenanceDate: v.nextMaintenanceDate || undefined,
+        cycleMonths: cycle,
+        slotsCount: 8,
+        upcomingDays: 7
+      }).map(s => ({ date: s.date, status: s.status }));
+      return {
+        vehicleId: v._id,
+        plateNumber: v.plateNumber,
+        vehicleCategory: v.vehicleCategory,
+        lastMaintenanceDate: v.lastMaintenanceDate || null,
+        nextMaintenanceDate: v.nextMaintenanceDate || null,
+        maintenanceCycleMonths: cycle,
+        isMaintenanceDue: Boolean(v.isMaintenanceDue) || (v.nextMaintenanceDate ? new Date(v.nextMaintenanceDate) <= now : false),
+        daysUntilDue,
+        bookingUrl: `/appointments/new?vehicleId=${v._id}`,
+        timeline
+      };
+    });
+
+    return res.status(200).json({ items, count: items.length });
+  } catch (error) {
+    console.error('Lỗi khi lấy tổng quan bảo dưỡng cá nhân:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy tổng quan bảo dưỡng' });
+  }
+}
+
+export async function getVehiclePeriodicStatus(req: Request, res: Response) {
+  try {
+    const { id } = req.params; // vehicle id
+    const { serviceId, servicePackageId } = req.query as { serviceId?: string; servicePackageId?: string };
+
+    if (!id) return res.status(400).json({ success: false, message: 'Thiếu vehicle id' });
+    const vehicle = await Vehicle.findById(id).lean();
+    if (!vehicle) return res.status(404).json({ success: false, message: 'Không tìm thấy xe' });
+
+    // Load config from service or package
+    let config: { periodicEnabled?: boolean; intervalMonths?: number; defaultTotalVisits?: number } | null = null;
+    if (servicePackageId) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const pkg = await ServicePackage.findById(servicePackageId)
+        .select('periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      if (pkg) config = pkg as any;
+    } else if (serviceId) {
+      const { Service } = await import('../models/Service.js');
+      const svc = await Service.findById(serviceId)
+        .select('periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      if (svc) config = svc as any;
+    }
+
+    if (!config || !config.periodicEnabled || !config.intervalMonths || !config.defaultTotalVisits) {
+      return res.status(200).json({
+        vehicleId: id,
+        periodicEnabled: false
+      });
+    }
+
+    const filter: any = { vehicleID: id, status: 'completed' };
+    if (servicePackageId) filter.servicePackageID = servicePackageId;
+    if (serviceId) filter.serviceID = serviceId;
+
+    const [firstCompleted, visitsUsed, firstPendingOrConfirmed] = await Promise.all([
+      Appointment.findOne(filter).sort({ bookingDate: 1 }).select('bookingDate').lean(),
+      Appointment.countDocuments(filter),
+      // Check for pending or confirmed appointments to use as reference date
+      Appointment.findOne({
+        ...filter,
+        status: { $in: ['pending', 'confirmed'] }
+      }).sort({ bookingDate: 1 }).select('bookingDate').lean()
+    ]);
+
+    const startDate = firstCompleted?.bookingDate || null;
+    const remainingVisits = Math.max(0, (config.defaultTotalVisits || 0) - (visitsUsed || 0));
+
+    // Compute next due based on startDate and number used
+    // nextDueDate = startDate + intervalMonths * (visitsUsed + 1)
+    // This calculates when the NEXT appointment should be scheduled
+    let nextDueDate: Date | null = null;
+    
+    if (remainingVisits > 0) {
+      if (startDate && visitsUsed > 0) {
+        // Case: Has completed appointments - calculate from startDate
+        const base = new Date(startDate as any);
+        // Calculate: startDate + intervalMonths * (visitsUsed + 1)
+        // visitsUsed + 1 because we want the date for the NEXT appointment
+        const months = (config.intervalMonths || 0) * (visitsUsed + 1);
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      } else if (firstPendingOrConfirmed?.bookingDate) {
+        // Case: No completed appointments but has pending/confirmed - use that as reference
+        const base = new Date(firstPendingOrConfirmed.bookingDate as any);
+        const months = config.intervalMonths || 0;
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      } else if (visitsUsed === 0) {
+        // Case: No appointments at all - use current date as base for first due date
+        const base = new Date();
+        const months = config.intervalMonths || 0;
+        const d = new Date(base);
+        d.setMonth(d.getMonth() + months);
+        nextDueDate = d;
+      }
+    }
+
+    return res.status(200).json({
+      vehicleId: id,
+      periodicEnabled: true,
+      serviceId: serviceId || null,
+      servicePackageId: servicePackageId || null,
+      startDate,
+      visitsUsed,
+      totalVisits: config.defaultTotalVisits,
+      remainingVisits,
+      intervalMonths: config.intervalMonths,
+      nextDueDate
+    });
+  } catch (error) {
+    console.error('Lỗi khi tính trạng thái bảo dưỡng định kỳ:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi tính trạng thái định kỳ' });
+  }
+}
+
+export async function listMyPeriodicSubscriptions(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Authentication required' });
+    const userId = req.user.id as string;
+
+    // Get completed appointments of current user that have service/servicePackage
+    const apps = await Appointment.find({
+      userID: userId,
+      status: 'completed',
+      $or: [{ serviceID: { $ne: null } }, { servicePackageID: { $ne: null } }]
+    })
+      .select('vehicleID serviceID servicePackageID bookingDate')
+      .lean();
+
+    // Group by vehicle + service or package
+    type Key = string;
+    interface GroupVal { vehicleID: any; serviceID?: any; servicePackageID?: any; firstDate: Date; count: number }
+    const groups = new Map<Key, GroupVal>();
+    const keyOf = (a: any) => String(a.vehicleID) + '|' + (a.serviceID ? 'S:' + a.serviceID : 'P:' + a.servicePackageID);
+    for (const a of apps) {
+      const k = keyOf(a);
+      const g = groups.get(k);
+      if (!g) {
+        groups.set(k, { vehicleID: a.vehicleID, serviceID: a.serviceID, servicePackageID: a.servicePackageID, firstDate: a.bookingDate as any, count: 1 });
+      } else {
+        g.count += 1;
+        if (new Date(a.bookingDate as any) < new Date(g.firstDate)) g.firstDate = a.bookingDate as any;
+      }
+    }
+
+    // Build results by loading config from Service/ServicePackage
+    const results: any[] = [];
+    for (const [, g] of groups) {
+      let cfg: any = null; let name: string = '';
+      if (g.serviceID) {
+        const { Service } = await import('../models/Service.js');
+        const s = await Service.findById(g.serviceID).select('name periodicEnabled intervalMonths defaultTotalVisits vehicleCategory').lean();
+        if (s && s.periodicEnabled && s.intervalMonths && s.defaultTotalVisits) { cfg = s; name = s.name; }
+      } else if (g.servicePackageID) {
+        const { ServicePackage } = await import('../models/ServicePackage.js');
+        const p = await ServicePackage.findById(g.servicePackageID).select('name periodicEnabled intervalMonths defaultTotalVisits vehicleCategory').lean();
+        if (p && p.periodicEnabled && p.intervalMonths && p.defaultTotalVisits) { cfg = p; name = p.name; }
+      }
+      if (!cfg) continue;
+
+      const veh = await Vehicle.findById(g.vehicleID).select('plateNumber vehicleCategory').lean();
+      if (!veh) continue;
+
+      const visitsUsed = g.count;
+      const totalVisits = Number(cfg.defaultTotalVisits || 0);
+      const remainingVisits = Math.max(0, totalVisits - Number(visitsUsed || 0));
+      const startDate = g.firstDate;
+      const intervalMonths = cfg.intervalMonths;
+      const next = new Date(startDate as any); next.setMonth(next.getMonth() + intervalMonths * visitsUsed);
+
+      // Only include ACTIVE periodic subscriptions (remainingVisits > 0)
+      if (remainingVisits <= 0) continue;
+
+      results.push({
+        vehicleId: String(g.vehicleID),
+        plateNumber: (veh as any).plateNumber,
+        vehicleCategory: (veh as any).vehicleCategory,
+        sourceType: g.serviceID ? 'service' : 'package',
+        sourceId: String(g.serviceID || g.servicePackageID),
+        name,
+        startDate,
+        visitsUsed,
+        totalVisits,
+        remainingVisits,
+        intervalMonths,
+        nextDueDate: next,
+        bookingUrl: `/booking?vehicleId=${String(g.vehicleID)}&lockService=1&${g.serviceID ? `serviceId=${String(g.serviceID)}` : `servicePackageId=${String(g.servicePackageID)}`}`
+      });
+    }
+
+    return res.status(200).json({ items: results, count: results.length });
+  } catch (e) {
+    console.error('listMyPeriodicSubscriptions error', e);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy danh sách định kỳ' });
   }
 }
 

@@ -12,26 +12,24 @@ interface ServiceCardProps {
   service: ServiceResponse;
   isSelected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }
 
 // Service Card Component
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, onSelect }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, isSelected, onSelect, disabled = false }) => {
 
   return (
     <div
-      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${isSelected
-          ? 'border-orange-500 bg-orange-50 shadow-lg'
-          : 'border-gray-200 hover:border-orange-300'
-        }`}
-      onClick={onSelect}
+      className={`relative bg-white rounded-lg shadow-md p-6 transition-all duration-300 border-2 ${disabled ? 'opacity-60 cursor-not-allowed border-gray-200' : 'cursor-pointer hover:shadow-lg'} ${isSelected && !disabled ? 'border-orange-500 bg-orange-50 shadow-lg' : (!disabled ? 'border-gray-200 hover:border-orange-300' : '')}`}
+      onClick={() => !disabled && onSelect()}
     >
       {/* Selection Circle */}
       <div className="absolute top-4 right-4">
-        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${(isSelected && !disabled)
             ? 'border-orange-500 bg-orange-500'
             : 'border-gray-300 bg-white hover:border-orange-300'
           }`}>
-          {isSelected && (
+          {(isSelected && !disabled) && (
             <Check className="w-4 h-4 text-white" />
           )}
         </div>
@@ -78,10 +76,11 @@ interface ServicePackageCardProps {
   servicePackage: ServicePackageResponse;
   isSelected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }
 
 // Service Package Card Component  
-export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ servicePackage, isSelected, onSelect }) => {
+export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ servicePackage, isSelected, onSelect, disabled = false }) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -98,39 +97,26 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
     return `${duration}m`;
   };
 
-  const getTotalOriginalPrice = () => {
-    if (!servicePackage.services || servicePackage.services.length === 0) {
-      return servicePackage.price;
-    }
-    return servicePackage.services.reduce((total, service) => total + service.price, 0);
+  const getFinalPrice = () => {
+    return servicePackage.price - getDiscountAmount();
   };
 
   const getDiscountAmount = () => {
-    const originalPrice = getTotalOriginalPrice();
-    return originalPrice - servicePackage.price;
-  };
-
-  const getDiscountPercentage = () => {
-    const originalPrice = getTotalOriginalPrice();
-    if (originalPrice === 0) return 0;
-    return Math.round((getDiscountAmount() / originalPrice) * 100);
-  };
+    return servicePackage.price * (servicePackage.discount ? servicePackage.discount / 100 : 0);
+  }
 
   return (
     <div
-      className={`relative bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${isSelected
-          ? 'border-orange-500 bg-orange-50 shadow-lg'
-          : 'border-gray-200 hover:border-orange-300'
-        }`}
-      onClick={onSelect}
+      className={`relative bg-white rounded-lg shadow-md p-6 transition-all duration-300 border-2 ${disabled ? 'opacity-60 cursor-not-allowed border-gray-200' : 'cursor-pointer hover:shadow-lg'} ${isSelected && !disabled ? 'border-orange-500 bg-orange-50 shadow-lg' : (!disabled ? 'border-gray-200 hover:border-orange-300' : '')}`}
+      onClick={() => !disabled && onSelect()}
     >
       {/* Selection Circle */}
       <div className="absolute top-4 right-4">
-        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${(isSelected && !disabled)
             ? 'border-orange-500 bg-orange-500'
             : 'border-gray-300 bg-white hover:border-orange-300'
           }`}>
-          {isSelected && (
+          {(isSelected && !disabled) && (
             <Check className="w-4 h-4 text-white" />
           )}
         </div>
@@ -144,7 +130,7 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
           </h3>
           {servicePackage.discount && servicePackage.discount > 0 && (
             <span className="bg-red-100 text-red-600 text-xs font-medium px-2 py-1 rounded-full">
-              -{getDiscountPercentage()}%
+              -{servicePackage.discount}%
             </span>
           )}
         </div>
@@ -180,11 +166,11 @@ export const ServicePackageCard: React.FC<ServicePackageCardProps> = ({ serviceP
           <div className="text-right">
             {getDiscountAmount() > 0 && (
               <div className="text-sm text-gray-500 line-through">
-                {formatPrice(getTotalOriginalPrice())}
+                {formatPrice(servicePackage.price)}
               </div>
             )}
             <div className="text-xl font-bold text-orange-600">
-              {formatPrice(servicePackage.price)}
+              {formatPrice(getFinalPrice())}
             </div>
             {getDiscountAmount() > 0 && (
               <div className="text-xs text-green-600">

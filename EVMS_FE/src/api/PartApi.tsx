@@ -30,21 +30,24 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
   })
 
   const response = await api.get(`/parts?${query.toString()}`)
-  const raw = response.data as { items: any[]; page: number; limit: number; total: number }
+  const raw = response.data as { items: unknown[]; page: number; limit: number; total: number }
 
-  const mapped: Part[] = (raw.items || []).map((it) => ({
-    id: it._id,
-    name: it.name,
-    description: it.description,
-    manufacturer: it.manufacturer,
-    partNumber: it.partNumber,
-    price: it.price,
-    status: it.status,
-    warrantyPeriod: it.warrantyPeriod,
-    warrantyCondition: it.warrantyCondition,
-    createdAt: it.createdAt,
-    updatedAt: it.updatedAt
-  }))
+  const mapped: Part[] = (raw.items || []).map((it) => {
+    const obj = it as Record<string, unknown>
+    return {
+      _id: obj._id as string,
+      name: obj.name as string,
+      description: obj.description as string,
+      manufacturer: obj.manufacturer as string,
+      partNumber: obj.partNumber as string,
+      price: obj.price as number,
+      status: ((obj.status as string) as 'active' | 'inactive') ?? 'active',
+      warrantyPeriod: obj.warrantyPeriod as number,
+      warrantyCondition: obj.warrantyCondition as string,
+      createdAt: obj.createdAt as string,
+      updatedAt: obj.updatedAt as string
+    }
+  })
 
   const totalPages = Math.max(1, Math.ceil((raw.total || 0) / (raw.limit || params.limit)))
 
@@ -64,15 +67,49 @@ export async function fetchParts(params: FetchPartsParams): Promise<PartsApiResp
   }
 }
 
+interface CreatePartWithInventoryParams {
+  // Part fields
+  name: string
+  description?: string
+  manufacturer?: string
+  partNumber?: string
+  price: number
+  status?: 'active' | 'inactive'
+  category: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
+  warrantyPeriod?: number
+  warrantyCondition?: string
+  // Inventory fields
+  quantity?: number
+  inventoryStatus?: 'in_stock' | 'low_stock' | 'out_of_stock'
+}
+
+interface UpdatePartParams {
+  name?: string
+  description?: string
+  manufacturer?: string
+  partNumber?: string
+  price?: number
+  status?: 'active' | 'inactive'
+  category?: 'tires' | 'oil' | 'filters' | 'brakes' | 'electrical' | 'cooling' | 'suspension' | 'transmission' | 'accessories'
+  warrantyPeriod?: number
+  warrantyCondition?: string
+}
+
 export const PartApi = {
+  getParts: async (params: { page: number; limit: number; search?: string }) => {
+    return fetchParts({ page: params.page, limit: params.limit, search: params.search })
+  },
   getPartById: (id: string) => {
     return api.get<{ part: Part }>(`/parts/${id}`)
   },
   createPart: (params: Part) => {
-    return api.post('/parts', params)
+    return api.post('/parts/with-inventory', params)
   },
-  updatePart: (id: string, params: Part) => {
-    return api.put(`/parts/${id}`, params)
+  createPartWithInventory: (params: CreatePartWithInventoryParams) => {
+    return api.post<{ message: string; part: Part; inventory: unknown }>('/parts/with-inventory', params)
+  },
+  updatePart: (id: string, params: UpdatePartParams) => {
+    return api.put<{ message: string; part: Part }>(`/parts/${id}`, params)
   },
   deletePart: (id: string) => {
     return api.delete(`/parts/${id}`)

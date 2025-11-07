@@ -7,7 +7,7 @@ import type { VehicleCategory } from '../../types/Vehicle';
 import DateTime from './DateTime';
 import Confirmation from './Confirmation';
 import { useAlert } from '../../hooks/useAlert';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppointmentApi } from '../../api/AppointmentApi';
 
@@ -38,10 +38,11 @@ const Booking: React.FC = () => {
     }, [user?.id]);
 
     const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
+  const [lockService, setLockService] = useState<boolean>(false);
 
     const { showAlert, AlertComponent } = useAlert();
     const navigate = useNavigate();
-
+  const location = useLocation();
     const steps = [
         { step: 1, info: 'Chọn phương tiện' },
         { step: 2, info: 'Chọn dịch vụ' },
@@ -67,9 +68,36 @@ const Booking: React.FC = () => {
         // Appointment đã được tạo thành công trong Confirmation component
         // Chỉ cần hiển thị thông báo và redirect
         showAlert('success', 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.', 3000, () => {
-            navigate('/customer/appointments');
+            navigate('/appointment-history');
         });
     };
+
+    // Handle deep link params: vehicleId, serviceId, servicePackageId, lockService
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const vehicleId = params.get('vehicleId') || '';
+        const serviceId = params.get('serviceId') || '';
+        const servicePackageId = params.get('servicePackageId') || '';
+        const lock = params.get('lockService') === '1';
+
+        if (vehicleId) {
+            setFormData(prev => ({
+                ...prev,
+                vehicleID: vehicleId,
+                serviceID: serviceId || '',
+                servicePackageID: servicePackageId || ''
+            }));
+        }
+        if (lock && (serviceId || servicePackageId)) {
+            setLockService(true);
+        }
+
+        // If all preselected, skip service step
+        if (vehicleId && (serviceId || servicePackageId)) {
+            setStep(3);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const renderStep = () => {
         switch (step) {
@@ -90,6 +118,8 @@ const Booking: React.FC = () => {
                     <Service
                         vehicleCategory={vehicleCategory || 'CAR'}
                         formData={handleServiceSelection}
+                        vehicleId={formData.vehicleID}
+                        locked={lockService}
                         onNext={() => {
                             setStep(3);
                             console.log('Form Data after Service:', formData);

@@ -62,7 +62,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ items, onRemove,
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {items.map((part) => (
             <div
-              key={part.id || part._id}
+              key={part._id || part._id}
               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
             >
               {/* Image Placeholder */}
@@ -70,7 +70,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ items, onRemove,
                 <div className="text-4xl">⚙️</div>
                 {/* Remove Button */}
                 <button
-                  onClick={() => onRemove(part.id || part._id || '')}
+                  onClick={() => onRemove(part._id || part._id || '')}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Xóa khỏi lịch sử"
                 >
@@ -97,7 +97,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ items, onRemove,
 
                 {/* View Button */}
                 <button
-                  onClick={() => navigate(`/parts/${part.id || part._id}`)}
+                  onClick={() => navigate(`/parts/${part._id || part._id}`)}
                   className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Xem chi tiết

@@ -44,7 +44,7 @@ function TechnicianCard({ member }: TeamMemberCardProps) {
 
       <div className="p-6">
         <div className="mb-4">
-          <p className="text-sm font-semibold text-slate-700 mb-1">Specialization</p>
+          <p className="text-sm font-semibold text-slate-700 mb-1">Chuyên môn</p>
           <p className="text-slate-600 text-sm leading-relaxed">{member.specialization}</p>
         </div>
 

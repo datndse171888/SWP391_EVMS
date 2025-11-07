@@ -1,5 +1,7 @@
 import type { AppointmentResponse, AppointmentStatus, CreateAppointmentRequest, UpdateAppointmentStatusRequest } from "../types/Appoitment";
-import type { FilteredDataResponse } from "../types/DataResponse";
+import type { FilteredDataResponse, CheckingResponse } from "../types/DataResponse";
+import type { ServiceResponse } from "../types/Service";
+import type { ServicePackageResponse } from "../types/ServicePackage";
 import { api } from "../utils/Axios";
 
 export const AppointmentApi = {
@@ -12,7 +14,23 @@ export const AppointmentApi = {
   },
 
   getAppointmentByMe: () => {
-    return api.get<AppointmentResponse>('/appointments/me');
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
+  },
+
+  getAppointmentByTechnician: (status?: AppointmentStatus) => {
+    const statusQuery = status ? `status=${status}` : '';
+    const includeQuery = 'include=user,service,package,technicians';
+    const query = [statusQuery, includeQuery].filter(Boolean).join('&');
+    return api.get<AppointmentResponse[]>(`/appointments/technician/me${query ? `?${query}` : ''}`);
+  },
+
+  getAppointmentById: (appointmentId: string, include?: string) => {
+    const query = include ? `?include=${include}` : '';
+    return api.get<{ data: AppointmentResponse }>(`/appointments/${appointmentId}${query}`);
+  },
+
+  getTodayAwaitingPayment: () => {
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/today/awaiting-payment');
   },
 
   getAppointmentByUserId: (userId: string) => {
@@ -25,5 +43,13 @@ export const AppointmentApi = {
 
   cancelAppointment: (appointmentId: string) => {
     return api.patch<AppointmentResponse>(`/appointments/${appointmentId}/cancel`);
+  },
+
+  getServiceByAppointmentId: (appointmentId: string) => {
+    return api.get<CheckingResponse<{
+      type: 'service' | 'servicePackage';
+      service?: ServiceResponse;
+      servicePackage?: ServicePackageResponse;
+    }>>(`/appointments/${appointmentId}/service`);
   }
 };
