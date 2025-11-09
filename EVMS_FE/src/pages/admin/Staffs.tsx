@@ -125,90 +125,99 @@ export const Staffs: React.FC = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <main>
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-blue-0 mb-2">Nhân viên</h1>
-          <p className="text-gray-600">Quản lý danh sách nhân viên</p>
+    <div className="flex flex-col">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-8 py-6 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Quản lý Nhân viên</h1>
+            <p className="text-gray-600 mt-1">Quản lý danh sách nhân viên trong hệ thống</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-0 text-white px-6 py-3 rounded-xl hover:bg-azure-0 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Thêm nhân viên
+          </button>
         </div>
+      </header>
 
-        <div className="bg-white rounded-lg shadow-lg">
-          {/* Search and Add Button */}
-          <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <form onSubmit={handleSearch} className="flex-1 w-full md:w-auto">
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        {/* Filters */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Tìm kiếm nhân viên..."
+                  placeholder="Tìm kiếm theo tên, email, số điện thoại..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full md:w-80 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-0 focus:border-blue-0"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent"
                 />
-                <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
-            </form>
+            </div>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="px-6 py-2 bg-blue-0 text-white rounded-lg hover:bg-azure-0 transition-colors duration-200 flex items-center gap-2"
+              type="submit"
+              className="bg-blue-0 text-white px-6 py-3 rounded-xl hover:bg-azure-0 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Thêm nhân viên
+              Tìm kiếm
             </button>
-          </div>
+          </form>
+        </div>
 
-          {/* Table */}
+        {/* Staff Table */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-0"></div>
-              <p className="mt-2 text-gray-500">Đang tải...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-azure-0"></div>
+              <span className="ml-3 text-gray-600">Đang tải...</span>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Người dùng</th>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Email</th>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Số điện thoại</th>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Vai trò</th>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Trạng thái</th>
-                      <th className="py-3 px-6 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Hành động</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Nhân viên</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Vai trò</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Trạng thái</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hành động</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-100">
                     {users.map((user) => (
-                      <tr key={user._id} className="hover:bg-gray-50">
+                      <tr key={user._id} className="hover:bg-gray-50 transition-colors duration-200">
                         <td className="py-4 px-6">
-                          <div className="flex items-center">
-                            {user.photoURL ? (
-                              <img
-                                src={user.photoURL}
-                                alt={user.fullName || user.userName}
-                                className="w-10 h-10 rounded-full mr-3"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-blue-0 flex items-center justify-center text-white font-semibold mr-3">
-                                {(user.fullName || user.userName || 'U').charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-blue-0 flex items-center justify-center shadow-md">
+                              {user.photoURL ? (
+                                <img
+                                  src={user.photoURL}
+                                  alt={user.fullName || user.userName}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-white font-bold text-lg">
+                                  {(user.fullName || user.userName || 'U').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{user.fullName || user.userName}</div>
-                              <div className="text-sm text-gray-500">@{user.userName}</div>
+                              <div className="font-semibold text-gray-800">{user.fullName || user.userName}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                              <div className="text-sm text-gray-500">{user.phoneNumber || '—'}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-sm text-gray-900">{user.email}</td>
-                        <td className="py-4 px-6 text-sm text-gray-900">{user.phoneNumber || '—'}</td>
                         <td className="py-4 px-6">
                           <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${getRoleBadge(user.role || '')}`}>
                             {user.role === 'staff' ? 'Nhân viên' : user.role}
