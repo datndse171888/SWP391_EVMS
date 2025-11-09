@@ -64,6 +64,9 @@ export const InventoryApi = {
   async updateQuantity(inventoryId: string, quantity: number) {
     return api.put(`/inventories/${inventoryId}`, { quantity });
   },
+  async createOrUpdateInventory(partID: string, quantity: number, status?: 'in_stock' | 'low_stock' | 'out_of_stock') {
+    return api.post('/inventories', { partID, quantity, status });
+  },
 };
 
 
