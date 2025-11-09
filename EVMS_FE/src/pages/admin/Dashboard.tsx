@@ -75,7 +75,7 @@ const StatCard: React.FC<{
       <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
       
       {/* Decorative circle */}
-      <div className={`absolute -top-8 -right-8 w-24 h-24 ${accentColor} opacity-5 rounded-full group-hover:opacity-10 transition-opacity duration-300`}></div>
+      <div className={`absolute -top-8 -right-8 w-24 h-24 ${accentColor} opacity-15 rounded-full group-hover:opacity-20 transition-opacity duration-300`}></div>
       
       <div className="relative z-10">
         {/* Header */}

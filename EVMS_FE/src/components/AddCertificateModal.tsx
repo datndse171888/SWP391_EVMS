@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../utils/Axios'
+import { compressImage, uploadImageApi } from '../api/UploadApi'
 
-interface Certificate {
-  _id: string
+interface CertificateFormData {
+  // Certificate info
   name: string
   description: string
   issuingAuthority: string
-}
-
-interface CertificateFormData {
-  certificateID: string
+  validityPeriod: string
+  // TechnicianCertificate info
   issuedDate: string
   expiryDate: string
   status: 'Active' | 'Expired' | 'Pending' | 'Revoked'
   note: string
   certificateImage: string
+  certificateImageFile: File | null
 }
 
 interface AddCertificateModalProps {
@@ -32,48 +32,40 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
   technicianId,
   technicianName
 }) => {
-  const [certificates, setCertificates] = useState<Certificate[]>([])
-  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<CertificateFormData>({
-    certificateID: '',
+    name: '',
+    description: '',
+    issuingAuthority: '',
+    validityPeriod: '',
     issuedDate: '',
     expiryDate: '',
     status: 'Active',
     note: '',
-    certificateImage: ''
+    certificateImage: '',
+    certificateImageFile: null
   })
 
   useEffect(() => {
     if (isOpen) {
-      fetchCertificates()
       // Reset form
       setFormData({
-        certificateID: '',
+        name: '',
+        description: '',
+        issuingAuthority: '',
+        validityPeriod: '',
         issuedDate: '',
         expiryDate: '',
         status: 'Active',
         note: '',
-        certificateImage: ''
+        certificateImage: '',
+        certificateImageFile: null
       })
       setErrors({})
     }
   }, [isOpen])
-
-  const fetchCertificates = async () => {
-    try {
-      setLoading(true)
-      const response = await api.get('/users/certificates')
-      if (response.data?.success) {
-        setCertificates(response.data.data || [])
-      }
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách chứng chỉ:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -81,11 +73,45 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
     setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, certificateImage: 'Chỉ được upload file ảnh' }))
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, certificateImage: 'Kích thước file không được vượt quá 5MB' }))
+      return
+    }
+
+    setErrors(prev => ({ ...prev, certificateImage: '' }))
+    setFormData(prev => ({ ...prev, certificateImageFile: file }))
+  }
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.certificateID) {
-      newErrors.certificateID = 'Chứng chỉ là bắt buộc'
+    if (!formData.name) {
+      newErrors.name = 'Tên chứng chỉ là bắt buộc'
+    }
+
+    if (!formData.description) {
+      newErrors.description = 'Mô tả là bắt buộc'
+    }
+
+    if (!formData.issuingAuthority) {
+      newErrors.issuingAuthority = 'Cơ quan cấp là bắt buộc'
+    }
+
+    if (!formData.validityPeriod) {
+      newErrors.validityPeriod = 'Thời hạn hiệu lực là bắt buộc'
+    } else if (Number(formData.validityPeriod) < 1) {
+      newErrors.validityPeriod = 'Thời hạn hiệu lực phải lớn hơn 0'
     }
 
     if (!formData.issuedDate) {
@@ -114,26 +140,50 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
     }
 
     setSubmitting(true)
+    setUploading(false)
     try {
-      // First, get technician ID from user ID
-      const techInfoResponse = await api.get(`/technicians/${technicianId}/info`)
-      if (!techInfoResponse.data?.success) {
-        throw new Error('Không tìm thấy thông tin kỹ thuật viên')
+      let certificateImageUrl = formData.certificateImage
+
+      // Upload image if file is selected
+      if (formData.certificateImageFile) {
+        setUploading(true)
+        try {
+          // Compress image before upload
+          const compressedFile = await compressImage(
+            formData.certificateImageFile,
+            1920, // maxWidth
+            1920, // maxHeight
+            0.7, // quality
+            500 // maxFileSizeKB
+          )
+          
+          // Upload to Cloudinary
+          certificateImageUrl = await uploadImageApi(compressedFile)
+          console.log('✅ Image uploaded successfully:', certificateImageUrl)
+        } catch (uploadError: any) {
+          console.error('Lỗi khi upload ảnh:', uploadError)
+          setErrors({ submit: uploadError?.message || 'Lỗi khi upload ảnh. Vui lòng thử lại.' })
+          setUploading(false)
+          setSubmitting(false)
+          return
+        } finally {
+          setUploading(false)
+        }
       }
 
-      const technicianInfo = techInfoResponse.data.data.technician
-      const technicianDbId = technicianInfo.id
-
-      // Create certificate
+      // Create certificate and technician certificate
       const response = await api.post(`/users/${technicianId}/certificates`, {
-        certificates: [{
-          certificateID: formData.certificateID,
-          issuedDate: formData.issuedDate,
-          expiryDate: formData.expiryDate,
-          status: formData.status,
-          note: formData.note || '',
-          certificateImage: formData.certificateImage || ''
-        }]
+        // Certificate info
+        name: formData.name,
+        description: formData.description,
+        issuingAuthority: formData.issuingAuthority,
+        validityPeriod: Number(formData.validityPeriod),
+        // TechnicianCertificate info
+        issuedDate: formData.issuedDate,
+        expiryDate: formData.expiryDate,
+        status: formData.status,
+        note: formData.note || '',
+        certificateImage: certificateImageUrl || ''
       })
 
       if (response.data?.success) {
@@ -147,6 +197,7 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
       setErrors({ submit: error?.response?.data?.message || 'Lỗi khi thêm chứng chỉ. Vui lòng thử lại.' })
     } finally {
       setSubmitting(false)
+      setUploading(false)
     }
   }
 
@@ -176,30 +227,81 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Chứng chỉ <span className="text-red-500">*</span>
+              Tên chứng chỉ <span className="text-red-500">*</span>
             </label>
-            {loading ? (
-              <div className="text-sm text-gray-500">Đang tải danh sách chứng chỉ...</div>
-            ) : (
-              <select
-                name="certificateID"
-                value={formData.certificateID}
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0 ${
+                errors.name ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Nhập tên chứng chỉ"
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Mô tả <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={3}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0 ${
+                errors.description ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Nhập mô tả chứng chỉ"
+            />
+            {errors.description && (
+              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cơ quan cấp <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="issuingAuthority"
+                value={formData.issuingAuthority}
                 onChange={handleInputChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0 ${
-                  errors.certificateID ? 'border-red-500' : 'border-gray-300'
+                  errors.issuingAuthority ? 'border-red-500' : 'border-gray-300'
                 }`}
-              >
-                <option value="">-- Chọn chứng chỉ --</option>
-                {certificates.map((cert) => (
-                  <option key={cert._id} value={cert._id}>
-                    {cert.name} - {cert.issuingAuthority}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.certificateID && (
-              <p className="mt-1 text-sm text-red-500">{errors.certificateID}</p>
-            )}
+                placeholder="Nhập cơ quan cấp"
+              />
+              {errors.issuingAuthority && (
+                <p className="mt-1 text-sm text-red-500">{errors.issuingAuthority}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Thời hạn hiệu lực (tháng) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="validityPeriod"
+                value={formData.validityPeriod}
+                onChange={handleInputChange}
+                min="1"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0 ${
+                  errors.validityPeriod ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Nhập số tháng"
+              />
+              {errors.validityPeriod && (
+                <p className="mt-1 text-sm text-red-500">{errors.validityPeriod}</p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -278,16 +380,31 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              URL ảnh chứng chỉ
+              Ảnh chứng chỉ
             </label>
             <input
-              type="url"
-              name="certificateImage"
-              value={formData.certificateImage}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0"
-              placeholder="https://example.com/certificate.jpg"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0 ${
+                errors.certificateImage ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
+            {errors.certificateImage && (
+              <p className="mt-1 text-sm text-red-500">{errors.certificateImage}</p>
+            )}
+            {formData.certificateImageFile && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-600">Đã chọn: {formData.certificateImageFile.name}</p>
+                <div className="mt-2 max-w-xs">
+                  <img
+                    src={URL.createObjectURL(formData.certificateImageFile)}
+                    alt="Preview"
+                    className="w-full h-auto rounded-lg border border-gray-300"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {errors.submit && (
@@ -306,10 +423,10 @@ export const AddCertificateModal: React.FC<AddCertificateModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploading}
               className="px-6 py-2 bg-blue-0 text-white rounded-lg hover:bg-azure-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Đang thêm...' : 'Thêm chứng chỉ'}
+              {uploading ? 'Đang upload ảnh...' : submitting ? 'Đang thêm...' : 'Thêm chứng chỉ'}
             </button>
           </div>
         </form>
