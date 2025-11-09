@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type ConversationStatus = 'open' | 'assigned' | 'closed';
+export type ConversationStatus = 'open' | 'assigned';
 
 export interface IConversation extends Document {
   userID: mongoose.Types.ObjectId;
@@ -14,7 +14,7 @@ const ConversationSchema = new Schema<IConversation>(
   {
     userID: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
     staffID: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-    status: { type: String, enum: ['open', 'assigned', 'closed'], default: 'open' },
+    status: { type: String, enum: ['open', 'assigned'], default: 'open' },
     createdAt: { type: Date, default: Date.now },
     closedAt: { type: Date, default: null },
   },
