@@ -31,7 +31,7 @@ const Footer: React.FC = () => {
               <li className="hover:text-gray-300 transition-colors"><Link to="/support#help">Trung tâm trợ giúp</Link></li>
               <li className="hover:text-gray-300 transition-colors"><Link to="/support#ticket">Hỗ trợ yêu cầu</Link></li>
               <li className="hover:text-gray-300 transition-colors"><Link to="/support#faq">Câu hỏi thường gặp</Link></li>
-              <li className="hover:text-gray-300 transition-colors"><Link to="/contact">Liên hệ</Link></li>
+              <li className="hover:text-gray-300 transition-colors"><Link to="/about">Liên hệ</Link></li>
               <li className="hover:text-gray-300 transition-colors"><Link to="/community">Cộng đồng</Link></li>
             </ul>
           </div>

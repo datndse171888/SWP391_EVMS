@@ -20,6 +20,7 @@ import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
 import { Parts as AdminParts } from './pages/admin/Parts'
 import Introduction from './pages/Introduction'
+import About from './pages/About'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
 import Service from './pages/service/Service'
@@ -69,8 +70,9 @@ export const Router: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={<><Home /> <ChatboxButton /> <ButtonRegister /> </>} />
-          <Route path="/introduction" element={<><Introduction /><ButtonRegister /></>} />
-          <Route path="/contact" element={<><Contact /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/about" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/introduction" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/contact" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/service" element={<><Service /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/carService" element={<><CarService /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/bikeService" element={<><BikeService /> <ChatboxButton /> <ButtonRegister /></>} />
