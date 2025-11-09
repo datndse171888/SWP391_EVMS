@@ -14,6 +14,7 @@ import { AdminLayout } from './components/layout/AdminLayout'
 import { StaffLayout } from './components/layout/StaffLayout'
 import { TechnicianLayout } from './components/layout/TechnicianLayout'
 import { Dashboard } from './pages/admin/Dashboard'
+import { Revenue } from './pages/admin/Revenue'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
@@ -146,34 +147,6 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Technicians />
-            </AdminLayout>
-          </AdminRoute>
-        } />
-        <Route path="/admin/staffs" element={
-          <AdminRoute>
-            <AdminLayout>
-              <Staffs />
-            </AdminLayout>
-          </AdminRoute>
-        } />
-        <Route path="/admin/profile" element={
-          <AdminRoute>
-            <AdminLayout>
-              <AdminProfile />
-            </AdminLayout>
-          </AdminRoute>
-        } />
-        <Route path="/admin/service-packages" element={
-          <AdminRoute>
-            <AdminLayout>
-              <ServicePackages />
-            </AdminLayout>
-          </AdminRoute>
-        } />
-        <Route path="/admin/appointments" element={
-          <AdminRoute>
-            <AdminLayout>
-              <Appointments />
             </AdminLayout>
           </AdminRoute>
         } />
