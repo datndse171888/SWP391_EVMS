@@ -1,6 +1,7 @@
 // src/pages/user/MyVehicles.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { VehicleApi } from "../../api/VehicleApi";
 import type { VehicleResponse } from "../../types/Vehicle";
 import { UserProfileLayout } from "../../components/layout/UserProfileLayout";
@@ -8,11 +9,12 @@ import { UserProfileSidebar } from "../../components/layout/UserProfileSidebar";
 import { UserProfileHeader } from "../../components/layout/UserProfileHeader";
 import { Loading } from "../../components/Loading";
 import { useAlert } from "../../hooks/useAlert";
-import { Car, Plus } from "lucide-react";
+import { Car, Plus, AlertCircle } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 
 const MyVehicles = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState<VehicleResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const { showAlert, AlertComponent } = useAlert();
@@ -72,16 +74,46 @@ const MyVehicles = () => {
                   type="button"
                   variant="primary"
                   size="sm"
-                  onClick={() => navigate("/add-vehicle")}
+                  onClick={() => {
+                    if (user && !user.isVerified) {
+                      navigate('/verify-otp');
+                    } else {
+                      navigate("/add-vehicle");
+                    }
+                  }}
+                  disabled={user && !user.isVerified}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Thêm phương tiện
                 </Button>
               </div>
+
+              {/* Verification Alert Banner */}
+              {user && !user.isVerified && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg shadow-md mb-5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-700 font-medium mb-2">
+                        Tài khoản của bạn chưa được xác thực
+                      </p>
+                      <p className="text-xs text-yellow-600 mb-3">
+                        Vui lòng xác thực email để quản lý phương tiện và đặt lịch dịch vụ.
+                      </p>
+                      <button
+                        onClick={() => navigate('/verify-otp')}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded text-sm transition-colors"
+                      >
+                        Xác thực ngay
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className={`flex-1 overflow-y-auto min-h-0 ${user && !user.isVerified ? 'opacity-50 pointer-events-none' : ''}`}>
               {loading ? (
                 <div className="py-12">
                   <Loading />
@@ -95,7 +127,14 @@ const MyVehicles = () => {
                     type="button"
                     variant="primary"
                     size="sm"
-                    onClick={() => navigate("/add-vehicle")}
+                    onClick={() => {
+                      if (user && !user.isVerified) {
+                        navigate('/verify-otp');
+                      } else {
+                        navigate("/add-vehicle");
+                      }
+                    }}
+                    disabled={user && !user.isVerified}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Thêm phương tiện đầu tiên
@@ -163,8 +202,15 @@ const MyVehicles = () => {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/booking?vehicleId=${vehicle._id}`)}
+                            onClick={() => {
+                              if (user && !user.isVerified) {
+                                navigate('/verify-otp');
+                              } else {
+                                navigate(`/booking?vehicleId=${vehicle._id}`);
+                              }
+                            }}
                             className="flex-1"
+                            disabled={user && !user.isVerified}
                           >
                             Đặt lịch
                           </Button>
@@ -174,6 +220,7 @@ const MyVehicles = () => {
                             size="sm"
                             onClick={() => navigate(`/maintenance?vehicleId=${vehicle._id}`)}
                             className="flex-1"
+                            disabled={user && !user.isVerified}
                           >
                             Bảo dưỡng
                           </Button>

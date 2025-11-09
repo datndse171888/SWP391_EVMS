@@ -22,8 +22,18 @@ export async function createAppointment(req: Request, res: Response) {
       status,
     } = req.body;
 
-    if (!userID || !bookingDate) {
+    if (!userID || !bookingDate) { 
       return res.status(400).json({ message: 'Thiếu userID hoặc bookingDate' });
+    }
+
+    // Check if user is verified (for customer role)
+    if (req.user) {
+      const account = await User.findById(req.user.id);
+      if (account && account.role === 'customer' && !account.isVerified) {
+        return res.status(403).json({ 
+          message: 'Vui lòng xác thực tài khoản trước khi đặt lịch' 
+        });
+      }
     }
 
     // Validate ít nhất một trong serviceID hoặc servicePackageID
@@ -65,11 +75,11 @@ export async function createAppointment(req: Request, res: Response) {
         let selectedKey = '';
         if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
           const { ServicePackage } = await import('../models/ServicePackage.js');
-          const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          const pkg = (await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean()) as any;
           if (pkg?.periodicEnabled) { selectedPeriodic = true; selectedKey = `P:${servicePackageID}`; }
         } else if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
           const { Service } = await import('../models/Service.js');
-          const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          const svc = (await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean()) as any;
           if (svc?.periodicEnabled) { selectedPeriodic = true; selectedKey = `S:${serviceID}`; }
         }
 
@@ -595,8 +605,8 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
 
     // Resolve technicianId from current user
     // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
     if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
     const technicianId = String(techDoc._id);
 
@@ -674,8 +684,8 @@ export async function getAppointmentById(req: Request, res: Response) {
     // Allow technician to view appointments they are assigned to
     if (role === 'technician') {
     // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
       if (!techDoc) {
         console.log('getAppointmentById - Technician profile not found');
         return res.status(403).json({ message: 'Insufficient permissions' });

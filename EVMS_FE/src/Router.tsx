@@ -18,16 +18,17 @@ import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
 import { Parts as AdminParts } from './pages/admin/Parts'
-import Introduction from './pages/Introduction'
+import Introduction from './pages/Introduction' 
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import Service from './pages/service/Service'
+import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
+import VerifyOTP from './pages/auth/VerifyOTP'
 import StaffDashboard from './pages/staff/StaffDashboard';
-import { BikeService } from './pages/service/BikeService';
-import { CarService } from './pages/service/CarService';
-import { MotoService } from './pages/service/MotoService';
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarService';
+import { MotoService } from './pages/Service/MotoService';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
@@ -84,6 +85,7 @@ export const Router: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />

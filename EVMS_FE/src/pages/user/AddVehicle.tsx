@@ -1,6 +1,7 @@
 // src/pages/user/AddVehicle.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { VehicleApi } from "../../api/VehicleApi";
 import type { VehicleRequest } from "../../types/Vehicle";
 import { UserProfileLayout } from "../../components/layout/UserProfileLayout";
@@ -10,11 +11,12 @@ import { useAlert } from "../../hooks/useAlert";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { validVIN } from "../../utils/Validation";
 
 const AddVehicle = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { showAlert, AlertComponent } = useAlert();
 
   const [formData, setFormData] = useState<VehicleRequest>({
@@ -30,6 +32,16 @@ const AddVehicle = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check verification status
+  useEffect(() => {
+    if (user && !user.isVerified) {
+      showAlert('error', 'Vui lòng xác thực tài khoản trước khi thêm phương tiện');
+      setTimeout(() => {
+        navigate('/verify-otp');
+      }, 2000);
+    }
+  }, [user, navigate, showAlert]);
 
   const vehicleCategoryOptions = [
     { value: 'CAR', label: 'Ô tô điện' },
@@ -96,6 +108,13 @@ const AddVehicle = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check verification before submit
+    if (user && !user.isVerified) {
+      showAlert('error', 'Vui lòng xác thực tài khoản trước khi thêm phương tiện');
+      navigate('/verify-otp');
+      return;
+    }
+
     if (!validate()) {
       showAlert('error', 'Vui lòng kiểm tra lại thông tin đã nhập');
       return;
@@ -143,10 +162,33 @@ const AddVehicle = () => {
                   description="Nhập thông tin phương tiện của bạn"
                 />
               </div>
+
+              {/* Verification Alert Banner */}
+              {user && !user.isVerified && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg shadow-md mb-5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-700 font-medium mb-2">
+                        Tài khoản của bạn chưa được xác thực
+                      </p>
+                      <p className="text-xs text-yellow-600 mb-3">
+                        Vui lòng xác thực email để thêm phương tiện mới.
+                      </p>
+                      <button
+                        onClick={() => navigate('/verify-otp')}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded text-sm transition-colors"
+                      >
+                        Xác thực ngay
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto min-h-0 pb-96">
+            <div className={`flex-1 overflow-y-auto min-h-0 pb-96 ${user && !user.isVerified ? 'opacity-50 pointer-events-none' : ''}`}>
               <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 max-w-3xl">
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* VIN */}

@@ -21,6 +21,7 @@ export interface UserResponse {
   role: Role;
   gender: Gender;
   isDisabled: boolean;
+  isVerified: boolean;
 };
 
 export interface AccountRegister {
