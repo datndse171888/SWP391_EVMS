@@ -78,76 +78,46 @@ export async function getDashboardStats(req: Request, res: Response) {
 
 /**
  * GET /api/dashboard/inventory-stats
- * Lấy thống kê tồn kho cho Dashboard
- * - Tổng số items trong kho
- * - Tổng giá trị tồn kho
+ * Lấy thống kê linh kiện cho Dashboard
+ * - Tổng số loại linh kiện (Part count)
+ * - Tổng số lượng tồn kho
  * - Số lượng theo category
  * - Số lượng low stock
  */
 export async function getInventoryStats(req: Request, res: Response) {
   try {
-    // Sử dụng MongoDB aggregation với lookup để tối ưu performance
-    const stats = await Inventory.aggregate([
-      {
-        $lookup: {
-          from: 'parts',
-          localField: 'partID',
-          foreignField: '_id',
-          as: 'part'
-        }
-      },
-      {
-        $unwind: {
-          path: '$part',
-          preserveNullAndEmptyArrays: true
-        }
-      },
+    // Đếm số loại linh kiện từ Part collection
+    const partStats = await Part.aggregate([
       {
         $facet: {
-          // Tính tổng items và value
-          totals: [
-            {
-              $group: {
-                _id: null,
-                totalItems: { $sum: '$quantity' },
-                totalValue: { $sum: { $multiply: ['$quantity', { $ifNull: ['$part.price', 0] }] } }
-              }
-            }
-          ],
+          // Đếm tổng số Part
+          total: [{ $count: 'count' }],
           // Đếm theo category
           byCategory: [
-            {
-              $group: {
-                _id: '$part.category',
-                count: { $sum: '$quantity' }
-              }
-            }
-          ],
-          // Đếm low stock
-          lowStock: [
-            {
-              $match: {
-                $or: [
-                  { status: 'low_stock' },
-                  { status: 'out_of_stock' }
-                ]
-              }
-            },
-            { $count: 'count' }
+            { $group: { _id: '$category', count: { $sum: 1 } } }
           ]
         }
       }
     ]);
 
-    const result = stats[0];
+    // Tính tổng số lượng tồn kho từ Inventory
+    const inventoryStats = await Inventory.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalQuantity: { $sum: '$quantity' }
+        }
+      }
+    ]);
+
+    const partResult = partStats[0];
 
     // Parse kết quả
-    const totalItems = result.totals[0]?.totalItems || 0;
-    const totalValue = result.totals[0]?.totalValue || 0;
-    const lowStockCount = result.lowStock[0]?.count || 0;
+    const totalParts = partResult.total[0]?.count || 0; // Số loại linh kiện
+    const totalQuantity = inventoryStats[0]?.totalQuantity || 0; // Tổng số lượng tồn kho
 
     const byCategory: Record<string, number> = {};
-    result.byCategory.forEach((item: any) => {
+    partResult.byCategory.forEach((item: any) => {
       if (item._id) {
         byCategory[item._id] = item.count;
       }
@@ -157,10 +127,10 @@ export async function getInventoryStats(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       data: {
-        totalItems,
-        totalValue,
-        byCategory,
-        lowStockCount
+        totalItems: totalParts, // Số loại linh kiện (Part count)
+        totalQuantity, // Tổng số lượng tồn kho
+        byCategory, // Số loại linh kiện theo category
+        lowStockCount: 0 // Deprecated, giữ lại để tương thích
       }
     });
   } catch (error) {

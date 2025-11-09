@@ -66,6 +66,7 @@ const StatCard: React.FC<{
 const UsersTable: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -73,71 +74,104 @@ const UsersTable: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/users')
+      setError(null)
+      const response = await fetch('http://localhost:4000/api/users?limit=5&page=1')
       const data = await response.json()
       if (data.success) {
-        setUsers(data.data.users)
+        setUsers(data.data.users || [])
+      } else {
+        setError('Không thể tải danh sách người dùng')
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách users:', error)
+      setError('Lỗi kết nối đến server')
     } finally {
       setLoading(false)
     }
   }
 
+  const roleLabels: Record<string, string> = {
+    'admin': 'Quản trị viên',
+    'staff': 'Nhân viên',
+    'technician': 'Kỹ thuật viên',
+    'customer': 'Khách hàng'
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-azure-0"></div>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-0"></div>
         <span className="ml-3 text-gray-600">Đang tải...</span>
       </div>
     )
   }
 
-  return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-      <div className="p-6 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800">Người dùng gần đây</h3>
+  if (error) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-red-600 mb-3">{error}</p>
+        <button
+          onClick={fetchUsers}
+          className="px-4 py-2 bg-blue-0 text-white rounded-lg hover:opacity-90 transition"
+        >
+          Thử lại
+        </button>
       </div>
+    )
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="py-12 text-center text-gray-500">
+        <p>Chưa có người dùng nào</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="text-left py-4 px-4 text-gray-600 font-semibold">Người dùng</th>
-              <th className="text-left py-4 px-4 text-gray-600 font-semibold">Vai trò</th>
-              <th className="text-left py-4 px-4 text-gray-600 font-semibold">Trạng thái</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-semibold text-sm">Người dùng</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-semibold text-sm">Vai trò</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-semibold text-sm">Trạng thái</th>
             </tr>
           </thead>
           <tbody>
             {users.slice(0, 5).map((user) => (
-              <tr key={user._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors duration-200">
-                <td className="py-4 px-4">
+              <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
+                <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-blue-0 flex items-center justify-center shadow-md">
-                      <span className="text-white font-bold text-lg">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md">
+                      <span className="text-white font-bold text-sm">
                         {user.fullName ? user.fullName.charAt(0).toUpperCase() : user.userName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-800">
+                      <div className="font-semibold text-gray-800 text-sm">
                         {user.fullName || user.userName}
                       </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-xs text-gray-500">{user.email}</div>
                     </div>
                   </div>
                 </td>
-                <td className="py-4 px-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                <td className="py-3 px-4">
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                    user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
                     user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
-                      user.role === 'technician' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                    }`}>
-                    {user.role}
+                    user.role === 'technician' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {roleLabels[user.role] || user.role}
                   </span>
                 </td>
-                <td className="py-4 px-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${user.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                    }`}>
+                <td className="py-3 px-4">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    user.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${user.isDisabled ? 'bg-red-500' : 'bg-green-500'}`}></span>
                     {user.isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}
                   </span>
                 </td>
@@ -156,78 +190,64 @@ export const Dashboard: React.FC = () => {
   const [usersByStatus, setUsersByStatus] = useState<{ active: number; disabled: number }>({ active: 0, disabled: 0 })
   const [servicesCount, setServicesCount] = useState<Record<string, number>>({})
   const [partsByCategory, setPartsByCategory] = useState<Record<string, number>>({})
+  const [totalUsers, setTotalUsers] = useState<number>(0)
+  const [totalTechnicians, setTotalTechnicians] = useState<number>(0)
+  const [totalInventoryItems, setTotalInventoryItems] = useState<number>(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
       setLoading(true)
+      setError(null)
       try {
-        // users
-        const uRes = await fetch('http://localhost:4000/api/users')
-        const uJson = await uRes.json()
-        const uList: User[] = uJson?.data?.users ?? []
+        // Gọi tất cả 3 API song song để tối ưu performance
+        const [statsRes, inventoryRes, serviceRes] = await Promise.all([
+          fetch('http://localhost:4000/api/dashboard/stats'),
+          fetch('http://localhost:4000/api/dashboard/inventory-stats'),
+          fetch('http://localhost:4000/api/dashboard/service-stats')
+        ])
 
-        // services
-        let sList: any[] = []
-        try {
-          const sRes = await fetch('http://localhost:4000/api/services')
-          const sJson = await sRes.json()
-          sList = sJson?.data?.services ?? []
-        } catch {
-          sList = [] // fallback
+        // Parse responses
+        const [statsJson, inventoryJson, serviceJson] = await Promise.all([
+          statsRes.json(),
+          inventoryRes.json(),
+          serviceRes.json()
+        ])
+
+        // Kiểm tra và set data
+        if (statsJson.success) {
+          setUsersByRole(statsJson.data.usersByRole || {})
+          setUsersByStatus(statsJson.data.usersByStatus || { active: 0, disabled: 0 })
+          setTotalUsers(statsJson.data.totalUsers || 0)
+          setTotalTechnicians(statsJson.data.totalTechnicians || 0)
+        } else {
+          console.error('Stats API error:', statsJson.message)
         }
 
-        // parts / inventory
-        let pList: any[] = []
-        try {
-          const pRes = await fetch('http://localhost:4000/api/parts')
-          const pJson = await pRes.json()
-          pList = pJson?.data?.parts ?? []
-        } catch {
-          pList = [] // fallback
+        if (inventoryJson.success) {
+          setPartsByCategory(inventoryJson.data.byCategory || {})
+          setTotalInventoryItems(inventoryJson.data.totalItems || 0)
+        } else {
+          console.error('Inventory API error:', inventoryJson.message)
         }
 
-        // compute users by role
-        const byRole: Record<string, number> = {}
-        let active = 0, disabled = 0
-        uList.forEach(u => {
-          byRole[u.role] = (byRole[u.role] || 0) + 1
-          if (u.isDisabled) disabled += 1
-          else active += 1
-        })
-
-        // services by type or name
-        const svcCount: Record<string, number> = {}
-        sList.forEach(s => {
-          const k = s.type || s.name || 'Other'
-          svcCount[k] = (svcCount[k] || 0) + 1
-        })
-
-        // parts by category
-        const partsCat: Record<string, number> = {}
-        pList.forEach(p => {
-          const k = p.category || 'Uncategorized'
-          partsCat[k] = (partsCat[k] || 0) + (p.quantity ?? 1)
-        })
-
-        // fallbacks if empty
-        const fallbackRoles = Object.keys(byRole).length ? byRole : { user: 800, technician: 45, staff: 120, admin: 10 }
-        const fallbackServices = Object.keys(svcCount).length ? svcCount : { 'Battery': 12, 'Software': 8, 'Hardware': 5, 'Inspection': 20 }
-        const fallbackParts = Object.keys(partsCat).length ? partsCat : { 'Battery Cells': 120, 'Controllers': 45, 'Cables': 200 }
-
-        setUsers(uList)
-        setUsersByRole(fallbackRoles)
-        setUsersByStatus({ active, disabled })
-        setServicesCount(fallbackServices)
-        setPartsByCategory(fallbackParts)
+        if (serviceJson.success) {
+          setServicesCount(serviceJson.data.byVehicleCategory || {})
+        } else {
+          console.error('Service API error:', serviceJson.message)
+        }
       } catch (err) {
         console.error('Dashboard load error', err)
-        // fallback mock
-        setUsers([])
-        setUsersByRole({ user: 800, technician: 45, staff: 120, admin: 10 })
-        setUsersByStatus({ active: 950, disabled: 25 })
-        setServicesCount({ 'Battery': 12, 'Software': 8, 'Hardware': 5, 'Inspection': 20 })
-        setPartsByCategory({ 'Battery Cells': 120, 'Controllers': 45, 'Cables': 200 })
+        setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.')
+        // Không dùng fallback mock data nữa - để trống để user biết có lỗi
+        setUsersByRole({})
+        setUsersByStatus({ active: 0, disabled: 0 })
+        setServicesCount({})
+        setPartsByCategory({})
+        setTotalUsers(0)
+        setTotalTechnicians(0)
+        setTotalInventoryItems(0)
       } finally {
         setLoading(false)
       }
@@ -236,15 +256,24 @@ export const Dashboard: React.FC = () => {
     load()
   }, [])
 
-  // Chart data
+  // Chart data với labels tiếng Việt
+  const roleLabelsMap: Record<string, string> = {
+    'admin': 'Quản trị viên',
+    'staff': 'Nhân viên',
+    'technician': 'Kỹ thuật viên',
+    'customer': 'Khách hàng'
+  }
+
   const rolesLabels = Object.keys(usersByRole)
   const rolesData = {
-    labels: rolesLabels,
+    labels: rolesLabels.map(role => roleLabelsMap[role] || role),
     datasets: [
       {
         label: 'Số lượng',
         data: rolesLabels.map(l => usersByRole[l] ?? 0),
         backgroundColor: ['#0ea5a4', '#06b6d4', '#6366f1', '#f97316', '#ef4444'],
+        borderRadius: 8,
+        borderWidth: 0,
       },
     ],
   }
@@ -255,35 +284,127 @@ export const Dashboard: React.FC = () => {
       {
         data: [usersByStatus.active || 0, usersByStatus.disabled || 0],
         backgroundColor: ['#10b981', '#ef4444'],
+        borderWidth: 0,
       },
     ],
+  }
+
+  const vehicleCategoryMap: Record<string, string> = {
+    'CAR': 'Ô tô',
+    'BICYCLE': 'Xe đạp điện',
+    'MOTOBIKE': 'Xe máy điện'
   }
 
   const servicesLabels = Object.keys(servicesCount)
   const servicesData = {
-    labels: servicesLabels,
+    labels: servicesLabels.map(cat => vehicleCategoryMap[cat] || cat),
     datasets: [
       {
-        label: 'Dịch vụ',
+        label: 'Số dịch vụ',
         data: servicesLabels.map(l => servicesCount[l] ?? 0),
         backgroundColor: ['#60a5fa', '#f472b6', '#f59e0b', '#34d399'],
+        borderRadius: 8,
+        borderWidth: 0,
       },
     ],
   }
 
+  const categoryMap: Record<string, string> = {
+    'tires': 'Lốp xe',
+    'oil': 'Dầu nhớt',
+    'filters': 'Lọc',
+    'brakes': 'Phanh',
+    'electrical': 'Điện',
+    'cooling': 'Làm mát',
+    'suspension': 'Giảm xóc',
+    'transmission': 'Hộp số',
+    'accessories': 'Phụ kiện'
+  }
+
   const partsLabels = Object.keys(partsByCategory)
   const partsData = {
-    labels: partsLabels,
+    labels: partsLabels.map(cat => categoryMap[cat] || cat),
     datasets: [
       {
-        label: 'Linh kiện',
+        label: 'Số lượng',
         data: partsLabels.map(l => partsByCategory[l] ?? 0),
-        backgroundColor: ['#a78bfa', '#fca5a5', '#34d399', '#fb923c'],
+        backgroundColor: ['#a78bfa', '#fca5a5', '#34d399', '#fb923c', '#60a5fa', '#f472b6', '#f59e0b', '#10b981', '#ef4444'],
+        borderWidth: 0,
       },
     ],
   }
+
+  // Chart options
+  const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 },
+        cornerRadius: 8,
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+
+  const doughnutChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: {
+          padding: 15,
+          font: { size: 12 },
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 },
+        cornerRadius: 8,
+      }
+    }
+  }
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-0 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">Đang tải dữ liệu dashboard...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-8">
+    <div className="p-8 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -292,16 +413,39 @@ export const Dashboard: React.FC = () => {
             <p className="text-gray-600">Chào mừng bạn đến với hệ thống quản lý EVMS</p>
           </div>
           <div className="hidden md:flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg bg-blue-0 text-white hover:opacity-90 transition">Tạo</button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg bg-blue-0 text-white hover:opacity-90 transition flex items-center gap-2"
+            >
+              <span>🔄</span>
+              <span>Làm mới</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <span className="text-red-500 text-xl">⚠️</span>
+          <div className="flex-1">
+            <p className="text-red-800 font-medium">Lỗi tải dữ liệu</p>
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Người dùng"
-          value={String(Object.values(usersByRole).reduce((a, b) => a + b, 0) || '—')}
+          value={totalUsers > 0 ? String(totalUsers) : '—'}
           change="+8%"
           changeType="positive"
           icon="👥"
@@ -310,7 +454,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Kỹ thuật viên"
-          value={String(usersByRole['technician'] ?? '—')}
+          value={totalTechnicians > 0 ? String(totalTechnicians) : '—'}
           change="+3%"
           changeType="positive"
           icon="🔧"
@@ -319,7 +463,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Linh kiện tồn kho"
-          value={String(partsLabels.reduce((s, l) => s + (partsByCategory[l] || 0), 0) || '—')}
+          value={totalInventoryItems > 0 ? String(totalInventoryItems) : '—'}
           change="-2%"
           changeType="negative"
           icon="📦"
@@ -330,38 +474,53 @@ export const Dashboard: React.FC = () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-10">Người dùng theo vai trò</h3>
-          <Bar data={rolesData} options={{ responsive: true, plugins: { legend: { display: false }, title: { display: false } } }} />
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Trạng thái người dùng</h3>
-          <div className="flex items-center justify-center" style={{ height: 320 }}>
-            <div className="w-80 h-80">
-              <Doughnut data={statusData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
-            </div>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <span>👥</span>
+            <span>Người dùng theo vai trò</span>
+          </h3>
+          <div className="h-64">
+            <Bar data={rolesData} options={barChartOptions} />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-10">Dịch vụ theo loại</h3>
-          <Bar data={servicesData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <span>📊</span>
+            <span>Trạng thái người dùng</span>
+          </h3>
+          <div className="flex items-center justify-center h-64">
+            <Doughnut data={statusData} options={doughnutChartOptions} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <span>🚗</span>
+            <span>Dịch vụ theo loại xe</span>
+          </h3>
+          <div className="h-64">
+            <Bar data={servicesData} options={barChartOptions} />
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-30">Linh kiện theo danh mục</h3>
-          <div className="flex items-center justify-center" style={{ height: 320 }}>
-            <div className="w-130 h-130">
-              <Doughnut data={partsData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
-            </div>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <span>📦</span>
+            <span>Linh kiện theo danh mục</span>
+          </h3>
+          <div className="flex items-center justify-center h-80">
+            <Doughnut data={partsData} options={doughnutChartOptions} />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Người dùng mới gần đây</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            <span>👤</span>
+            <span>Người dùng mới gần đây</span>
+          </h3>
           <UsersTable />
         </div>
       </div>
