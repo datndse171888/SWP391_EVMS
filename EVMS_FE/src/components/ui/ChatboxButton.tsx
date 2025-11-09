@@ -1,6 +1,7 @@
 import { MessageCircle, X, Send, Minimize2, Maximize2, Camera } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 import { conversationApi } from '../../api/ConversationApi';
 import { messageApi, type Message as ApiMessage } from '../../api/MessageApi';
 
@@ -23,6 +24,7 @@ interface ChatState {
 
 const ChatboxButton: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const socket = useSocket();
   const [chatState, setChatState] = useState<ChatState>({
     isOpen: false,
     isMinimized: false,
@@ -125,6 +127,84 @@ const ChatboxButton: React.FC = () => {
       loadConversationAndMessages();
     }
   }, [chatState.isOpen, isAuthenticated, user, loadConversationAndMessages]);
+
+  // Join conversation room via Socket.io
+  useEffect(() => {
+    if (socket && conversationID) {
+      socket.emit('joinConversation', conversationID);
+      
+      return () => {
+        socket.emit('leaveConversation', conversationID);
+      };
+    }
+  }, [socket, conversationID]);
+
+  // Listen for new messages via Socket.io
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNewMessage = (message: any) => {
+      const senderID = message.senderID;
+      const isFromUser = senderID._id === user.id;
+      
+      // Nếu là message của mình, tìm và replace optimistic message
+      if (isFromUser) {
+        setChatState((prev) => {
+          const tempIndex = prev.messages.findIndex((msg) => msg.id.startsWith('temp-'));
+          if (tempIndex !== -1) {
+            const updated = [...prev.messages];
+            updated[tempIndex] = {
+              id: message._id,
+              text: message.content,
+              fromUser: true,
+              timestamp: new Date(message.timestamp),
+              status: 'sent',
+              imageUrl: message.imageUrl,
+              imageUrls: message.imageUrls,
+            };
+            return { ...prev, messages: updated };
+          }
+          return {
+            ...prev,
+            messages: [...prev.messages, {
+              id: message._id,
+              text: message.content,
+              fromUser: true,
+              timestamp: new Date(message.timestamp),
+              status: 'sent',
+              imageUrl: message.imageUrl,
+              imageUrls: message.imageUrls,
+            }],
+          };
+        });
+      } else {
+        // Message từ support, add vào
+        setChatState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, {
+            id: message._id,
+            text: message.content,
+            fromUser: false,
+            timestamp: new Date(message.timestamp),
+            status: 'read',
+            imageUrl: message.imageUrl,
+            imageUrls: message.imageUrls,
+          }],
+          newMessageCount: prev.isOpen ? 0 : prev.newMessageCount + 1,
+        }));
+      }
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('error', (error: any) => {
+      console.error('Socket error:', error);
+    });
+
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('error');
+    };
+  }, [socket, user]);
 
   const toggleChat = () => {
     setChatState(prev => ({
@@ -251,32 +331,45 @@ const ChatboxButton: React.FC = () => {
     }));
 
     try {
-      // Send message via API
-      const response = await messageApi.sendMessage(
-        conversationID,
-        messageText,
-        uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
-        uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined
-      );
-      const sentMessage = response.data.data;
+      // Gửi message via Socket.io
+      if (socket && socket.connected) {
+        socket.emit('sendMessage', {
+          conversationID,
+          content: messageText,
+          imageUrl: uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+        });
+        // Message will be confirmed via newMessage event in the main listener
+        setIsSending(false);
+      } else {
+        // Fallback to API if socket not connected
+        const response = await messageApi.sendMessage(
+          conversationID,
+          messageText,
+          uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined
+        );
+        const sentMessage = response.data.data;
 
-      // Replace temp message with real message
-      setChatState(prev => ({
-        ...prev,
-        messages: prev.messages.map(msg => 
-          msg.id === tempMessageId 
-            ? {
-                id: sentMessage._id,
-                text: sentMessage.content,
-                fromUser: true,
-                timestamp: new Date(sentMessage.timestamp),
-                status: 'sent',
-                imageUrl: sentMessage.imageUrl,
-                imageUrls: sentMessage.imageUrls
-              }
-            : msg
-        )
-      }));
+        // Replace temp message with real message
+        setChatState(prev => ({
+          ...prev,
+          messages: prev.messages.map(msg => 
+            msg.id === tempMessageId 
+              ? {
+                  id: sentMessage._id,
+                  text: sentMessage.content,
+                  fromUser: true,
+                  timestamp: new Date(sentMessage.timestamp),
+                  status: 'sent',
+                  imageUrl: sentMessage.imageUrl,
+                  imageUrls: sentMessage.imageUrls
+                }
+              : msg
+          )
+        }));
+        setIsSending(false);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // Remove failed message
@@ -290,7 +383,6 @@ const ChatboxButton: React.FC = () => {
       setImagePreviews(savedImagePreviews);
       // Show error
       alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
-    } finally {
       setIsSending(false);
     }
   };

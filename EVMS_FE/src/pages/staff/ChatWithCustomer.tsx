@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { conversationApi, type Conversation as ApiConversation } from '../../api/ConversationApi';
 import { messageApi, type Message as ApiMessage } from '../../api/MessageApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 import type { VehicleResponse } from '../../types/Vehicle';
 import { api } from '../../utils/Axios';
 
@@ -101,6 +102,7 @@ const Bubble: React.FC<{ item: MessageItem }> = ({ item }) => {
 
 const ChatWithCustomer: React.FC = () => {
   const { user } = useAuth();
+  const socket = useSocket();
   const [activeId, setActiveId] = useState<string>('');
   const [assigned, setAssigned] = useState<Conversation[]>([]);
   const [newCustomers, setNewCustomers] = useState<Conversation[]>([]);
@@ -325,6 +327,80 @@ const ChatWithCustomer: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Join conversation room via Socket.io
+  useEffect(() => {
+    if (socket && activeConversation?._id) {
+      socket.emit('joinConversation', activeConversation._id);
+      
+      return () => {
+        socket.emit('leaveConversation', activeConversation._id);
+      };
+    }
+  }, [socket, activeConversation?._id]);
+
+  // Listen for new messages via Socket.io
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message: any) => {
+      const senderID = message.senderID;
+      const isFromMe = senderID._id === user?.id;
+      
+      // Nếu là message của mình, tìm và replace optimistic message
+      if (isFromMe) {
+        setMessages((prev) => {
+          // Tìm optimistic message (id bắt đầu bằng "temp-")
+          const tempIndex = prev.findIndex((msg) => msg.id.startsWith('temp-'));
+          if (tempIndex !== -1) {
+            // Replace optimistic message
+            const updated = [...prev];
+            updated[tempIndex] = {
+              id: message._id,
+              fromMe: true,
+              text: message.content,
+              time: formatMessageTime(message.timestamp),
+              imageUrl: message.imageUrl,
+              imageUrls: message.imageUrls,
+            };
+            return updated;
+          }
+          // Nếu không tìm thấy optimistic message, add như message mới
+          return [...prev, {
+            id: message._id,
+            fromMe: true,
+            text: message.content,
+            time: formatMessageTime(message.timestamp),
+            imageUrl: message.imageUrl,
+            imageUrls: message.imageUrls,
+          }];
+        });
+      } else {
+        // Message từ người khác, add vào
+        const mappedMessage: MessageItem = {
+          id: message._id,
+          fromMe: false,
+          text: message.content,
+          time: formatMessageTime(message.timestamp),
+          senderName: senderID ? (senderID.fullName || senderID.userName || 'User') : undefined,
+          senderAvatar: senderID?.photoURL,
+          imageUrl: message.imageUrl,
+          imageUrls: message.imageUrls,
+        };
+        setMessages((prev) => [...prev, mappedMessage]);
+      }
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('error', (error: any) => {
+      console.error('Socket error:', error);
+    });
+
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('error');
+    };
+  }, [socket, user]);
+
   // Filter conversations based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -489,30 +565,43 @@ const ChatWithCustomer: React.FC = () => {
     setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
-      // Gửi 1 message với tất cả ảnh
-      const response = await messageApi.sendMessage(
-        activeConversation._id,
-        messageText,
-        uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
-        uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined
-      );
-      const sentMessage = response.data.data;
+      // Gửi message via Socket.io
+      if (socket && socket.connected) {
+        socket.emit('sendMessage', {
+          conversationID: activeConversation._id,
+          content: messageText,
+          imageUrl: uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+        });
+        // Message will be confirmed via newMessage event in the main listener
+        setIsSending(false);
+      } else {
+        // Fallback to API if socket not connected
+        const response = await messageApi.sendMessage(
+          activeConversation._id,
+          messageText,
+          uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined
+        );
+        const sentMessage = response.data.data;
 
-      // Replace temp message with real message
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessageId
-            ? {
-                id: sentMessage._id,
-                fromMe: true,
-                text: sentMessage.content,
-                time: formatMessageTime(sentMessage.timestamp),
-                imageUrl: sentMessage.imageUrl,
-                imageUrls: sentMessage.imageUrls,
-              }
-            : msg
-        )
-      );
+        // Replace temp message with real message
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === tempMessageId
+              ? {
+                  id: sentMessage._id,
+                  fromMe: true,
+                  text: sentMessage.content,
+                  time: formatMessageTime(sentMessage.timestamp),
+                  imageUrl: sentMessage.imageUrl,
+                  imageUrls: sentMessage.imageUrls,
+                }
+              : msg
+          )
+        );
+        setIsSending(false);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // Remove failed message
@@ -522,7 +611,6 @@ const ChatWithCustomer: React.FC = () => {
       setSelectedImages(selectedImages);
       setImagePreviews(imagePreviews);
       alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
-    } finally {
       setIsSending(false);
     }
   };
