@@ -58,6 +58,9 @@ export const Users: React.FC = () => {
       if (data.success) {
         let filteredUsers = data.data.users
         
+        // Filter out admin users
+        filteredUsers = filteredUsers.filter(user => user.role !== 'admin')
+        
         // Filter by search term
         if (searchTerm) {
           filteredUsers = filteredUsers.filter(user => 
@@ -148,7 +151,6 @@ export const Users: React.FC = () => {
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-azure-0 focus:border-transparent"
                 >
                   <option value="all">Tất cả vai trò</option>
-                  <option value="admin">Admin</option>
                   <option value="staff">Staff</option>
                   <option value="technician">Technician</option>
                   <option value="customer">Customer</option>

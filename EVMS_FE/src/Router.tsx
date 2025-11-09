@@ -124,6 +124,13 @@ export const Router: React.FC = () => {
             </AdminLayout>
           </AdminRoute>
         } />
+        <Route path="/admin/revenue" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Revenue />
+            </AdminLayout>
+          </AdminRoute>
+        } />
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
