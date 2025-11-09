@@ -18,16 +18,6 @@
       ),
     },
     {
-      name: 'Doanh thu',
-      path: '/admin/revenue',
-      icon: (
-        <svg className="w-6 h-6 flex-none" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-        </svg>
-      ),
-    },
-    {
       name: 'Người dùng',
       path: '/admin/users',
       icon: (
@@ -147,16 +137,6 @@
                   EVRepair
                 </span>
               )}
-              {/* toggle button positioned on the edge to avoid clipping */}
-              <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-blue-0 bg-blue-0 text-white hover:bg-azure-0 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  {collapsed ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  )}
-                </svg>
-              </button>
             </div>
               </div>
               
@@ -179,60 +159,22 @@
             </ul>
           </nav>
 
-          {/* User Profile */}
+          {/* Toggle Sidebar Button */}
           <div className="p-6 border-t border-slate-600">
-            <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-4'} mb-4`}>
-              {user?.photoURL ? (
-                <div className="flex-shrink-0" style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}>
-                  <img
-                    src={user.photoURL}
-                    alt="Avatar"
-                    className="w-full h-full rounded-full border-2 border-white/30 object-cover"
-                    style={{ aspectRatio: '1/1' }}
-                  />
-                </div>
-              ) : (
-                <div 
-                  className="rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0"
-                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
-                >
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              )}
-              {!collapsed && (
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{user?.fullName || user?.userName || 'Admin User'}</div>
-                  <div className="text-xs text-gray-300 truncate">{user?.email || 'admin@evms.com'}</div>
-                </div>
-              )}
-            </div>
-            
-            {/* Edit Profile Button */}
             <button
-              onClick={() => navigate('/admin/profile')}
-              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 mb-2 border border-white/30 text-white hover:bg-white/10 rounded-lg transition-all duration-200 group`}
-              title="Chỉnh sửa hồ sơ"
-              aria-label="Chỉnh sửa hồ sơ"
+              onClick={toggleSidebar}
+              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2.5 bg-white text-blue-0 hover:bg-blue-0/10 border border-blue-0/30 hover:border-blue-0 rounded-lg transition-all duration-300 group shadow-sm hover:shadow-md`}
+              title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+              aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
             >
-              <svg className="w-5 h-5 flex-none group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg className="w-5 h-5 flex-none transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                {collapsed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                )}
               </svg>
-              {!collapsed && <span className="text-sm font-medium">Chỉnh sửa hồ sơ</span>}
-            </button>
-            
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-white/30 text-white hover:bg-white/10 rounded-lg transition-all duration-200 group`}
-              title="Đăng xuất"
-              aria-label="Đăng xuất"
-            >
-              <svg className="w-5 h-5 flex-none group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              {!collapsed && <span className="text-sm font-medium">Đăng xuất</span>}
+              {!collapsed && <span className="text-sm font-medium">Thu gọn</span>}
             </button>
           </div>
           </aside>

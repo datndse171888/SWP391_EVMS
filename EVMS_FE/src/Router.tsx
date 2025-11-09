@@ -19,7 +19,7 @@ import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
 import { Parts as AdminParts } from './pages/admin/Parts'
-import Introduction from './pages/Introduction' 
+import About from './pages/About'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
 import Service from './pages/Service/Service'
@@ -54,7 +54,6 @@ import Maintenance from './pages/user/Maintenance';
 import MyVehicles from './pages/user/MyVehicles';
 import AddVehicle from './pages/user/AddVehicle';
 import PaymentCallback from './pages/payment/PaymentCallback';
-import Contact from './pages/Contact';
 import ButtonRegister from './components/ButtonRegister';
 import ChatboxButton from './components/ui/ChatboxButton'
 
@@ -70,8 +69,9 @@ export const Router: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={<><Home /> <ChatboxButton /> <ButtonRegister /> </>} />
-          <Route path="/introduction" element={<><Introduction /><ButtonRegister /></>} />
-          <Route path="/contact" element={<><Contact /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/about" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/introduction" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/contact" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/service" element={<><Service /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/carService" element={<><CarService /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/bikeService" element={<><BikeService /> <ChatboxButton /> <ButtonRegister /></>} />
@@ -124,6 +124,13 @@ export const Router: React.FC = () => {
             </AdminLayout>
           </AdminRoute>
         } />
+        <Route path="/admin/revenue" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Revenue />
+            </AdminLayout>
+          </AdminRoute>
+        } />
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
@@ -149,6 +156,34 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Technicians />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminProfile />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/service-packages" element={
+          <AdminRoute>
+            <AdminLayout>
+              <ServicePackages />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/appointments" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Appointments />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/staffs" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Staffs />
             </AdminLayout>
           </AdminRoute>
         } />

@@ -288,18 +288,13 @@ export const Technicians: React.FC = () => {
                             )}
                           </td>
                           <td className="py-4 px-6">
-                            <div className="flex flex-wrap gap-1">
-                              {techCertificates.map((cert, index) => (
-                                <span
-                                  key={index}
-                                  className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(cert.status)}`}
-                                >
-                                  {cert.status}
-                                </span>
-                              ))}
-                              {techCertificates.length === 0 && (
-                                <span className="text-gray-400 text-sm">Chưa có chứng chỉ</span>
-                              )}
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-800">
+                                {techCertificates.length}
+                              </span>
+                              <span className="text-gray-500 text-sm">
+                                {techCertificates.length === 1 ? 'chứng chỉ' : 'chứng chỉ'}
+                              </span>
                             </div>
                           </td>
                           <td className="py-4 px-6">

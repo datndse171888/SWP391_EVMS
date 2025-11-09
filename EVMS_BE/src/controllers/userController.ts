@@ -407,4 +407,103 @@ export async function getUserById(req: Request, res: Response) {
   }
 }
 
+// Add certificate to technician
+export async function addTechnicianCertificate(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    const { 
+      // Certificate info
+      name,
+      description,
+      issuingAuthority,
+      validityPeriod,
+      // TechnicianCertificate info
+      issuedDate,
+      expiryDate,
+      status,
+      note,
+      certificateImage
+    } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Validation
+    if (!name || !description || !issuingAuthority || !validityPeriod) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Thiếu thông tin chứng chỉ: name, description, issuingAuthority, validityPeriod' 
+      });
+    }
+
+    if (!issuedDate || !expiryDate || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Thiếu thông tin technician certificate: issuedDate, expiryDate, status' 
+      });
+    }
+
+    // Find user and technician
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const technician = await Technician.findOne({ userID: userId });
+    if (!technician) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin kỹ thuật viên' });
+    }
+
+    // Create Certificate
+    const certificate = await Certificate.create({
+      certificateID: new mongoose.Types.ObjectId(),
+      name,
+      description,
+      issuingAuthority,
+      validityPeriod: Number(validityPeriod),
+    });
+
+    // Create TechnicianCertificate
+    const technicianCertificate = await TechnicianCertificate.create({
+      technicianCertificateID: new mongoose.Types.ObjectId(),
+      technicianID: technician._id,
+      certificateID: certificate._id,
+      issuedDate: new Date(issuedDate),
+      expiryDate: new Date(expiryDate),
+      status,
+      note: note || '',
+      certificateImage: certificateImage || '',
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Thêm chứng chỉ thành công',
+      data: {
+        certificate: {
+          id: certificate._id,
+          name: certificate.name,
+          description: certificate.description,
+          issuingAuthority: certificate.issuingAuthority,
+          validityPeriod: certificate.validityPeriod,
+        },
+        technicianCertificate: {
+          id: technicianCertificate._id,
+          issuedDate: technicianCertificate.issuedDate,
+          expiryDate: technicianCertificate.expiryDate,
+          status: technicianCertificate.status,
+          note: technicianCertificate.note,
+          certificateImage: technicianCertificate.certificateImage,
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi thêm chứng chỉ:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ khi thêm chứng chỉ' 
+    });
+  }
+}
+
 // Technician-specific APIs have been moved to technicianController.ts
