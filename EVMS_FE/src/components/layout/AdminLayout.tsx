@@ -173,22 +173,28 @@
           <div className="p-6 border-t border-slate-600">
             <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-4'} mb-4`}>
               {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full border-2 border-white/30 flex-none"
-                />
+                <div className="flex-shrink-0" style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}>
+                  <img
+                    src={user.photoURL}
+                    alt="Avatar"
+                    className="w-full h-full rounded-full border-2 border-white/30 object-cover"
+                    style={{ aspectRatio: '1/1' }}
+                  />
+                </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center flex-none">
+                <div 
+                  className="rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
+                >
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                 </div>
               )}
               {!collapsed && (
-                <div className="flex-1">
-                  <div className="text-sm font-semibold">{user?.fullName || user?.userName || 'Admin User'}</div>
-                  <div className="text-xs text-gray-300">{user?.email || 'admin@evms.com'}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{user?.fullName || user?.userName || 'Admin User'}</div>
+                  <div className="text-xs text-gray-300 truncate">{user?.email || 'admin@evms.com'}</div>
                 </div>
               )}
             </div>
