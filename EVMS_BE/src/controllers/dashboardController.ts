@@ -13,30 +13,43 @@ import { Service } from '../models/Service.js';
  */
 export async function getDashboardStats(req: Request, res: Response) {
   try {
-    // Lấy tất cả users (chỉ lấy các field cần thiết để tối ưu performance)
-    const users = await User.find({}, { role: 1, isDisabled: 1 }).lean();
+    // Sử dụng MongoDB aggregation để tối ưu performance
+    const stats = await User.aggregate([
+      {
+        $facet: {
+          // Đếm tổng users
+          total: [{ $count: 'count' }],
+          // Đếm theo role
+          byRole: [
+            { $group: { _id: '$role', count: { $sum: 1 } } }
+          ],
+          // Đếm theo status
+          byStatus: [
+            { $group: { _id: '$isDisabled', count: { $sum: 1 } } }
+          ]
+        }
+      }
+    ]);
 
-    // Tính tổng số users
-    const totalUsers = users.length;
+    const result = stats[0];
 
-    // Đếm users theo role
+    // Parse kết quả
+    const totalUsers = result.total[0]?.count || 0;
+
     const usersByRole: Record<string, number> = {};
-    users.forEach(user => {
-      const role = user.role || 'customer';
-      usersByRole[role] = (usersByRole[role] || 0) + 1;
+    result.byRole.forEach((item: any) => {
+      usersByRole[item._id || 'customer'] = item.count;
     });
 
-    // Đếm số technicians
     const totalTechnicians = usersByRole['technician'] || 0;
 
-    // Đếm users theo status
     let activeUsers = 0;
     let disabledUsers = 0;
-    users.forEach(user => {
-      if (user.isDisabled) {
-        disabledUsers++;
+    result.byStatus.forEach((item: any) => {
+      if (item._id === true) {
+        disabledUsers = item.count;
       } else {
-        activeUsers++;
+        activeUsers = item.count;
       }
     });
 
@@ -73,35 +86,70 @@ export async function getDashboardStats(req: Request, res: Response) {
  */
 export async function getInventoryStats(req: Request, res: Response) {
   try {
-    // Lấy tất cả inventory items với thông tin part
-    const inventories = await Inventory.find({})
-      .populate('partID', 'category price')
-      .lean();
+    // Sử dụng MongoDB aggregation với lookup để tối ưu performance
+    const stats = await Inventory.aggregate([
+      {
+        $lookup: {
+          from: 'parts',
+          localField: 'partID',
+          foreignField: '_id',
+          as: 'part'
+        }
+      },
+      {
+        $unwind: {
+          path: '$part',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $facet: {
+          // Tính tổng items và value
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalItems: { $sum: '$quantity' },
+                totalValue: { $sum: { $multiply: ['$quantity', { $ifNull: ['$part.price', 0] }] } }
+              }
+            }
+          ],
+          // Đếm theo category
+          byCategory: [
+            {
+              $group: {
+                _id: '$part.category',
+                count: { $sum: '$quantity' }
+              }
+            }
+          ],
+          // Đếm low stock
+          lowStock: [
+            {
+              $match: {
+                $or: [
+                  { status: 'low_stock' },
+                  { status: 'out_of_stock' }
+                ]
+              }
+            },
+            { $count: 'count' }
+          ]
+        }
+      }
+    ]);
 
-    // Tính tổng số items
-    let totalItems = 0;
-    let totalValue = 0;
-    let lowStockCount = 0;
+    const result = stats[0];
+
+    // Parse kết quả
+    const totalItems = result.totals[0]?.totalItems || 0;
+    const totalValue = result.totals[0]?.totalValue || 0;
+    const lowStockCount = result.lowStock[0]?.count || 0;
+
     const byCategory: Record<string, number> = {};
-
-    inventories.forEach((inv: any) => {
-      const quantity = inv.quantity || 0;
-      totalItems += quantity;
-
-      // Tính tổng giá trị (quantity * price)
-      if (inv.partID && inv.partID.price) {
-        totalValue += quantity * inv.partID.price;
-      }
-
-      // Đếm low stock
-      if (inv.status === 'low_stock' || inv.status === 'out_of_stock') {
-        lowStockCount++;
-      }
-
-      // Đếm theo category
-      if (inv.partID && inv.partID.category) {
-        const category = inv.partID.category;
-        byCategory[category] = (byCategory[category] || 0) + quantity;
+    result.byCategory.forEach((item: any) => {
+      if (item._id) {
+        byCategory[item._id] = item.count;
       }
     });
 
@@ -134,26 +182,39 @@ export async function getInventoryStats(req: Request, res: Response) {
  */
 export async function getServiceStats(req: Request, res: Response) {
   try {
-    // Lấy tất cả services
-    const services = await Service.find({}).lean();
+    // Sử dụng MongoDB aggregation để tối ưu performance
+    const stats = await Service.aggregate([
+      {
+        $facet: {
+          // Đếm tổng services
+          total: [{ $count: 'count' }],
+          // Đếm theo vehicleCategory
+          byVehicleCategory: [
+            { $group: { _id: '$vehicleCategory', count: { $sum: 1 } } }
+          ],
+          // Đếm theo tên (top 10 services)
+          byName: [
+            { $group: { _id: '$name', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+          ]
+        }
+      }
+    ]);
 
-    // Tính tổng số services
-    const totalServices = services.length;
+    const result = stats[0];
 
-    // Đếm theo vehicleCategory
+    // Parse kết quả
+    const totalServices = result.total[0]?.count || 0;
+
     const byVehicleCategory: Record<string, number> = {};
-    services.forEach(service => {
-      const category = service.vehicleCategory || 'OTHER';
-      byVehicleCategory[category] = (byVehicleCategory[category] || 0) + 1;
+    result.byVehicleCategory.forEach((item: any) => {
+      byVehicleCategory[item._id || 'OTHER'] = item.count;
     });
 
-    // Đếm theo tên dịch vụ (để hiển thị chart)
-    // Vì Service không có field "type", ta sẽ group theo vehicleCategory
-    // hoặc có thể trả về top services theo tên
     const byName: Record<string, number> = {};
-    services.forEach(service => {
-      const name = service.name || 'Unknown';
-      byName[name] = (byName[name] || 0) + 1;
+    result.byName.forEach((item: any) => {
+      byName[item._id || 'Unknown'] = item.count;
     });
 
     // Trả về response
