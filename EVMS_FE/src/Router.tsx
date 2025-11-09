@@ -43,6 +43,9 @@ import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
 import TechnicianProfile from './pages/technician/TechnicianProfile';
 import Profile from './pages/user/Profile';
 import AdminProfile from './pages/admin/AdminProfile';
+import ServicePackages from './pages/admin/ServicePackages';
+import Appointments from './pages/admin/Appointments';
+import Staffs from './pages/admin/Staffs';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import Maintenance from './pages/user/Maintenance';
@@ -146,10 +149,31 @@ export const Router: React.FC = () => {
             </AdminLayout>
           </AdminRoute>
         } />
+        <Route path="/admin/staffs" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Staffs />
+            </AdminLayout>
+          </AdminRoute>
+        } />
         <Route path="/admin/profile" element={
           <AdminRoute>
             <AdminLayout>
               <AdminProfile />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/service-packages" element={
+          <AdminRoute>
+            <AdminLayout>
+              <ServicePackages />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/appointments" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Appointments />
             </AdminLayout>
           </AdminRoute>
         } />

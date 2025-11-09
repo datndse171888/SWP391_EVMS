@@ -116,20 +116,9 @@ export const Users: React.FC = () => {
     <div className="flex flex-col">
       {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-8 py-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">Quản lý người dùng</h1>
-              <p className="text-gray-600 mt-1">Quản lý tất cả người dùng trong hệ thống</p>
-            </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-0 text-white px-6 py-3 rounded-xl hover:bg-azure-0 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              Thêm người dùng
-            </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Quản lý người dùng</h1>
+            <p className="text-gray-600 mt-1">Quản lý tất cả người dùng trong hệ thống</p>
           </div>
         </header>
 
@@ -226,7 +215,7 @@ export const Users: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-4 px-6">
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                            <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${
                               user.isDisabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                             }`}>
                               {user.isDisabled ? 'Vô hiệu hóa' : 'Hoạt động'}

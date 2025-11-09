@@ -35,9 +35,11 @@ interface AddUserModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  defaultRole?: 'staff' | 'technician'
+  allowedRoles?: ('staff' | 'technician')[]
 }
 
-export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess, defaultRole = 'staff', allowedRoles = ['staff', 'technician'] }) => {
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
     password: '',
@@ -45,7 +47,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
     fullName: '',
     phoneNumber: '',
     photoURL: '',
-    role: 'staff',
+    role: defaultRole,
     gender: '',
     introduction: '',
     experience: 0,
@@ -63,8 +65,13 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
   useEffect(() => {
     if (isOpen) {
       fetchCertificates()
+      // Reset form with default role when modal opens
+      setFormData(prev => ({
+        ...prev,
+        role: defaultRole
+      }))
     }
-  }, [isOpen])
+  }, [isOpen, defaultRole])
 
   const fetchCertificates = async () => {
     try {
@@ -383,7 +390,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
           fullName: '',
           phoneNumber: '',
           photoURL: '',
-          role: 'staff',
+          role: defaultRole,
           gender: '',
           introduction: '',
           experience: 0,
@@ -419,33 +426,39 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Role Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Vai trò *</label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="role"
-                  value="staff"
-                  checked={formData.role === 'staff'}
-                  onChange={handleInputChange}
-                  className="mr-2"
-                />
-                <span className="text-gray-700">Staff</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="role"
-                  value="technician"
-                  checked={formData.role === 'technician'}
-                  onChange={handleInputChange}
-                  className="mr-2"
-                />
-                <span className="text-gray-700">Technician</span>
-              </label>
+          {allowedRoles.length > 1 && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Vai trò *</label>
+              <div className="flex gap-4">
+                {allowedRoles.includes('staff') && (
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="staff"
+                      checked={formData.role === 'staff'}
+                      onChange={handleInputChange}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-700">Staff</span>
+                  </label>
+                )}
+                {allowedRoles.includes('technician') && (
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="technician"
+                      checked={formData.role === 'technician'}
+                      onChange={handleInputChange}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-700">Technician</span>
+                  </label>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

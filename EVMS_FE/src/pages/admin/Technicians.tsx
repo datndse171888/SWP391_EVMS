@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AddUserModal } from '../../components/AddUserModal'
 import { UserDetailModal } from '../../components/UserDetailModal'
+import { UserApi } from '../../api/UserApi'
 
 interface User {
   _id: string
@@ -127,6 +128,21 @@ export const Technicians: React.FC = () => {
 
   const handleAddSuccess = () => {
     fetchTechnicians()
+  }
+
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      if (currentStatus) {
+        await UserApi.enableUser(userId)
+      } else {
+        await UserApi.disableUser(userId)
+      }
+      // Refresh the list
+      fetchTechnicians()
+    } catch (error) {
+      console.error('Lỗi khi thay đổi trạng thái:', error)
+      alert('Không thể thay đổi trạng thái. Vui lòng thử lại.')
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -286,7 +302,7 @@ export const Technicians: React.FC = () => {
                             </div>
                           </td>
                           <td className="py-4 px-6">
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                            <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${
                               technician.isDisabled 
                                 ? 'bg-red-100 text-red-800' 
                                 : 'bg-green-100 text-green-800'
@@ -295,12 +311,24 @@ export const Technicians: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-4 px-6">
-                            <button
-                              onClick={() => handleViewDetails(technician)}
-                              className="px-4 py-2 rounded-lg border border-blue-0 text-blue-0 hover:bg-blue-0 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
-                            >
-                              Xem chi tiết
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleViewDetails(technician)}
+                                className="px-4 py-2 rounded-lg border border-blue-0 text-blue-0 hover:bg-blue-0 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
+                              >
+                                Xem chi tiết
+                              </button>
+                              <button
+                                onClick={() => handleToggleStatus(technician._id, technician.isDisabled)}
+                                className={`px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow text-sm ${
+                                  technician.isDisabled
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-300'
+                                }`}
+                              >
+                                {technician.isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -343,6 +371,8 @@ export const Technicians: React.FC = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
+        defaultRole="technician"
+        allowedRoles={['technician']}
       />
 
       <UserDetailModal

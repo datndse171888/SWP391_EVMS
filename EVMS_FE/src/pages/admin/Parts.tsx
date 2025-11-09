@@ -207,7 +207,7 @@ export const Parts: React.FC = () => {
                         <td className="py-4 px-6">{typeof p.price === 'number' ? currencyFormatter.format(p.price) : '—'}</td>
                         <td className="py-4 px-6">{p.warrantyPeriod ? `${p.warrantyPeriod} ${p.warrantyCondition || ''}`.trim() : '—'}</td>
                         <td className="py-4 px-6">
-                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${p.status === 'active' ? 'bg-green-100 text-green-800' :
+                          <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${p.status === 'active' ? 'bg-green-100 text-green-800' :
                             p.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
@@ -215,26 +215,26 @@ export const Parts: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 justify-center">
                             <button
                               onClick={() => {
                                 console.log('Edit service', p);
                                 handleEdit(p)
                               }}
-                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                              className="p-2.5 bg-blue-0/10 text-blue-0 hover:bg-blue-0 hover:text-white rounded-lg transition-all duration-200 border border-blue-0/20 hover:border-blue-0"
                               title="Chỉnh sửa"
                             >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             <button
                               onClick={() => handleDelete(p._id)}
-                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                              className="p-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200 border border-red-200 hover:border-red-600"
                               title="Xóa"
                             >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
                           </div>
