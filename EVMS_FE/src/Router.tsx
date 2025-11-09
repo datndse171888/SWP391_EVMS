@@ -19,17 +19,17 @@ import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
 import { Parts as AdminParts } from './pages/admin/Parts'
-import Introduction from './pages/Introduction'
 import About from './pages/About'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import Service from './pages/service/Service'
+import Service from './pages/Service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
+import VerifyOTP from './pages/auth/VerifyOTP'
 import StaffDashboard from './pages/staff/StaffDashboard';
-import { BikeService } from './pages/service/BikeService';
-import { CarService } from './pages/service/CarService';
-import { MotoService } from './pages/service/MotoService';
+import { BikeService } from './pages/Service/BikeService';
+import { CarService } from './pages/Service/CarService';
+import { MotoService } from './pages/Service/MotoService';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
@@ -54,7 +54,6 @@ import Maintenance from './pages/user/Maintenance';
 import MyVehicles from './pages/user/MyVehicles';
 import AddVehicle from './pages/user/AddVehicle';
 import PaymentCallback from './pages/payment/PaymentCallback';
-import Contact from './pages/Contact';
 import ButtonRegister from './components/ButtonRegister';
 import ChatboxButton from './components/ui/ChatboxButton'
 
@@ -87,6 +86,7 @@ export const Router: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
@@ -149,6 +149,34 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Technicians />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminProfile />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/service-packages" element={
+          <AdminRoute>
+            <AdminLayout>
+              <ServicePackages />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/appointments" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Appointments />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/staffs" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Staffs />
             </AdminLayout>
           </AdminRoute>
         } />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Vehicle from './Vehicle';
 import { ProcessBar } from '../../components/ui/ProcessBar';
-import type { AppointmentResponse, CreateAppointmentRequest } from '../../types/Appoitment';
+import type { CreateAppointmentRequest } from '../../types/Appoitment';
 import Service from './Service';
 import type { VehicleCategory } from '../../types/Vehicle';
 import DateTime from './DateTime';
@@ -9,7 +9,6 @@ import Confirmation from './Confirmation';
 import { useAlert } from '../../hooks/useAlert';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { AppointmentApi } from '../../api/AppointmentApi';
 
 const Booking: React.FC = () => {
 
@@ -19,6 +18,9 @@ const Booking: React.FC = () => {
 
     const [step, setStep] = useState<number>(1);
     const { user } = useAuth();
+    const { showAlert, AlertComponent } = useAlert();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [formData, setFormData] = useState<CreateAppointmentRequest>({
         userID: user?.id || '',
         vehicleID: '',
@@ -32,17 +34,21 @@ const Booking: React.FC = () => {
         if (user?.id) {
             setFormData(prev => ({
                 ...prev,
-                userID: user.id
+                userID: user.id 
             }));
         }
     }, [user?.id]);
 
-    const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
-  const [lockService, setLockService] = useState<boolean>(false);
+    // Check verification status when user tries to book
+    useEffect(() => {
+        if (user && !user.isVerified) {
+            // Redirect to verify page if user is not verified
+            navigate('/verify-otp');
+        }
+    }, [user, navigate]);
 
-    const { showAlert, AlertComponent } = useAlert();
-    const navigate = useNavigate();
-  const location = useLocation();
+    const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
+    const [lockService, setLockService] = useState<boolean>(false);
     const steps = [
         { step: 1, info: 'Chọn phương tiện' },
         { step: 2, info: 'Chọn dịch vụ' },

@@ -1,16 +1,18 @@
 // src/pages/user/Profile.tsx - Updated with new layout
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { authApi } from "../../api/AuthApi";
 import { compressImage } from "../../api/UploadApi";
 import type { AxiosError } from "axios";
-import { Eye, EyeOff, CheckCircle, XCircle, Info, X } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, XCircle, Info, X, AlertCircle } from "lucide-react";
 import { UserProfileLayout } from "../../components/layout/UserProfileLayout";
 import { UserProfileSidebar } from "../../components/layout/UserProfileSidebar";
 import { UserProfileHeader } from "../../components/layout/UserProfileHeader";
 
 export default function Profile() {
   const { user: authUser, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({
     fullName: authUser?.fullName || "",
@@ -241,6 +243,29 @@ export default function Profile() {
               title="Hồ sơ người dùng"
               description="Quản lý thông tin cá nhân và cài đặt tài khoản"
             />
+
+            {/* Verification Alert Banner */}
+            {authUser && !authUser.isVerified && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg shadow-md mb-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-yellow-700 font-medium mb-2">
+                      Tài khoản của bạn chưa được xác thực
+                    </p>
+                    <p className="text-xs text-yellow-600 mb-3">
+                      Vui lòng xác thực email để sử dụng đầy đủ các tính năng như đặt lịch, xem lịch sử đặt lịch, và nhiều tính năng khác.
+                    </p>
+                    <button
+                      onClick={() => navigate('/verify-otp')}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded text-sm transition-colors"
+                    >
+                      Xác thực ngay
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-lg shadow-lg p-8 w-full">
               <div className="flex flex-col md:flex-row gap-8">

@@ -17,6 +17,7 @@ declare global {
         photoURL?: string;
         gender?: string;
         isDisabled: boolean;
+        isVerified: boolean;
       };
     }
   }
@@ -80,7 +81,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       phoneNumber: user.phoneNumber,
       photoURL: user.photoURL,
       gender: user.gender,
-      isDisabled: user.isDisabled
+      isDisabled: user.isDisabled,
+      isVerified: user.isVerified ?? false
     };
 
     next();
