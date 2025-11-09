@@ -42,6 +42,7 @@ import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
 import TechnicianProfile from './pages/technician/TechnicianProfile';
 import Profile from './pages/user/Profile';
+import AdminProfile from './pages/admin/AdminProfile';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import Maintenance from './pages/user/Maintenance';
@@ -142,6 +143,13 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Technicians />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminProfile />
             </AdminLayout>
           </AdminRoute>
         } />

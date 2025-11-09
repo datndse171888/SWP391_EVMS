@@ -433,7 +433,7 @@ export const Dashboard: React.FC = () => {
         <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-azure-0/10 rounded-full"></div>
         
         <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex-1 z-10">
+          <div className="flex-1 z-10 pl-2 md:pl-4">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
               <span className="text-gray-700">Hi,</span>{' '}
               <span className="text-blue-0">
@@ -463,11 +463,11 @@ export const Dashboard: React.FC = () => {
           </div>
           
           {/* Car Image section - Absolute positioned to not affect banner size */}
-          <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-96 h-64 pointer-events-none">
+          <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[350px] pointer-events-none">
             <img 
               src={adminCar} 
               alt="Admin Car" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain scale-110"
             />
           </div>
         </div>
