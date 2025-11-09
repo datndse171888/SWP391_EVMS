@@ -785,7 +785,7 @@ export const Dashboard: React.FC = () => {
             <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-azure-0/10 rounded-full"></div>
             
             <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="flex-1 z-10 pl-2 md:pl-4">
+              <div className="flex-1 z-10 pl-2 md:pl-4 pt-4 md:pt-6">
                 <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
                   <span className="text-gray-700">Hi,</span>{' '}
                   <span className="text-blue-0">
@@ -798,18 +798,17 @@ export const Dashboard: React.FC = () => {
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-sm md:text-base">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-0/10 rounded-lg">
                     <svg className="w-4 h-4 text-blue-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-gray-700 font-semibold">{totalUsers > 0 ? totalUsers : 0}</span>
-                    <span className="text-gray-600">người dùng</span>
+                    <span className="text-gray-700 font-semibold">{Object.values(servicesCount).reduce((sum, count) => sum + (count || 0), 0)}</span>
+                    <span className="text-gray-600">dịch vụ</span>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-azure-0/10 rounded-lg">
                     <svg className="w-4 h-4 text-azure-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <span className="text-gray-700 font-semibold">{totalTechnicians > 0 ? totalTechnicians : 0}</span>
-                    <span className="text-gray-600">kỹ thuật viên</span>
+                    <span className="text-gray-700 font-semibold">{totalInventoryItems > 0 ? totalInventoryItems : 0}</span>
+                    <span className="text-gray-600">linh kiện</span>
                   </div>
                 </div>
               </div>

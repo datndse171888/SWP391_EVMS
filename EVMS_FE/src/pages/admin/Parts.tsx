@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Part } from '../../types/Part'
 import { fetchParts, PartApi } from '../../api/PartApi'
 import PartModal from '../../components/PartsModal'
+import { InventoryApi } from '../../api/Inventory'
+import type { InventoryItemResponse } from '../../api/Inventory'
 
 export const Parts: React.FC = () => {
   const [parts, setParts] = useState<Part[]>([])
+  const [inventories, setInventories] = useState<Record<string, InventoryItemResponse>>({})
   const [loading, setLoading] = useState<boolean>(true)
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -14,6 +17,7 @@ export const Parts: React.FC = () => {
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('')
+  const [editingQuantity, setEditingQuantity] = useState<{ partId: string; quantity: number } | null>(null)
 
 
 
@@ -24,8 +28,23 @@ export const Parts: React.FC = () => {
       setLoading(true)
       const res = await fetchParts({ page: currentPage, limit, search: searchTerm })
       if (res?.success) {
-        setParts(res.data.parts || [])
+        const partsData = res.data.parts || []
+        setParts(partsData)
         setTotalPages(res.data.pagination?.totalPages || 1)
+        
+        // Load inventory data for all parts
+        try {
+          const inventoryRes = await InventoryApi.getWithParts({})
+          const inventoryMap: Record<string, InventoryItemResponse> = {}
+          inventoryRes.items.forEach((item) => {
+            if (item.partID && typeof item.partID === 'object' && '_id' in item.partID) {
+              inventoryMap[item.partID._id] = item
+            }
+          })
+          setInventories(inventoryMap)
+        } catch (invErr) {
+          console.error('Lỗi khi tải thông tin tồn kho:', invErr)
+        }
       } else {
         setParts([])
         setTotalPages(1)
@@ -107,6 +126,63 @@ export const Parts: React.FC = () => {
       alert('Failed to delete part. Please try again.');
     }
   };
+
+  const handleUpdateQuantity = async (partId: string, newQuantity: number) => {
+    try {
+      const inventory = inventories[partId]
+      
+      let response
+      if (inventory) {
+        // Update existing inventory
+        response = await InventoryApi.updateQuantity(inventory._id, newQuantity)
+      } else {
+        // Create new inventory if doesn't exist
+        response = await InventoryApi.createOrUpdateInventory(partId, newQuantity)
+      }
+
+      if (response.data) {
+        // Reload inventory data
+        const inventoryRes = await InventoryApi.getWithParts({})
+        const inventoryMap: Record<string, InventoryItemResponse> = {}
+        inventoryRes.items.forEach((item) => {
+          if (item.partID && typeof item.partID === 'object' && '_id' in item.partID) {
+            inventoryMap[item.partID._id] = item
+          }
+        })
+        setInventories(inventoryMap)
+        setEditingQuantity(null)
+      }
+    } catch (error: any) {
+      console.error('Error updating quantity:', error)
+      alert(error?.response?.data?.message || 'Lỗi khi cập nhật số lượng. Vui lòng thử lại.')
+    }
+  }
+
+  const getInventoryStatusBadge = (status: string) => {
+    switch (status) {
+      case 'in_stock':
+        return 'bg-green-100 text-green-800'
+      case 'low_stock':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'out_of_stock':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getInventoryStatusText = (status: string) => {
+    switch (status) {
+      case 'in_stock':
+        return 'Còn hàng'
+      case 'low_stock':
+        return 'Sắp hết'
+      case 'out_of_stock':
+        return 'Hết hàng'
+      default:
+        return 'Chưa có'
+    }
+  }
 
   return (
     <div className="flex flex-col">
@@ -191,6 +267,7 @@ export const Parts: React.FC = () => {
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hãng</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Giá</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Bảo hành</th>
+                      <th className="text-left py-4 px-6 text-gray-600 font-semibold">Số lượng</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Trạng thái</th>
                       <th className="text-left py-4 px-6 text-gray-600 font-semibold">Hành động</th>
                     </tr>
@@ -206,6 +283,60 @@ export const Parts: React.FC = () => {
                         <td className="py-4 px-6">{p.manufacturer || '—'}</td>
                         <td className="py-4 px-6">{typeof p.price === 'number' ? currencyFormatter.format(p.price) : '—'}</td>
                         <td className="py-4 px-6">{p.warrantyPeriod ? `${p.warrantyPeriod} ${p.warrantyCondition || ''}`.trim() : '—'}</td>
+                        <td className="py-4 px-6">
+                          {editingQuantity?.partId === p._id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                value={editingQuantity.quantity}
+                                onChange={(e) => setEditingQuantity({ partId: p._id, quantity: parseInt(e.target.value) || 0 })}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-0"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleUpdateQuantity(p._id, editingQuantity.quantity)}
+                                className="p-1 text-green-600 hover:text-green-800"
+                                title="Lưu"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => setEditingQuantity(null)}
+                                className="p-1 text-red-600 hover:text-red-800"
+                                title="Hủy"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-800">
+                                {inventories[p._id]?.quantity ?? 0}
+                              </span>
+                              <button
+                                onClick={() => setEditingQuantity({ partId: p._id, quantity: inventories[p._id]?.quantity ?? 0 })}
+                                className="p-1 text-blue-0 hover:text-azure-0"
+                                title="Chỉnh sửa số lượng"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                          {inventories[p._id] && (
+                            <div className="mt-1">
+                              <span className={`inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${getInventoryStatusBadge(inventories[p._id].status)}`}>
+                                {getInventoryStatusText(inventories[p._id].status)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
                         <td className="py-4 px-6">
                           <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${p.status === 'active' ? 'bg-green-100 text-green-800' :
                             p.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
