@@ -111,7 +111,7 @@
                 </span>
               )}
               {/* toggle button positioned on the edge to avoid clipping */}
-              <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-orange-400 bg-orange-500 text-white hover:bg-orange-600 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
+              <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-blue-0 bg-blue-0 text-white hover:bg-azure-0 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   {collapsed ? (
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -131,7 +131,7 @@
                   <Link 
                     to={item.path} 
                     className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                      isActive(item.path) ? 'bg-orange-500 text-white shadow-lg' : 'hover:bg-white/10 text-gray-200'
+                      isActive(item.path) ? 'bg-blue-0 text-white shadow-lg' : 'hover:bg-white/10 text-gray-200'
                     }`}
                   >
                     {item.icon}
@@ -169,7 +169,7 @@
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-orange-400 text-orange-400 hover:bg-orange-500 hover:text-white rounded-lg transition-all duration-200 group`}
+              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-white/30 text-white hover:bg-white/10 rounded-lg transition-all duration-200 group`}
               title="Đăng xuất"
               aria-label="Đăng xuất"
             >
