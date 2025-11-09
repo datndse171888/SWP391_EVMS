@@ -8,7 +8,7 @@ import { conversationRouter } from './conversation.js';
 import { messageRouter } from './message.js';
 import { partRouter } from './part.js';
 import { inventoryRouter } from './inventory.js';
-
+import { dashboardRouter } from './dashboard.js';
 
 import { userRouter } from './user.js';
 import { checklistRouter } from './checklist.js';
@@ -24,6 +24,7 @@ export const router = Router();
 router.get('/health', (_req, res) => { res.json({ status: 'ok' }); });
 router.use('/auth', authRouter);
 router.use('/demo', demoRouter);
+router.use('/dashboard', dashboardRouter);
 router.use('/users', userRouter);
 router.use('/appointments', appointmentRouter);
 router.use('/services', serviceRouter);
