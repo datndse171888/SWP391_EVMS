@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDashboardStats, getInventoryStats } from '../controllers/dashboardController.js';
+import { getDashboardStats, getInventoryStats, getServiceStats } from '../controllers/dashboardController.js';
 
 export const dashboardRouter = Router();
 
@@ -14,4 +14,10 @@ dashboardRouter.get('/stats', getDashboardStats);
  * Lấy thống kê tồn kho cho Dashboard
  */
 dashboardRouter.get('/inventory-stats', getInventoryStats);
+
+/**
+ * GET /api/dashboard/service-stats
+ * Lấy thống kê dịch vụ cho Dashboard
+ */
+dashboardRouter.get('/service-stats', getServiceStats);
 

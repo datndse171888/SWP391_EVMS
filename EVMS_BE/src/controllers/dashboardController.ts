@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { User } from '../models/User.js';
 import { Inventory } from '../models/Inventory.js';
 import { Part } from '../models/Part.js';
+import { Service } from '../models/Service.js';
 
 /**
  * GET /api/dashboard/stats
@@ -119,6 +120,56 @@ export async function getInventoryStats(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: 'Lỗi khi lấy thống kê tồn kho',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * GET /api/dashboard/service-stats
+ * Lấy thống kê dịch vụ cho Dashboard
+ * - Tổng số dịch vụ
+ * - Số lượng theo vehicleCategory (CAR, BICYCLE, MOTOBIKE)
+ * - Số lượng theo tên dịch vụ (top services)
+ */
+export async function getServiceStats(req: Request, res: Response) {
+  try {
+    // Lấy tất cả services
+    const services = await Service.find({}).lean();
+
+    // Tính tổng số services
+    const totalServices = services.length;
+
+    // Đếm theo vehicleCategory
+    const byVehicleCategory: Record<string, number> = {};
+    services.forEach(service => {
+      const category = service.vehicleCategory || 'OTHER';
+      byVehicleCategory[category] = (byVehicleCategory[category] || 0) + 1;
+    });
+
+    // Đếm theo tên dịch vụ (để hiển thị chart)
+    // Vì Service không có field "type", ta sẽ group theo vehicleCategory
+    // hoặc có thể trả về top services theo tên
+    const byName: Record<string, number> = {};
+    services.forEach(service => {
+      const name = service.name || 'Unknown';
+      byName[name] = (byName[name] || 0) + 1;
+    });
+
+    // Trả về response
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalServices,
+        byVehicleCategory,
+        byName
+      }
+    });
+  } catch (error) {
+    console.error('Error in getServiceStats:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy thống kê dịch vụ',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
