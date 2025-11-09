@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { User } from '../models/User.js';
+import { Inventory } from '../models/Inventory.js';
+import { Part } from '../models/Part.js';
 
 /**
  * GET /api/dashboard/stats
@@ -55,6 +57,68 @@ export async function getDashboardStats(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: 'Lỗi khi lấy thống kê dashboard',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * GET /api/dashboard/inventory-stats
+ * Lấy thống kê tồn kho cho Dashboard
+ * - Tổng số items trong kho
+ * - Tổng giá trị tồn kho
+ * - Số lượng theo category
+ * - Số lượng low stock
+ */
+export async function getInventoryStats(req: Request, res: Response) {
+  try {
+    // Lấy tất cả inventory items với thông tin part
+    const inventories = await Inventory.find({})
+      .populate('partID', 'category price')
+      .lean();
+
+    // Tính tổng số items
+    let totalItems = 0;
+    let totalValue = 0;
+    let lowStockCount = 0;
+    const byCategory: Record<string, number> = {};
+
+    inventories.forEach((inv: any) => {
+      const quantity = inv.quantity || 0;
+      totalItems += quantity;
+
+      // Tính tổng giá trị (quantity * price)
+      if (inv.partID && inv.partID.price) {
+        totalValue += quantity * inv.partID.price;
+      }
+
+      // Đếm low stock
+      if (inv.status === 'low_stock' || inv.status === 'out_of_stock') {
+        lowStockCount++;
+      }
+
+      // Đếm theo category
+      if (inv.partID && inv.partID.category) {
+        const category = inv.partID.category;
+        byCategory[category] = (byCategory[category] || 0) + quantity;
+      }
+    });
+
+    // Trả về response
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalItems,
+        totalValue,
+        byCategory,
+        lowStockCount
+      }
+    });
+  } catch (error) {
+    console.error('Error in getInventoryStats:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy thống kê tồn kho',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
