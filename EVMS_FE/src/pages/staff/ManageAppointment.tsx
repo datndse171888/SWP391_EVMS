@@ -93,7 +93,7 @@ const ManageAppointment: React.FC = () => {
       setError('');
       try {
         const res = await AppointmentApi.getAllAppointments();
-        const baseList: AppointmentResponse[] = res.data?.data || [];
+        const baseList: AppointmentResponse[] = res.data || [];
         // Helpers to read ids with various field names from BE
         const getServiceId = (a: unknown): string | undefined => {
           const obj = a as Record<string, unknown>;

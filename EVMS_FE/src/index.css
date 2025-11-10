@@ -17,3 +17,28 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
 }
+
+
+.custom-scrollbarPart::-webkit-scrollbar {
+  width: 4px; /* Rất mỏng - chỉ 4px */
+}
+
+.custom-scrollbarPart::-webkit-scrollbar-track {
+  background: #f2b496; /* gray-100 */
+  border-radius: 10px;
+}
+
+.custom-scrollbarPart::-webkit-scrollbar-thumb {
+  background: #000000; /* blue-400 */
+  border-radius: 10px;
+}
+
+.custom-scrollbarPart::-webkit-scrollbar-thumb:hover {
+  background: #657a9c; /* blue-500 - màu đậm hơn khi hover */
+}
+
+/* Cho Firefox */
+.custom-scrollbarPart {
+  scrollbar-width: thin;
+  scrollbar-color: #663f7d #f3f4f6;
+}
