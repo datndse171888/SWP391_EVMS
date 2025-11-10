@@ -22,14 +22,14 @@ import { Parts as AdminParts } from './pages/admin/Parts'
 import About from './pages/About'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
-import Service from './pages/Service/Service'
+import Service from './pages/service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
 import VerifyOTP from './pages/auth/VerifyOTP'
 import StaffDashboard from './pages/staff/StaffDashboard';
-import { BikeService } from './pages/Service/BikeService';
-import { CarService } from './pages/Service/CarService';
-import { MotoService } from './pages/Service/MotoService';
+import { BikeService } from './pages/service/BikeService';
+import { CarService } from './pages/service/CarService';
+import { MotoService } from './pages/service/MotoService';
 import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
