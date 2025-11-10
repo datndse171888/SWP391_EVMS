@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { getDashboardStats, getInventoryStats, getServiceStats } from '../controllers/dashboardController.js';
+import { getDashboardStats, getInventoryStats, getServiceStats, getTechnicianOverview } from '../controllers/dashboardController.js';
 import { cacheMiddleware } from '../middleware/cache.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const dashboardRouter = Router();
 
@@ -24,4 +25,7 @@ dashboardRouter.get('/inventory-stats', cacheMiddleware(60), getInventoryStats);
  * Cache: 60 seconds
  */
 dashboardRouter.get('/service-stats', cacheMiddleware(60), getServiceStats);
+
+// Technician overview (no cache because per-user dynamic)
+dashboardRouter.get('/technician/overview', authMiddleware, getTechnicianOverview);
 

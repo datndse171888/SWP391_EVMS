@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -26,6 +26,11 @@ appointmentRouter.get('/count/confirmed-cancelled', authMiddleware, countConfirm
 // Response: { success: true, data: { totalAll: number } }
 // Test: http://localhost:4000/api/appointments/count/all
 appointmentRouter.get('/count/all', authMiddleware, countAllAppointments);
+
+// Technician self counts (today)
+appointmentRouter.get('/technician/me/count/today', authMiddleware, countMyTodayAppointments);
+appointmentRouter.get('/technician/me/count/today/confirmed', authMiddleware, countMyTodayConfirmed);
+appointmentRouter.get('/technician/me/count/today/in-progress', authMiddleware, countMyTodayInProgress);
 
 // List today's awaiting payment appointments (admin/staff)
 appointmentRouter.get('/today/awaiting-payment', authMiddleware, listTodayAwaitingPayment);

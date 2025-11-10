@@ -4,6 +4,24 @@ import type { ServiceResponse } from "../types/Service";
 import type { ServicePackageResponse } from "../types/ServicePackage";
 import { api } from "../utils/Axios";
 
+type TechnicianOverviewItem = {
+  _id?: string;
+  bookingDate?: string;
+  status?: string;
+  userID?: { fullName?: string; userName?: string };
+  serviceID?: { name?: string };
+  servicePackageID?: { name?: string };
+};
+
+type TechnicianOverviewResponse = {
+  stats: { totalToday: number; confirmedToday: number; inProgressToday: number };
+  inventory: { totalLowStock: number; totalInStock: number };
+  progress: { assignedCount: number; completedCount: number; completionRate: number };
+  performance: { label: string; completed: number }[];
+  upcoming: TechnicianOverviewItem[];
+  range: string;
+};
+
 export const AppointmentApi = {
   createAppointment: (data: CreateAppointmentRequest) => {
     return api.post<AppointmentResponse>('/appointments', data);
@@ -17,11 +35,25 @@ export const AppointmentApi = {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
-  getAppointmentByTechnician: (status?: AppointmentStatus) => {
-    const statusQuery = status ? `status=${status}` : '';
-    const includeQuery = 'include=user,service,package,technicians';
-    const query = [statusQuery, includeQuery].filter(Boolean).join('&');
-    return api.get<AppointmentResponse[]>(`/appointments/technician/me${query ? `?${query}` : ''}`);
+  getAppointmentByTechnician: (
+    status?: AppointmentStatus,
+    opts?: {
+      from?: string;
+      to?: string;
+      order?: 'asc' | 'desc';
+      limit?: number | string;
+      include?: string;
+    }
+  ) => {
+    const params: string[] = [];
+    if (status) params.push(`status=${status}`);
+    if (opts?.from) params.push(`from=${encodeURIComponent(opts.from)}`);
+    if (opts?.to) params.push(`to=${encodeURIComponent(opts.to)}`);
+    if (opts?.order) params.push(`order=${opts.order}`);
+    if (opts?.limit !== undefined) params.push(`limit=${opts.limit}`);
+    params.push(`include=${encodeURIComponent(opts?.include || 'user,service,package,technicians')}`);
+    const qs = params.length ? `?${params.join('&')}` : '';
+    return api.get<AppointmentResponse[]>(`/appointments/technician/me${qs}`);
   },
 
   getAppointmentById: (appointmentId: string, include?: string) => {
@@ -51,5 +83,18 @@ export const AppointmentApi = {
       service?: ServiceResponse;
       servicePackage?: ServicePackageResponse;
     }>>(`/appointments/${appointmentId}/service`);
-  }
+  },
+
+  // Dashboard technician counts
+  getMyTodayTotal: () => api.get<{ total: number }>('/appointments/technician/me/count/today'),
+  getMyTodayConfirmed: () => api.get<{ total: number }>('/appointments/technician/me/count/today/confirmed'),
+  getMyTodayInProgress: () => api.get<{ total: number }>('/appointments/technician/me/count/today/in-progress'),
+
+  // Inventory status counts (exposed here for dashboard convenience)
+  getInventoryCountByStatus: () => api.get<{ totalLowStock: number; totalInStock: number }>('/inventories/count/by-status'),
+  // Dashboard overview for technician
+  getTechnicianOverview: (range?: 'today' | 'week' | 'month') => {
+    const qs = range ? `?range=${range}` : '';
+    return api.get<TechnicianOverviewResponse>(`/dashboard/technician/overview${qs}`);
+  },
 };

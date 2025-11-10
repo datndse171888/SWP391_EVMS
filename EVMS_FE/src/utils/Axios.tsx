@@ -17,8 +17,13 @@ const axiosInstance: AxiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Add auth token if available
-    const token = localStorage.getItem('accessToken');
+    // Add auth token if available (support multiple storage keys)
+    const token = localStorage.getItem('accessToken')
+      || localStorage.getItem('token')
+      || localStorage.getItem('access_token')
+      || sessionStorage.getItem('accessToken')
+      || sessionStorage.getItem('token')
+      || sessionStorage.getItem('access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

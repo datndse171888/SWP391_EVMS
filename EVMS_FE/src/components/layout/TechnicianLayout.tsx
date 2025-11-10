@@ -35,7 +35,6 @@ export const TechnicianLayout: React.FC<TechnicianLayoutProps> = ({ children }) 
   const technicianMenuItems = [
     { name: 'Dashboard', path: '/technician/dashboard' },
     { name: 'Schedule', path: '/technician/schedule' },
-    { name: 'Appointment', path: '/technician/appointments' },
   ];
 
   const isActive = (path: string) => {
