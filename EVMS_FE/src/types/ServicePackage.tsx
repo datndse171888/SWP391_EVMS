@@ -8,11 +8,14 @@ export interface ServicePackageResponse {
   name: string;
   description: string;
   vehicleCategory: VehicleCategory;
-  price: number; // using Number for simplicity; can switch to Decimal128 if needed
-  duration: number; // minutes or hours depending on business rule
-  discount: number; // percentage discount, optional
-  status: ServicePackageStatus
-  services: ServiceResponse[];
-  createAt: string;
-  updateAt: string;
+  price: number;
+  duration: number;
+  discount: number;
+  status: ServicePackageStatus;
+  services: ServiceResponse[] | string[]; // Can be populated or just IDs
+  periodicEnabled?: boolean;
+  intervalMonths?: number;
+  defaultTotalVisits?: number;
+  createAt?: string;
+  updateAt?: string;
 }
