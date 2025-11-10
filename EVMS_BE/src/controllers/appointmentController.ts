@@ -477,7 +477,7 @@ function buildBaseFilter(params: ReturnType<typeof parseListParams>) {
   return filter;
 }
 
-export async function listAppointments(req: Request, res: Response) {
+export async function listAppointments(req: Request, res: Response) { 
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
     const role = req.user.role;
@@ -508,20 +508,8 @@ export async function listAppointments(req: Request, res: Response) {
       })(),
     ]);
 
-    const totalPages = Math.ceil(total / params.limit) || 1;
-    return res.json({
-      data: docs,
-      pagination: { page: params.page, limit: params.limit, total, totalPages },
-      filters: {
-        status: params.status,
-        from: params.from,
-        to: params.to,
-        serviceId: params.serviceId,
-        packageId: params.packageId,
-        technicianId: params.technicianId,
-        userId: params.userId,
-      },
-    });
+    // Return plain data array (no wrappers)
+    return res.json(docs);
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
@@ -1432,3 +1420,65 @@ export async function getServiceByAppointmentId(req: Request, res: Response) {
   }
 }
 
+// Dashboard: Count total pending appointments
+export async function countPendingAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const total = await Appointment.countDocuments({ status: 'pending' });
+    // Return plain object (no wrappers)
+    return res.status(200).json({ totalPending: total });
+  } catch (error) {
+    console.error('Count pending appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Dashboard: Count totals for confirmed and cancelled appointments
+export async function countConfirmedAndCancelledAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const [confirmed, cancelled] = await Promise.all([
+      Appointment.countDocuments({ status: 'confirmed' }),
+      Appointment.countDocuments({ status: 'cancelled' }),
+    ]);
+    // Return plain object (no wrappers)
+    return res.status(200).json({
+      totalConfirmed: confirmed,
+      totalCancelled: cancelled,
+    });
+  } catch (error) {
+    console.error('Count confirmed/cancelled appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Dashboard: Count total appointments (all statuses)
+export async function countAllAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const total = await Appointment.countDocuments({});
+    // Return plain object (no wrappers)
+    return res.status(200).json({ totalAll: total });
+  } catch (error) {
+    console.error('Count all appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}

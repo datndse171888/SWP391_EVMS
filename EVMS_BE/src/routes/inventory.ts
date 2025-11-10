@@ -9,6 +9,7 @@ import {
   updateInventoryQuantity,
   decreaseInventoryQuantity,
   deleteInventory,
+  countInventoryByStatus,
 } from '../controllers/inventoryController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
@@ -30,4 +31,10 @@ inventoryRouter.put('/:id', authMiddleware, roleMiddleware(['admin', 'staff']), 
 // Giảm số lượng tồn kho theo delta (decreaseBy)
 inventoryRouter.patch('/:id/decrease', authMiddleware, roleMiddleware(['admin', 'staff']), decreaseInventoryQuantity);
 inventoryRouter.delete('/:id', authMiddleware, roleMiddleware(['admin']), deleteInventory);
+
+// Count totals for low_stock and in_stock inventories
+// Request: GET /api/inventory/count/by-status
+// Response: { totalLowStock: number, totalInStock: number }
+// Test: http://localhost:4000/api/inventories/count/by-status
+inventoryRouter.get('/count/by-status', countInventoryByStatus);
 

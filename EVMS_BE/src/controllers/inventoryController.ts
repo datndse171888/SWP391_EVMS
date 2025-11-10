@@ -103,6 +103,20 @@ export async function getInventoriesWithFullPart(req: Request, res: Response) {
   }
 }
 
+// Count totals for low_stock and in_stock items
+export async function countInventoryByStatus(req: Request, res: Response) {
+  try {
+    const [lowStock, inStock] = await Promise.all([
+      Inventory.countDocuments({ status: 'low_stock' }),
+      Inventory.countDocuments({ status: 'in_stock' }),
+    ]);
+    // Return plain object (no wrappers)
+    return res.json({ totalLowStock: lowStock, totalInStock: inStock });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 // Trả về toàn bộ tồn kho với đầy đủ Part, KHÔNG phân trang (dùng cho FE phân trang client-side)
 export async function getAllInventoriesWithFullPart(req: Request, res: Response) {
   try {
