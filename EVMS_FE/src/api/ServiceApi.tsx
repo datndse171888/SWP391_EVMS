@@ -48,21 +48,16 @@ export async function fetchServices(params: FetchServicesParams): Promise<Servic
 
   const mapped: ServiceResponse[] = Array.from(uniqueItemsMap.values()).map((it) => ({
     // Use _id as the primary identifier
-    id: 0, // Deprecated field, use _id instead
     _id: it._id ? String(it._id) : (it.id ? String(it.id) : ''),
     name: it.name || '',
     description: it.description || '',
     price: typeof it.price === 'number' ? it.price : 0,
-    // BE duration is number (minutes), FE expects string
-    duration: typeof it.duration === 'number' ? `${it.duration}` : (it.duration || ''),
+    duration: typeof it.duration === 'number' ? it.duration : 0,
     image: it.image || '',
-    vehicleType: it.vehicleType,
     vehicleCategory: it.vehicleCategory || it.vehicleType || 'CAR',
-    pricing: Array.isArray(it.pricing)
-      ? it.pricing
-        .filter((p: any) => p && typeof p.price === 'number' && ['CAR', 'BICYCLE', 'MOTOBIKE'].includes(String(p.category)))
-        .map((p: any) => ({ category: String(p.category) as 'CAR' | 'BICYCLE' | 'MOTOBIKE', price: p.price }))
-      : undefined
+    periodicEnabled: it.periodicEnabled || false,
+    intervalMonths: it.intervalMonths,
+    defaultTotalVisits: it.defaultTotalVisits,
   }))
 
   const totalPages = Math.max(1, Math.ceil((raw.total || 0) / (raw.limit || params.limit)))
