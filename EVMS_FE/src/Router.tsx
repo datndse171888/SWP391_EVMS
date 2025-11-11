@@ -58,6 +58,9 @@ import ButtonRegister from './components/ButtonRegister';
 import ChatboxButton from './components/ui/ChatboxButton'
 import Introduction from './pages/Introduction'
 import Contact from './pages/Contact'
+import AboutUs from './pages/AboutUs'
+import PartsExplore from './pages/PartsExplore'
+import ProcessGuide from './pages/ProcessGuide'
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -74,6 +77,9 @@ export const Router: React.FC = () => {
           <Route path="/about" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/introduction" element={<><Introduction /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/contact" element={<><Contact /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/about-us" element={<><AboutUs /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/parts-explore" element={<><PartsExplore /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/process-guide" element={<><ProcessGuide /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/service" element={<><Service /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/carService" element={<><CarService /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/bikeService" element={<><BikeService /> <ChatboxButton /> <ButtonRegister /></>} />
