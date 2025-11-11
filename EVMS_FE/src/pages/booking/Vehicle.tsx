@@ -287,7 +287,7 @@ const Vehicle: React.FC<VehicleProps> = ({
             {/* Vehicle Type */}
             <div>
               <Select
-                name="vehicleType"
+                name="vehicleCategory"
                 label="Loại xe"
                 value={selectedVehicle?.vehicleCategory || newVehicleData.vehicleCategory}
                 onChange={(e) => !selectedVehicle && handleNewVehicleChange('vehicleCategory', e.target.value as VehicleCategory)}
