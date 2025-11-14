@@ -15,9 +15,12 @@ import {
   ArcElement,
   PointElement,
   LineElement,
+  Filler,
 } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement, Filler)
+
+const API_BASE = import.meta.env.VITE_BASE_API_URL || 'http://localhost:4000/api'
 
 
 // Interface cho User
@@ -127,7 +130,7 @@ const UsersTable: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setError(null)
-      const response = await fetch('http://localhost:4000/api/users?limit=5&page=1')
+      const response = await fetch(`${API_BASE}/users?limit=5&page=1`)
       const data = await response.json()
       if (data.success) {
         setUsers(data.data.users || [])
@@ -279,9 +282,9 @@ export const Dashboard: React.FC = () => {
       try {
         // Gọi tất cả 3 API song song để tối ưu performance
         const [statsRes, inventoryRes, serviceRes] = await Promise.all([
-          fetch('http://localhost:4000/api/dashboard/stats'),
-          fetch('http://localhost:4000/api/dashboard/inventory-stats'),
-          fetch('http://localhost:4000/api/dashboard/service-stats')
+          fetch(`${API_BASE}/dashboard/stats`),
+          fetch(`${API_BASE}/dashboard/inventory-stats`),
+          fetch(`${API_BASE}/dashboard/service-stats`)
         ])
 
         // Parse responses
@@ -343,9 +346,9 @@ export const Dashboard: React.FC = () => {
     setRevenueLoading(true)
     try {
       const [overviewRes, topServicesRes, comparisonRes] = await Promise.all([
-        fetch(`http://localhost:4000/api/revenue/overview?period=${revenuePeriod}`),
-        fetch(`http://localhost:4000/api/revenue/top-services?period=${revenuePeriod}&limit=5`),
-        fetch(`http://localhost:4000/api/revenue/comparison`)
+        fetch(`${API_BASE}/revenue/overview?period=${revenuePeriod}`),
+        fetch(`${API_BASE}/revenue/top-services?period=${revenuePeriod}&limit=5`),
+        fetch(`${API_BASE}/revenue/comparison`)
       ])
 
       const [overviewJson, topServicesJson, comparisonJson] = await Promise.all([

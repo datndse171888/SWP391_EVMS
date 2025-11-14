@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
+import { Payment } from '../models/Payment.js';
 import { Service } from '../models/Service.js';
 import { ServicePackage } from '../models/ServicePackage.js';
 
@@ -43,8 +44,59 @@ export async function getRevenueOverview(req: Request, res: Response) {
       }
     }
 
-    // Aggregation: Appointment (completed) -> Service/ServicePackage để lấy price
-    const revenueStats = await Appointment.aggregate([
+    // Ưu tiên tính theo Payment (status = completed). Nếu không có bản ghi, fallback Appointment.
+    const paymentStats = await Payment.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: { $gte: start, $lte: end }
+        }
+      },
+      {
+        $project: {
+          amount: 1,
+          paymentMethod: 1,
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }
+        }
+      },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalRevenue: { $sum: '$amount' },
+                totalTransactions: { $sum: 1 }
+              }
+            }
+          ],
+          byDate: [
+            {
+              $group: {
+                _id: '$date',
+                revenue: { $sum: '$amount' },
+                count: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ],
+          byPaymentMethod: [
+            {
+              $group: {
+                _id: '$paymentMethod',
+                revenue: { $sum: '$amount' },
+                count: { $sum: 1 }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    const hasPayments = Array.isArray(paymentStats) && paymentStats[0]?.totals?.length > 0;
+
+    // Fallback: Aggregation theo Appointment (completed) -> Service/ServicePackage để lấy price
+    const appointmentStats = await Appointment.aggregate([
       {
         $match: {
           status: 'completed',
@@ -127,23 +179,39 @@ export async function getRevenueOverview(req: Request, res: Response) {
       }
     ]);
 
-    const result = revenueStats[0];
+    // Compose response data from either payments or appointments
+    let totalRevenue = 0;
+    let totalTransactions = 0;
+    let byDate: Array<{ date: string; revenue: number; count: number }> = [];
+    let byPaymentMethod: Record<string, { revenue: number; count: number }> = {};
 
-    // Parse kết quả
-    const totalRevenue = result.total[0]?.totalRevenue || 0;
-    const totalTransactions = result.total[0]?.totalTransactions || 0;
-
-    const byDate = result.byDate.map((item: any) => ({
-      date: item._id,
-      revenue: item.revenue,
-      count: item.count
-    }));
-
-    // Giả lập byPaymentMethod (vì không có Payment data)
-    // Có thể bỏ hoặc để mặc định CASH 100%
-    const byPaymentMethod = {
-      CASH: { revenue: totalRevenue, count: totalTransactions }
-    };
+    if (hasPayments) {
+      const p = paymentStats[0];
+      totalRevenue = p.totals[0]?.totalRevenue || 0;
+      totalTransactions = p.totals[0]?.totalTransactions || 0;
+      byDate = (p.byDate || []).map((item: any) => ({
+        date: item._id,
+        revenue: item.revenue,
+        count: item.count
+      }));
+      byPaymentMethod = (p.byPaymentMethod || []).reduce((acc: any, item: any) => {
+        acc[item._id] = { revenue: item.revenue, count: item.count };
+        return acc;
+      }, {} as Record<string, { revenue: number; count: number }>);
+    } else {
+      const a = appointmentStats[0];
+      const aTotalRevenue = a?.total?.[0]?.totalRevenue || 0;
+      const aTotalTransactions = a?.total?.[0]?.totalTransactions || 0;
+      totalRevenue = aTotalRevenue;
+      totalTransactions = aTotalTransactions;
+      byDate = (a?.byDate || []).map((item: any) => ({
+        date: item._id,
+        revenue: item.revenue,
+        count: item.count
+      }));
+      // Không có Payment -> mặc định CASH
+      byPaymentMethod = { CASH: { revenue: totalRevenue, count: totalTransactions } };
+    }
 
     return res.status(200).json({
       success: true,
@@ -283,8 +351,16 @@ export async function getRevenueComparison(req: Request, res: Response) {
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-    // Helper function để tính revenue từ Appointment
+    // Helper function: ưu tiên Payment completed, nếu không có thì fallback Appointment
     const calculateRevenue = async (start: Date, end: Date) => {
+      const paymentAgg = await Payment.aggregate([
+        { $match: { status: 'completed', createdAt: { $gte: start, $lte: end } } },
+        { $group: { _id: null, revenue: { $sum: '$amount' }, count: { $sum: 1 } } }
+      ]);
+      if (paymentAgg.length > 0) {
+        return paymentAgg[0];
+      }
+
       const result = await Appointment.aggregate([
         {
           $match: {

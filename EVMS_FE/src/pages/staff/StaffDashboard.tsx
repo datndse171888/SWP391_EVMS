@@ -240,7 +240,7 @@ const StaffDashboard: React.FC = () => {
     datasets: [
       {
         data: [appointmentStatus.confirmed || 0, appointmentStatus.pending || 0],
-        backgroundColor: ['#10b981', '#f59e0b',],
+        backgroundColor: ['#014091', '#0991f3'],
         hoverOffset: 6
       },
     ],
@@ -258,7 +258,7 @@ const StaffDashboard: React.FC = () => {
     datasets: [
       {
         data: [partsStatus.inStock || 0, partsStatus.lowStock || 0],
-        backgroundColor: ['#05c205ff', '#f3a827ff'],
+        backgroundColor: ['#0991f3', '#014091'],
         hoverOffset: 6,
       },
     ],
@@ -280,7 +280,7 @@ const StaffDashboard: React.FC = () => {
       <div className="p-8">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-0 mx-auto mb-4"></div>
             <p className="text-gray-600 text-lg">Đang tải dữ liệu dashboard...</p>
           </div>
         </div>
@@ -311,8 +311,8 @@ const StaffDashboard: React.FC = () => {
 
             <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex-1 z-10 pl-2 md:pl-4 pt-4 md:pt-6">
-                <h1 className="text-3xl font-bold text-orange-600 mb-2">Staff Dashboard</h1>
-                <p className="text-lg md:text-4xl font-semibold mb-3"><span className="text-gray-700">Hi,</span> <span className="text-blue-600">{user?.fullName || user?.userName || 'Staff'}</span></p>
+                <h1 className="text-3xl font-bold text-blue-0 mb-2">Staff Dashboard</h1>
+                <p className="text-lg md:text-4xl font-semibold mb-3"><span className="text-gray-700">Hi,</span> <span className="text-blue-0">{user?.fullName || user?.userName || 'Staff'}</span></p>
                 <p className="text-gray-700 text-base md:text-lg leading-relaxed font-medium">Quản lý công việc cửa hàng, lịch hẹn, linh kiện và hỗ trợ khách hàng.</p>
               </div>
 
@@ -326,7 +326,7 @@ const StaffDashboard: React.FC = () => {
             <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-lg p-6 min-h-[140px] flex flex-col">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16"></div>
               <div className="flex ml-35 items-center gap-2 flex-shrink-0 ">
-                <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:opacity-90 transition flex items-center gap-2">
+                <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-blue-0 text-white hover:bg-azure-0 transition flex items-center gap-2 shadow-md">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                   <span>Làm mới</span>
                 </button>
@@ -335,8 +335,8 @@ const StaffDashboard: React.FC = () => {
                 <div className="flex items-center justify-between gap-3 pb-4 border-b border-gray-200">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="pt-4 border-t border-gray-200 text-center ml-30">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">{currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>
-                      <div className="text-sm font-semibold text-gray-500">{currentTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                      <div className="text-3xl font-bold text-blue-0 mb-1">{currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>
+                      <div className="text-sm font-semibold text-azure-0">{currentTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                     </div>
                   </div>
                 </div>
@@ -349,7 +349,7 @@ const StaffDashboard: React.FC = () => {
       {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
         <StatCard title="Lịch hẹn" value={totalAppointments > 0 ? String(totalAppointments) : '—'} change="+8%" changeType="positive" icon={<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} linkText="Quản lý lịch hẹn" accentColor="bg-blue-0" />
-        <StatCard title="Lịch hẹn chờ xác nhận" value={appointmentStatus.pending > 0 ? String(appointmentStatus.pending) : '—'} change="+3%" changeType="positive" icon={<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} linkText="Lịch hẹn đang chờ xác nhận" accentColor="bg-emerald-200" />
+        <StatCard title="Lịch hẹn chờ xác nhận" value={appointmentStatus.pending > 0 ? String(appointmentStatus.pending) : '—'} change="+3%" changeType="positive" icon={<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} linkText="Lịch hẹn đang chờ xác nhận" accentColor="bg-azure-0" />
         <StatCard title="Linh kiện tồn kho" value={totalInventoryItems > 0 ? String(totalInventoryItems) : '—'} change="-2%" changeType="negative" icon={<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>} linkText="Quản lý linh kiện" accentColor="bg-blue-0" />
       </div>
 
@@ -370,7 +370,7 @@ const StaffDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-800">Kho linh kiện</h3>
             <button
               onClick={() => navigate('/staff/parts')}
-              className="text-sm text-blue-600 hover:underline font-medium"
+              className="text-sm text-blue-0 hover:text-azure-0 font-medium"
             >
               Quản lý →
             </button>
