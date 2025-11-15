@@ -158,7 +158,7 @@ const Booking: React.FC = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md mt-22 mb-10">
+        <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-md mt-22 mb-10">
             <ProcessBar currentStep={step} steps={steps} />
             {renderStep()}
             {AlertComponent}
