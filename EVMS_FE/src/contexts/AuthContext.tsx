@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import type { AxiosError } from 'axios';
 import { authApi } from '../api/AuthApi';
 
 // User interface
@@ -10,8 +11,9 @@ export interface User {
   phoneNumber?: string;
   photoURL?: string;
   role: 'admin' | 'staff' | 'technician' | 'customer';
-  gender?: string;
+  gender?: string; 
   isDisabled: boolean;
+  isVerified: boolean;
 }
 
 // Auth context interface
@@ -24,6 +26,7 @@ interface AuthContextType {
   loginWithGoogle: (payload: { email: string; userName: string; photoURL?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  updateUserInfo: () => Promise<void>;
   hasRole: (roles: string | string[]) => boolean;
   hasPermission: (resource: string, action: string) => boolean;
 }
@@ -83,9 +86,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Update state
       setToken(accessToken);
       setUser(userData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      throw new Error(error.response?.data?.message || 'Đăng nhập thất bại');
+      const axiosError = error as AxiosError<{ message?: string }>;
+      throw new Error(axiosError.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -103,9 +107,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setToken(accessToken);
       setUser(userData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Google Login error:', error);
-      throw new Error(error.response?.data?.message || 'Đăng nhập Google thất bại');
+      const axiosError = error as AxiosError<{ message?: string }>;
+      throw new Error(axiosError.response?.data?.message || 'Đăng nhập Google thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +133,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  // Update user info from API (refresh user data)
+  const updateUserInfo = async (): Promise<void> => {
+    const storedToken = localStorage.getItem('accessToken');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      try {
+        // Get fresh user data from API
+        const response = await authApi.getProfile();
+        // Response format from backend: { user: { id, email, isVerified, ... } }
+        interface ProfileResponse {
+          user?: {
+            id?: string;
+            _id?: string;
+            email?: string;
+            userName?: string;
+            fullName?: string;
+            phoneNumber?: string;
+            photoURL?: string;
+            role?: string;
+            gender?: string;
+            isDisabled?: boolean;
+            isVerified?: boolean;
+          };
+        }
+        const responseData = response.data as ProfileResponse;
+        const userData = responseData.user;
+        
+        if (!userData) {
+          throw new Error('User data not found in response');
+        }
+        
+        // Map backend user format to frontend User format
+        const updatedUser: User = {
+          id: userData.id || userData._id || '',
+          email: userData.email || '',
+          userName: userData.userName || '',
+          fullName: userData.fullName,
+          phoneNumber: userData.phoneNumber,
+          photoURL: userData.photoURL,
+          role: (userData.role as User['role']) || 'customer',
+          gender: userData.gender,
+          isDisabled: userData.isDisabled ?? false,
+          isVerified: userData.isVerified ?? false,
+        };
+        
+        // Update state and localStorage
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (error) {
+        console.error('Error updating user info:', error);
+        // If API call fails, try to parse stored user
+        try {
+          const parsedUser = JSON.parse(storedUser) as User;
+          setUser(parsedUser);
+        } catch (parseError) {
+          console.error('Error parsing stored user:', parseError);
+        }
+      }
     }
   };
 
@@ -188,6 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loginWithGoogle,
     logout,
     updateUser,
+    updateUserInfo,
     hasRole,
     hasPermission
   };
@@ -200,6 +268,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 };
 
 // Custom hook to use auth context
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

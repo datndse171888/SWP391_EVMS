@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { technicianApi } from '../api/TechnicianApi'
 
 interface User {
   _id: string
@@ -53,22 +54,24 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClos
 
     setLoading(true)
     try {
-      // Fetch technician info
-      const techResponse = await fetch(`http://localhost:4000/api/technicians/${user._id}/info`)
-      if (techResponse.ok) {
-        const techData = await techResponse.json()
-        if (techData.success) {
-          setTechnicianInfo(techData.data.technician)
+      // Fetch technician info using authenticated API
+      try {
+        const techResponse = await technicianApi.getTechnicianInfo(user._id)
+        if (techResponse.data?.success && techResponse.data.data?.technician) {
+          setTechnicianInfo(techResponse.data.data.technician)
         }
+      } catch (error: any) {
+        console.warn('Lỗi khi lấy thông tin technician:', error?.response?.status || error)
       }
 
-      // Fetch technician certificates
-      const certResponse = await fetch(`http://localhost:4000/api/technicians/${user._id}/certificates`)
-      if (certResponse.ok) {
-        const certData = await certResponse.json()
-        if (certData.success) {
-          setCertificates(certData.data.certificates)
+      // Fetch technician certificates using authenticated API
+      try {
+        const certResponse = await technicianApi.getTechnicianCertificates(user._id)
+        if (certResponse.data?.success) {
+          setCertificates(certResponse.data.data?.certificates || [])
         }
+      } catch (error: any) {
+        console.warn('Lỗi khi lấy chứng chỉ technician:', error?.response?.status || error)
       }
     } catch (error) {
       console.error('Lỗi khi lấy thông tin technician:', error)

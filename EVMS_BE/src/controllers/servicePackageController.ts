@@ -5,7 +5,11 @@ import { Service } from '../models/Service.js';
 export async function createServicePackage(req: Request, res: Response) {
   try {
     // Expecting serviceItems: [{ serviceID }] - duration từng service tự lấy từ Service
-    const { name, description, vehicleCategory, price, duration, status, discount, serviceItems, createAt, updateAt } = req.body as any;
+    const {
+      name, description, vehicleCategory, price, duration, status, discount, serviceItems, createAt, updateAt,
+      periodicEnabled, intervalMonths, defaultTotalVisits
+    } = req.body as any;
+
     if (!name || !vehicleCategory || price === undefined) {
       return res.status(400).json({ message: 'Thiếu name, vehicleCategory hoặc price' });
     }
@@ -13,14 +17,24 @@ export async function createServicePackage(req: Request, res: Response) {
     // Validation vehicleCategory
     const validVehicleCategories = ['CAR', 'BICYCLE', 'MOTOBIKE'];
     if (!validVehicleCategories.includes(vehicleCategory)) {
-      return res.status(400).json({ 
-        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE' 
+      return res.status(400).json({
+        message: 'Danh mục xe không hợp lệ. Phải là: CAR, BICYCLE, hoặc MOTOBIKE'
       });
     }
 
     // Giới hạn giảm giá < 15%
     if (discount !== undefined && (discount < 0 || discount >= 15)) {
       return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    }
+
+    // Validate periodic fields
+    if (periodicEnabled) {
+      if (!intervalMonths || intervalMonths < 1 || intervalMonths > 24) {
+        return res.status(400).json({ message: 'intervalMonths phải từ 1-24 khi bật gói định kỳ' });
+      }
+      if (!defaultTotalVisits || defaultTotalVisits < 1 || defaultTotalVisits > 60) {
+        return res.status(400).json({ message: 'defaultTotalVisits phải từ 1-60 khi bật gói định kỳ' });
+      }
     }
     
     let services: any[] | undefined = undefined;
@@ -115,7 +129,21 @@ export async function createServicePackage(req: Request, res: Response) {
         });
       }
     }
-    const created = await ServicePackage.create({ name, description, vehicleCategory, price, duration: finalDuration, status, discount, services, createAt, updateAt });
+    const created = await ServicePackage.create({
+      name,
+      description,
+      vehicleCategory,
+      price,
+      duration: finalDuration,
+      status,
+      discount,
+      services,
+      createAt,
+      updateAt,
+      periodicEnabled: periodicEnabled || false,
+      intervalMonths: periodicEnabled ? intervalMonths : undefined,
+      defaultTotalVisits: periodicEnabled ? defaultTotalVisits : undefined,
+    });
     const populated = await ServicePackage.findById(created._id).populate('services').lean();
     return res.status(201).json({ message: 'Tạo gói dịch vụ thành công', servicePackage: populated });
   } catch (error: any) {
@@ -166,7 +194,10 @@ export async function getServicePackageById(req: Request, res: Response) {
 
 export async function updateServicePackage(req: Request, res: Response) {
   try {
-    const { name, description, vehicleCategory, price, duration, status, discount, services, serviceItems, createAt, updateAt } = req.body as any;
+    const {
+      name, description, vehicleCategory, price, duration, status, discount, services, serviceItems, createAt, updateAt,
+      periodicEnabled, intervalMonths, defaultTotalVisits
+    } = req.body as any;
 
     // Tải bản ghi hiện tại để có giá trị mặc định nếu request không gửi
     const existing: any = await ServicePackage.findById(req.params.id).lean();
@@ -185,6 +216,16 @@ export async function updateServicePackage(req: Request, res: Response) {
     // Giới hạn giảm giá < 15%
     if (discount !== undefined && (discount < 0 || discount >= 15)) {
       return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    }
+
+    // Validate periodic fields
+    if (periodicEnabled) {
+      if (intervalMonths !== undefined && (intervalMonths < 1 || intervalMonths > 24)) {
+        return res.status(400).json({ message: 'intervalMonths phải từ 1-24 khi bật gói định kỳ' });
+      }
+      if (defaultTotalVisits !== undefined && (defaultTotalVisits < 1 || defaultTotalVisits > 60)) {
+        return res.status(400).json({ message: 'defaultTotalVisits phải từ 1-60 khi bật gói định kỳ' });
+      }
     }
 
     let resolvedServices = services ?? existing.services;
@@ -252,20 +293,33 @@ export async function updateServicePackage(req: Request, res: Response) {
       }
     }
 
+    const updateData: any = {
+      name: name ?? existing.name,
+      description: description ?? existing.description,
+      vehicleCategory: vehicleCategory ?? existing.vehicleCategory,
+      price: price ?? existing.price,
+      duration: finalDuration,
+      status: status ?? existing.status,
+      discount: discount ?? existing.discount,
+      services: resolvedServices,
+      createAt: createAt ?? existing.createAt,
+      updateAt: updateAt ?? existing.updateAt,
+      periodicEnabled: periodicEnabled !== undefined ? periodicEnabled : existing.periodicEnabled,
+    };
+
+    // Only set periodic fields if periodicEnabled is true
+    if (periodicEnabled) {
+      updateData.intervalMonths = intervalMonths ?? existing.intervalMonths;
+      updateData.defaultTotalVisits = defaultTotalVisits ?? existing.defaultTotalVisits;
+    } else if (periodicEnabled === false) {
+      // Clear periodic fields if disabled
+      updateData.intervalMonths = undefined;
+      updateData.defaultTotalVisits = undefined;
+    }
+
     const updated = await ServicePackage.findByIdAndUpdate(
       req.params.id,
-      {
-        name: name ?? existing.name,
-        description: description ?? existing.description,
-        vehicleCategory: vehicleCategory ?? existing.vehicleCategory,
-        price: price ?? existing.price,
-        duration: finalDuration,
-        status: status ?? existing.status,
-        discount: discount ?? existing.discount,
-        services: resolvedServices,
-        createAt: createAt ?? existing.createAt,
-        updateAt: updateAt ?? existing.updateAt,
-      },
+      updateData,
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy gói dịch vụ' });

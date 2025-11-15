@@ -70,14 +70,21 @@ const TechnicianSchedule: React.FC = () => {
     fetchAppointments();
   }, []);
 
-  // fetch function - fetch appointments (all relevant statuses)
+  // fetch function - fetch appointments (all relevant statuses including awaiting_payment)
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      // Fetch without status to include awaiting_payment/completed
-      const response = await AppointmentApi.getAppointmentByTechnician();
+      // Fetch without status filter to include all statuses: pending, confirmed, in_progress, awaiting_payment, completed
+      const response = await AppointmentApi.getAppointmentByTechnician(undefined, {
+        include: 'user,service,package'
+      });
       const data: AppointmentResponse[] = response.data;
-      setAppointments(data);
+      // Filter to show only relevant statuses (exclude cancelled, no_show)
+      const filteredData = data.filter(app => 
+        app.status && 
+        !['cancelled', 'no_show'].includes(app.status)
+      );
+      setAppointments(filteredData);
     } catch (error) {
       console.log('Lỗi khi fetch data: ', error);
     } finally {
@@ -276,22 +283,22 @@ const TechnicianSchedule: React.FC = () => {
 
                         // Get status color class
                         const statusBgClass =
-                          (appointment.status === 'completed' || appointment.status === 'awaiting_payment') ? 'bg-green-50' :
-                            appointment.status === 'confirmed' ? 'bg-blue-50' :
-                              appointment.status === 'pending' ? 'bg-yellow-50' :
-                                appointment.status === 'in_progress' ? 'bg-purple-50' :
-                                  'bg-gray-50';
+                          appointment.status === 'awaiting_payment' ? 'bg-green-100 border-green-300' :
+                            appointment.status === 'completed' ? 'bg-green-50' :
+                              appointment.status === 'confirmed' ? 'bg-blue-50' :
+                                appointment.status === 'pending' ? 'bg-yellow-50' :
+                                  appointment.status === 'in_progress' ? 'bg-purple-50' :
+                                    'bg-gray-50';
 
                         // Get status text in Vietnamese
                         const statusText: Record<string, string> = {
                           'pending': 'Chờ xác nhận',
                           'confirmed': 'Đã xác nhận',
                           'in_progress': 'Đang thực hiện',
+                          'awaiting_payment': 'Chờ thanh toán',
                           'completed': 'Hoàn thành',
                           'cancelled': 'Đã hủy',
-                          'no_show': 'Không đến',
-                          // Treat awaiting_payment as completed on schedule view
-                          'awaiting_payment': 'Đã hoàn thành'
+                          'no_show': 'Không đến'
                         };
 
                         return (

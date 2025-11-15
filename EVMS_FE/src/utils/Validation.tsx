@@ -17,8 +17,11 @@ export const validPhoneNumber = (phoneNumber: string): string => {
 }
 
 export const validPassword = (password: string): string => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[`~!@#$%^&*\-_=+/\\|/?><,.]).{8,}$/;
     if (password.length < 8) {
         return 'Mật khẩu phải có ít nhất 8 ký tự';
+    } else if (!passwordRegex.test(password)) {
+        return 'Mật khẩu phải chứa ít nhất một chữ cái viết hoa, một chữ cái viết thường, một chữ số và một ký tự đặc biệt';
     }
     return '';
 }

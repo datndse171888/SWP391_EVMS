@@ -99,6 +99,76 @@ export async function updateUserStatus(req: Request, res: Response) {
   }
 }
 
+export async function disableUser(req: Request, res: Response) {
+  try {
+    const { userId } = req.params as { userId: string };
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Không cho tự vô hiệu hóa chính mình
+    if (req.user.id === userId) {
+      return res.status(400).json({ message: 'Không thể vô hiệu hóa tài khoản của chính bạn' });
+    }
+
+    // Tìm user mục tiêu
+    const target = await User.findById(userId);
+    if (!target) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Không cho phép vô hiệu hóa tài khoản admin
+    if (target.role === 'admin') {
+      return res.status(403).json({ message: 'Không được phép vô hiệu hóa tài khoản admin' });
+    }
+
+    target.isDisabled = true;
+    await target.save();
+
+    const sanitized = await User.findById(userId).select('-passwordHash').lean();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã vô hiệu hóa tài khoản',
+      data: { user: sanitized }
+    });
+  } catch (error) {
+    console.error('Lỗi vô hiệu hóa người dùng:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi vô hiệu hóa người dùng' });
+  }
+}
+
+export async function enableUser(req: Request, res: Response) {
+  try {
+    const { userId } = req.params as { userId: string };
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Tìm user mục tiêu
+    const target = await User.findById(userId);
+    if (!target) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    target.isDisabled = false;
+    await target.save();
+
+    const sanitized = await User.findById(userId).select('-passwordHash').lean();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã kích hoạt tài khoản',
+      data: { user: sanitized }
+    });
+  } catch (error) {
+    console.error('Lỗi kích hoạt người dùng:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi kích hoạt người dùng' });
+  }
+}
+
 export async function getAllUsers(req: Request, res: Response) {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -334,6 +404,105 @@ export async function getUserById(req: Request, res: Response) {
   } catch (error) {
     console.error('Lỗi khi lấy thông tin người dùng:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ khi lấy thông tin người dùng' });
+  }
+}
+
+// Add certificate to technician
+export async function addTechnicianCertificate(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    const { 
+      // Certificate info
+      name,
+      description,
+      issuingAuthority,
+      validityPeriod,
+      // TechnicianCertificate info
+      issuedDate,
+      expiryDate,
+      status,
+      note,
+      certificateImage
+    } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập' });
+    }
+
+    // Validation
+    if (!name || !description || !issuingAuthority || !validityPeriod) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Thiếu thông tin chứng chỉ: name, description, issuingAuthority, validityPeriod' 
+      });
+    }
+
+    if (!issuedDate || !expiryDate || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Thiếu thông tin technician certificate: issuedDate, expiryDate, status' 
+      });
+    }
+
+    // Find user and technician
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const technician = await Technician.findOne({ userID: userId });
+    if (!technician) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin kỹ thuật viên' });
+    }
+
+    // Create Certificate
+    const certificate = await Certificate.create({
+      certificateID: new mongoose.Types.ObjectId(),
+      name,
+      description,
+      issuingAuthority,
+      validityPeriod: Number(validityPeriod),
+    });
+
+    // Create TechnicianCertificate
+    const technicianCertificate = await TechnicianCertificate.create({
+      technicianCertificateID: new mongoose.Types.ObjectId(),
+      technicianID: technician._id,
+      certificateID: certificate._id,
+      issuedDate: new Date(issuedDate),
+      expiryDate: new Date(expiryDate),
+      status,
+      note: note || '',
+      certificateImage: certificateImage || '',
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Thêm chứng chỉ thành công',
+      data: {
+        certificate: {
+          id: certificate._id,
+          name: certificate.name,
+          description: certificate.description,
+          issuingAuthority: certificate.issuingAuthority,
+          validityPeriod: certificate.validityPeriod,
+        },
+        technicianCertificate: {
+          id: technicianCertificate._id,
+          issuedDate: technicianCertificate.issuedDate,
+          expiryDate: technicianCertificate.expiryDate,
+          status: technicianCertificate.status,
+          note: technicianCertificate.note,
+          certificateImage: technicianCertificate.certificateImage,
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi thêm chứng chỉ:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ khi thêm chứng chỉ' 
+    });
   }
 }
 

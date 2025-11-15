@@ -5,6 +5,7 @@ import type { ForgotPasswordRequest } from '../../types/Account';
 import { Button } from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/AuthApi';
+import { useAlert } from '../../hooks/useAlert';
 
 export const ForgotPassword: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,8 @@ export const ForgotPassword: React.FC = () => {
     const [data, setData] = useState<ForgotPasswordRequest>({
         email: ''
     })
+
+    const { showAlert, AlertComponent } = useAlert();
 
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,7 +31,9 @@ export const ForgotPassword: React.FC = () => {
 
         try {
             const response = await authApi.forgotPassword(data);
-            console.log(response.data.message);
+            // console.log(response.data.message);
+            
+            showAlert('success', 'Yêu cầu khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn.');
 
             // Note: User data will be available after login completes
             // We'll handle redirect in useEffect when user state updates
@@ -43,6 +48,7 @@ export const ForgotPassword: React.FC = () => {
     return (
         <div className={`min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat`}
             style={{ backgroundImage: `url(${loginBackground})` }}>
+            {AlertComponent}
             <div className="w-full max-w-md">
                 {/* Blur container with light background */}
                 <div className={`backdrop-blur-xs rounded-2xl shadow-xl border border-white/20 p-8 bg-gradient-to-br from-orange-200 to-blue-200`}>

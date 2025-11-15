@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { AddUserModal } from '../../components/AddUserModal'
 import { UserDetailModal } from '../../components/UserDetailModal'
+import { AddCertificateModal } from '../../components/AddCertificateModal'
+import { UserApi } from '../../api/UserApi'
+import { technicianApi } from '../../api/TechnicianApi'
 
 interface User {
   _id: string
@@ -43,7 +46,9 @@ export const Technicians: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedTechnicianForCertificate, setSelectedTechnicianForCertificate] = useState<{ id: string; name: string } | null>(null)
 
   const limit = 10
 
@@ -72,10 +77,11 @@ export const Technicians: React.FC = () => {
         setTechnicians(data.data.users)
         setTotalPages(data.data.pagination.totalPages)
         
-        // Fetch technician details for each technician
-        for (const technician of data.data.users) {
-          await fetchTechnicianDetails(technician._id)
-        }
+        // Fetch technician details for each technician (in parallel for better performance)
+        const detailPromises = data.data.users.map((technician: User) => 
+          fetchTechnicianDetails(technician._id)
+        )
+        await Promise.all(detailPromises)
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách kỹ thuật viên:', error)
@@ -86,31 +92,37 @@ export const Technicians: React.FC = () => {
 
   const fetchTechnicianDetails = async (userId: string) => {
     try {
-      // Fetch technician info
-      const techResponse = await fetch(`http://localhost:4000/api/technicians/${userId}/info`)
-      if (techResponse.ok) {
-        const techData = await techResponse.json()
-        if (techData.success) {
+      // Fetch technician info using authenticated API
+      try {
+        const techResponse = await technicianApi.getTechnicianInfo(userId)
+        if (techResponse.data?.success && techResponse.data.data?.technician) {
+          const technicianInfo = techResponse.data.data.technician
+          console.log(`Technician ${userId} info:`, technicianInfo)
           setTechnicianDetails(prev => ({
             ...prev,
-            [userId]: techData.data.technician
+            [userId]: technicianInfo
           }))
+        } else {
+          console.warn(`Technician ${userId}: API response không có data`, techResponse.data)
         }
+      } catch (error: any) {
+        console.warn(`Technician ${userId}: Lỗi khi lấy thông tin`, error?.response?.status || error)
       }
 
-      // Fetch certificates
-      const certResponse = await fetch(`http://localhost:4000/api/technicians/${userId}/certificates`)
-      if (certResponse.ok) {
-        const certData = await certResponse.json()
-        if (certData.success) {
+      // Fetch certificates using authenticated API
+      try {
+        const certResponse = await technicianApi.getTechnicianCertificates(userId)
+        if (certResponse.data?.success) {
           setCertificates(prev => ({
             ...prev,
-            [userId]: certData.data.certificates
+            [userId]: certResponse.data.data?.certificates || []
           }))
         }
+      } catch (error: any) {
+        console.warn(`Technician ${userId}: Lỗi khi lấy chứng chỉ`, error?.response?.status || error)
       }
     } catch (error) {
-      console.error('Lỗi khi lấy thông tin kỹ thuật viên:', error)
+      console.error(`Lỗi khi lấy thông tin kỹ thuật viên ${userId}:`, error)
     }
   }
 
@@ -129,6 +141,21 @@ export const Technicians: React.FC = () => {
     fetchTechnicians()
   }
 
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      if (currentStatus) {
+        await UserApi.enableUser(userId)
+      } else {
+        await UserApi.disableUser(userId)
+      }
+      // Refresh the list
+      fetchTechnicians()
+    } catch (error) {
+      console.error('Lỗi khi thay đổi trạng thái:', error)
+      alert('Không thể thay đổi trạng thái. Vui lòng thử lại.')
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       'Active': 'bg-green-100 text-green-800',
@@ -137,12 +164,6 @@ export const Technicians: React.FC = () => {
       'Revoked': 'bg-gray-100 text-gray-800'
     }
     return statusMap[status as keyof typeof statusMap] || 'bg-gray-100 text-gray-800'
-  }
-
-  const getExperienceLevel = (experience: number) => {
-    if (experience < 2) return { text: 'Mới', color: 'bg-blue-100 text-blue-800' }
-    if (experience < 5) return { text: 'Trung bình', color: 'bg-yellow-100 text-yellow-800' }
-    return { text: 'Kinh nghiệm', color: 'bg-green-100 text-green-800' }
   }
 
   return (
@@ -156,7 +177,7 @@ export const Technicians: React.FC = () => {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="bg-blue-0 text-white px-6 py-2 rounded-lg hover:bg-azure-0 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -199,7 +220,7 @@ export const Technicians: React.FC = () => {
             </div>
             <button
               type="submit"
-            className="bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg"
+            className="bg-blue-0 text-white px-6 py-3 rounded-xl hover:bg-azure-0 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               Tìm kiếm
             </button>
@@ -230,7 +251,6 @@ export const Technicians: React.FC = () => {
                     {technicians.map((technician) => {
                       const details = technicianDetails[technician._id]
                       const techCertificates = certificates[technician._id] || []
-                      const experienceLevel = details ? getExperienceLevel(details.experience) : null
                       
                       return (
                         <tr key={technician._id} className="hover:bg-gray-50 transition-colors duration-200">
@@ -258,35 +278,27 @@ export const Technicians: React.FC = () => {
                           </td>
                           <td className="py-4 px-6">
                             {details ? (
-                              <div>
-                                <div className="font-medium text-gray-800">{details.experience} năm</div>
-                                {experienceLevel && (
-                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${experienceLevel.color}`}>
-                                    {experienceLevel.text}
-                                  </span>
-                                )}
+                              <div className="font-medium text-gray-800">
+                                {details.experience !== undefined && details.experience !== null 
+                                  ? `${details.experience} năm` 
+                                  : 'Chưa có thông tin'}
                               </div>
                             ) : (
                               <span className="text-gray-400">Chưa có thông tin</span>
                             )}
                           </td>
                           <td className="py-4 px-6">
-                            <div className="flex flex-wrap gap-1">
-                              {techCertificates.map((cert, index) => (
-                                <span
-                                  key={index}
-                                  className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(cert.status)}`}
-                                >
-                                  {cert.status}
-                                </span>
-                              ))}
-                              {techCertificates.length === 0 && (
-                                <span className="text-gray-400 text-sm">Chưa có chứng chỉ</span>
-                              )}
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-800">
+                                {techCertificates.length}
+                              </span>
+                              <span className="text-gray-500 text-sm">
+                                {techCertificates.length === 1 ? 'chứng chỉ' : 'chứng chỉ'}
+                              </span>
                             </div>
                           </td>
                           <td className="py-4 px-6">
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                            <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium ${
                               technician.isDisabled 
                                 ? 'bg-red-100 text-red-800' 
                                 : 'bg-green-100 text-green-800'
@@ -295,12 +307,36 @@ export const Technicians: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-4 px-6">
-                            <button
-                              onClick={() => handleViewDetails(technician)}
-                              className="px-4 py-2 rounded-lg border border-orange-400 text-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
-                            >
-                              Xem chi tiết
-                            </button>
+                            <div className="flex gap-2 flex-wrap">
+                              <button
+                                onClick={() => handleViewDetails(technician)}
+                                className="px-4 py-2 rounded-lg border border-blue-0 text-blue-0 hover:bg-blue-0 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
+                              >
+                                Xem chi tiết
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedTechnicianForCertificate({
+                                    id: technician._id,
+                                    name: technician.fullName
+                                  })
+                                  setShowCertificateModal(true)
+                                }}
+                                className="px-4 py-2 rounded-lg border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-200 shadow-sm hover:shadow text-sm"
+                              >
+                                Thêm chứng chỉ
+                              </button>
+                              <button
+                                onClick={() => handleToggleStatus(technician._id, technician.isDisabled)}
+                                className={`px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow text-sm ${
+                                  technician.isDisabled
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-300'
+                                }`}
+                              >
+                                {technician.isDisabled ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -343,13 +379,38 @@ export const Technicians: React.FC = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
+        defaultRole="technician"
+        allowedRoles={['technician']}
       />
 
-      <UserDetailModal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        user={selectedUser}
-      />
+      {selectedUser && (
+        <UserDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false)
+            setSelectedUser(null)
+          }}
+          user={selectedUser}
+        />
+      )}
+
+      {selectedTechnicianForCertificate && (
+        <AddCertificateModal
+          isOpen={showCertificateModal}
+          onClose={() => {
+            setShowCertificateModal(false)
+            setSelectedTechnicianForCertificate(null)
+          }}
+          onSuccess={() => {
+            // Refresh certificates for the technician
+            if (selectedTechnicianForCertificate) {
+              fetchTechnicianDetails(selectedTechnicianForCertificate.id)
+            }
+          }}
+          technicianId={selectedTechnicianForCertificate.id}
+          technicianName={selectedTechnicianForCertificate.name}
+        />
+      )}
     </div>
   )
 }

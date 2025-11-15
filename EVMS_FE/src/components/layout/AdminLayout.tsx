@@ -36,11 +36,29 @@
       ),
     },
     {
+      name: 'Nhân viên',
+      path: '/admin/staffs',
+      icon: (
+        <svg className="w-6 h-6 flex-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+    },
+    {
       name: 'Dịch vụ',
       path: '/admin/services',
       icon: (
         <svg className="w-6 h-6 flex-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232a3 3 0 11-4.464 4.464l-7.071 7.071a2 2 0 11-2.828-2.828l7.071-7.071a3 3 0 014.464-4.464z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Gói dịch vụ',
+      path: '/admin/service-packages',
+      icon: (
+        <svg className="w-6 h-6 flex-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       ),
     },
@@ -52,6 +70,15 @@
           <path d="M3 7l9-4 9 4-9 4-9-4z" />
           <path d="M3 10l9 4 9-4" />
           <path d="M3 13l9 4 9-4v4l-9 4-9-4v-4z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Lịch hẹn',
+      path: '/admin/appointments',
+      icon: (
+        <svg className="w-6 h-6 flex-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
     },
@@ -110,16 +137,6 @@
                   EVRepair
                 </span>
               )}
-              {/* toggle button positioned on the edge to avoid clipping */}
-              <button onClick={toggleSidebar} className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-orange-400 bg-orange-500 text-white hover:bg-orange-600 shadow-lg z-20" title={collapsed ? 'Mở rộng' : 'Thu gọn'} aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'} style={{ right: '-12px' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  {collapsed ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  )}
-                </svg>
-              </button>
             </div>
               </div>
               
@@ -131,7 +148,7 @@
                   <Link 
                     to={item.path} 
                     className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-4 px-4'} h-12 rounded-2xl transition-all duration-300 ${
-                      isActive(item.path) ? 'bg-orange-500 text-white shadow-lg' : 'hover:bg-white/10 text-gray-200'
+                      isActive(item.path) ? 'bg-blue-0 text-white shadow-lg' : 'hover:bg-white/10 text-gray-200'
                     }`}
                   >
                     {item.icon}
@@ -142,41 +159,22 @@
             </ul>
           </nav>
 
-          {/* User Profile */}
+          {/* Toggle Sidebar Button */}
           <div className="p-6 border-t border-slate-600">
-            <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-4'} mb-4`}>
-              {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full border-2 border-white/30 flex-none"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center flex-none">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              )}
-              {!collapsed && (
-                <div className="flex-1">
-                  <div className="text-sm font-semibold">{user?.fullName || user?.userName || 'Admin User'}</div>
-                  <div className="text-xs text-gray-300">{user?.email || 'admin@evms.com'}</div>
-                </div>
-              )}
-            </div>
-            
-            {/* Logout Button */}
             <button
-              onClick={handleLogout}
-              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2 border border-orange-400 text-orange-400 hover:bg-orange-500 hover:text-white rounded-lg transition-all duration-200 group`}
-              title="Đăng xuất"
-              aria-label="Đăng xuất"
+              onClick={toggleSidebar}
+              className={`w-full flex items-center justify-center ${collapsed ? 'min-w-[40px]' : 'gap-2'} px-4 py-2.5 bg-white text-blue-0 hover:bg-blue-0/10 border border-blue-0/30 hover:border-blue-0 rounded-lg transition-all duration-300 group shadow-sm hover:shadow-md`}
+              title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+              aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
             >
-              <svg className="w-5 h-5 flex-none group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg className="w-5 h-5 flex-none transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                {collapsed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                )}
               </svg>
-              {!collapsed && <span className="text-sm font-medium">Đăng xuất</span>}
+              {!collapsed && <span className="text-sm font-medium">Thu gọn</span>}
             </button>
           </div>
           </aside>

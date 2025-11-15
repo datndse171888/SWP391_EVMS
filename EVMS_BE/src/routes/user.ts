@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, createUser, getCertificates, updateUser, updateUserStatus, getUserById } from '../controllers/userController.js';
+import { getAllUsers, createUser, getCertificates, updateUser, updateUserStatus, getUserById, disableUser, enableUser, addTechnicianCertificate } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { staffOnly, adminOnly, authenticatedOnly } from '../middleware/roleMiddleware.js';
 
@@ -13,3 +13,9 @@ userRouter.get('/:userId', authMiddleware, getUserById);
 userRouter.put('/:userId', authMiddleware, updateUser);
 // Update user status (enable/disable) - admin only (the system has single admin)
 userRouter.patch('/:userId/status', authMiddleware, adminOnly, updateUserStatus);
+// Disable user - admin only
+userRouter.patch('/:userId/disable', authMiddleware, adminOnly, disableUser);
+// Enable user - admin only
+userRouter.patch('/:userId/enable', authMiddleware, adminOnly, enableUser);
+// Add certificate to technician - admin only
+userRouter.post('/:userId/certificates', authMiddleware, adminOnly, addTechnicianCertificate);

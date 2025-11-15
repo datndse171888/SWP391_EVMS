@@ -1,5 +1,9 @@
-import { MessageCircle, X, Send, Minimize2, Maximize2 } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, Minimize2, Maximize2, Camera } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { conversationApi } from '../../api/ConversationApi';
+import { messageApi, type Message as ApiMessage } from '../../api/MessageApi';
 
 interface Message {
   id: string;
@@ -7,6 +11,8 @@ interface Message {
   fromUser: boolean;
   timestamp: Date;
   status?: 'sending' | 'sent' | 'read';
+  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 interface ChatState {
@@ -17,6 +23,8 @@ interface ChatState {
 }
 
 const ChatboxButton: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const socket = useSocket();
   const [chatState, setChatState] = useState<ChatState>({
     isOpen: false,
     isMinimized: false,
@@ -25,55 +33,178 @@ const ChatboxButton: React.FC = () => {
   });
   
   const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [conversationID, setConversationID] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Mock data - initial messages
-  const mockInitialMessages: Message[] = [
-    {
-      id: '1',
-      text: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
-      fromUser: false,
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      status: 'read'
-    },
-    {
-      id: '2',
-      text: 'Chúng tôi cung cấp dịch vụ bảo dưỡng và sửa chữa xe điện chuyên nghiệp. Bạn có muốn đặt lịch không?',
-      fromUser: false,
-      timestamp: new Date(Date.now() - 4 * 60 * 1000),
-      status: 'read'
-    }
-  ];
-
-  // Mock auto responses
-  const mockAutoResponses = [
-    'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.',
-    'Bạn có thể đặt lịch qua trang web hoặc gọi hotline 1900-xxxx.',
-    'Dịch vụ của chúng tôi bao gồm: bảo dưỡng định kỳ, sửa chữa và thay thế phụ tùng.',
-    'Thời gian làm việc: 8:00 - 18:00 từ thứ 2 đến thứ 7.',
-    'Chúng tôi hỗ trợ tất cả các loại xe điện: ô tô, xe máy, xe đạp điện.'
-  ];
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll to bottom when new messages
   useEffect(() => {
     scrollToBottom();
   }, [chatState.messages]);
 
-  // Initialize mock messages on first open
-  useEffect(() => {
-    if (chatState.isOpen && chatState.messages.length === 0) {
-      setChatState(prev => ({
-        ...prev,
-        messages: mockInitialMessages
-      }));
-    }
-  }, [chatState.isOpen]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Load conversation and messages
+  const loadConversationAndMessages = useCallback(async () => {
+    if (!user || user.role !== 'customer') return;
+
+    try {
+      setIsLoading(true);
+      
+      // Try to get existing conversation
+      let conversation;
+      try {
+        const response = await conversationApi.getMyConversation();
+        conversation = response.data.data;
+        setConversationID(conversation._id);
+      } catch (error: unknown) {
+        // If no conversation found (404), create a new one
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) {
+          const createResponse = await conversationApi.createConversation(user.id);
+          conversation = createResponse.data.data;
+          setConversationID(conversation._id);
+        } else {
+          throw error;
+        }
+      }
+
+      // Load messages
+      if (conversation._id) {
+        const messagesResponse = await messageApi.getMessagesByConversation(conversation._id, { limit: 50 });
+        const apiMessages = messagesResponse.data.data;
+        
+        // Convert API messages to component messages
+        const convertedMessages: Message[] = apiMessages.map((msg: ApiMessage) => {
+          const senderID = typeof msg.senderID === 'string' ? msg.senderID : msg.senderID._id;
+          const isFromUser = senderID === user.id;
+          
+          return {
+            id: msg._id,
+            text: msg.content,
+            fromUser: isFromUser,
+            timestamp: new Date(msg.timestamp),
+            status: 'read' as const,
+            imageUrl: msg.imageUrl,
+            imageUrls: msg.imageUrls
+          };
+        });
+
+        setChatState(prev => ({
+          ...prev,
+          messages: convertedMessages
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      // Show error message to user
+      setChatState(prev => ({
+        ...prev,
+        messages: [{
+          id: 'error',
+          text: 'Không thể tải cuộc trò chuyện. Vui lòng thử lại sau.',
+          fromUser: false,
+          timestamp: new Date(),
+          status: 'read'
+        }]
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  // Load conversation and messages when chat opens
+  useEffect(() => {
+    if (chatState.isOpen && isAuthenticated && user && user.role === 'customer') {
+      loadConversationAndMessages();
+    }
+  }, [chatState.isOpen, isAuthenticated, user, loadConversationAndMessages]);
+
+  // Join conversation room via Socket.io
+  useEffect(() => {
+    if (socket && conversationID) {
+      socket.emit('joinConversation', conversationID);
+      
+      return () => {
+        socket.emit('leaveConversation', conversationID);
+      };
+    }
+  }, [socket, conversationID]);
+
+  // Listen for new messages via Socket.io
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNewMessage = (message: any) => {
+      const senderID = message.senderID;
+      const isFromUser = senderID._id === user.id;
+      
+      // Nếu là message của mình, tìm và replace optimistic message
+      if (isFromUser) {
+        setChatState((prev) => {
+          const tempIndex = prev.messages.findIndex((msg) => msg.id.startsWith('temp-'));
+          if (tempIndex !== -1) {
+            const updated = [...prev.messages];
+            updated[tempIndex] = {
+              id: message._id,
+              text: message.content,
+              fromUser: true,
+              timestamp: new Date(message.timestamp),
+              status: 'sent',
+              imageUrl: message.imageUrl,
+              imageUrls: message.imageUrls,
+            };
+            return { ...prev, messages: updated };
+          }
+          return {
+            ...prev,
+            messages: [...prev.messages, {
+              id: message._id,
+              text: message.content,
+              fromUser: true,
+              timestamp: new Date(message.timestamp),
+              status: 'sent',
+              imageUrl: message.imageUrl,
+              imageUrls: message.imageUrls,
+            }],
+          };
+        });
+      } else {
+        // Message từ support, add vào
+        setChatState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, {
+            id: message._id,
+            text: message.content,
+            fromUser: false,
+            timestamp: new Date(message.timestamp),
+            status: 'read',
+            imageUrl: message.imageUrl,
+            imageUrls: message.imageUrls,
+          }],
+          newMessageCount: prev.isOpen ? 0 : prev.newMessageCount + 1,
+        }));
+      }
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('error', (error: any) => {
+      console.error('Socket error:', error);
+    });
+
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('error');
+    };
+  }, [socket, user]);
 
   const toggleChat = () => {
     setChatState(prev => ({
@@ -98,55 +229,162 @@ const ChatboxButton: React.FC = () => {
     }));
   };
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
 
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      alert('Vui lòng chọn file ảnh hợp lệ.');
+      return;
+    }
+
+    // Validate file size (max 5MB per image)
+    const validFiles = imageFiles.filter(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`Ảnh ${file.name} vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    // Generate previews
+    const previewPromises = validFiles.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve(e.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(previewPromises).then(newPreviews => {
+      setImagePreviews(prev => [...prev, ...newPreviews]);
+    });
+
+    setSelectedImages(prev => [...prev, ...validFiles]);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const sendMessage = async () => {
+    if ((!inputMessage.trim() && selectedImages.length === 0) || !conversationID || !user || isSending || isUploadingImage) return;
+
+    const messageText = inputMessage.trim() || (selectedImages.length > 0 ? '📷' : '');
+    
+    // Lưu lại giá trị để restore nếu lỗi
+    const savedInputMessage = inputMessage;
+    const savedSelectedImages = [...selectedImages];
+    const savedImagePreviews = [...imagePreviews];
+    
+    // Upload tất cả ảnh nếu có
+    const uploadedImageUrls: string[] = [];
+    if (selectedImages.length > 0) {
+      try {
+        setIsUploadingImage(true);
+        for (const image of selectedImages) {
+          const uploadResponse = await messageApi.uploadImage(image);
+          uploadedImageUrls.push(uploadResponse.data.imageUrl);
+        }
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        alert('Không thể upload ảnh. Vui lòng thử lại.');
+        setIsUploadingImage(false);
+        return;
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
+
+    // Clear input và previews sau khi upload thành công
+    setInputMessage('');
+    setSelectedImages([]);
+    setImagePreviews([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setIsSending(true);
+
+    // Optimistically add user message
+    const tempMessageId = `temp-${Date.now()}`;
     const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputMessage.trim(),
+      id: tempMessageId,
+      text: messageText,
       fromUser: true,
       timestamp: new Date(),
-      status: 'sending'
+      status: 'sending',
+      imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+      imageUrl: uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined
     };
 
-    // Add user message
     setChatState(prev => ({
       ...prev,
       messages: [...prev.messages, newMessage]
     }));
 
-    setInputMessage('');
-    setIsTyping(true);
+    try {
+      // Gửi message via Socket.io
+      if (socket && socket.connected) {
+        socket.emit('sendMessage', {
+          conversationID,
+          content: messageText,
+          imageUrl: uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+        });
+        // Message will be confirmed via newMessage event in the main listener
+        setIsSending(false);
+      } else {
+        // Fallback to API if socket not connected
+        const response = await messageApi.sendMessage(
+          conversationID,
+          messageText,
+          uploadedImageUrls.length === 1 ? uploadedImageUrls[0] : undefined,
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined
+        );
+        const sentMessage = response.data.data;
 
-    // Simulate sending and auto response
-    setTimeout(() => {
-      // Update message status to sent
-      setChatState(prev => ({
-        ...prev,
-        messages: prev.messages.map(msg => 
-          msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg
-        )
-      }));
-
-      // Auto response after delay
-      setTimeout(() => {
-        const randomResponse = mockAutoResponses[Math.floor(Math.random() * mockAutoResponses.length)];
-        const autoReply: Message = {
-          id: (Date.now() + 1).toString(),
-          text: randomResponse,
-          fromUser: false,
-          timestamp: new Date(),
-          status: 'read'
-        };
-
+        // Replace temp message with real message
         setChatState(prev => ({
           ...prev,
-          messages: [...prev.messages, autoReply],
-          newMessageCount: prev.isOpen && !prev.isMinimized ? prev.newMessageCount : prev.newMessageCount + 1
+          messages: prev.messages.map(msg => 
+            msg.id === tempMessageId 
+              ? {
+                  id: sentMessage._id,
+                  text: sentMessage.content,
+                  fromUser: true,
+                  timestamp: new Date(sentMessage.timestamp),
+                  status: 'sent',
+                  imageUrl: sentMessage.imageUrl,
+                  imageUrls: sentMessage.imageUrls
+                }
+              : msg
+          )
         }));
-        setIsTyping(false);
-      }, 1500);
-    }, 500);
+        setIsSending(false);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove failed message
+      setChatState(prev => ({
+        ...prev,
+        messages: prev.messages.filter(msg => msg.id !== tempMessageId)
+      }));
+      // Restore input và previews
+      setInputMessage(savedInputMessage);
+      setSelectedImages(savedSelectedImages);
+      setImagePreviews(savedImagePreviews);
+      // Show error
+      alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
+      setIsSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -197,14 +435,14 @@ const ChatboxButton: React.FC = () => {
   return (
     <div className="fixed bottom-35 right-6 z-50">
       <div 
-        className={`bg-white rounded-2xl shadow-2xl border transition-all duration-300 ${
-          chatState.isMinimized ? 'h-14' : 'h-96 w-80'
+        className={`bg-white rounded-2xl shadow-2xl border transition-all duration-300 flex flex-col ${
+          chatState.isMinimized ? 'h-14' : 'h-[500px] w-80'
         }`}
         style={{ borderColor: '#e5e7eb' }}
       >
         {/* Header */}
         <div 
-          className="flex items-center justify-between p-4 border-b rounded-t-2xl cursor-pointer"
+          className="flex items-center justify-between p-4 border-b rounded-t-2xl cursor-pointer flex-shrink-0"
           style={{ 
             backgroundColor: '#014091',
             borderColor: '#e5e7eb'
@@ -218,7 +456,7 @@ const ChatboxButton: React.FC = () => {
             <div>
               <h3 className="text-white font-semibold text-sm">EVMS Support</h3>
               <p className="text-white/80 text-xs">
-                {isTyping ? 'Đang trả lời...' : 'Trực tuyến'}
+                Trực tuyến
               </p>
             </div>
           </div>
@@ -250,9 +488,14 @@ const ChatboxButton: React.FC = () => {
         {/* Content - Messages */}
         {!chatState.isMinimized && (
           <>
-            <div className="flex-1 p-4 overflow-y-auto max-h-64 bg-gray-50">
-              <div className="space-y-3">
-                {chatState.messages.map((message) => (
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 min-h-0">
+              {isLoading && chatState.messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-sm text-gray-500">Đang tải...</div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {chatState.messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.fromUser ? 'justify-end' : 'justify-start'}`}
@@ -268,7 +511,29 @@ const ChatboxButton: React.FC = () => {
                         borderColor: message.fromUser ? 'transparent' : '#e5e7eb'
                       }}
                     >
-                      <p>{message.text}</p>
+                      {/* Hiển thị ảnh */}
+                      {(() => {
+                        const images = message.imageUrls && message.imageUrls.length > 0 
+                          ? message.imageUrls 
+                          : message.imageUrl 
+                            ? [message.imageUrl] 
+                            : [];
+                        return images.length > 0 ? (
+                          <div className="mb-2 space-y-2">
+                            {images.map((imgUrl, idx) => (
+                              <img 
+                                key={idx}
+                                src={imgUrl} 
+                                alt={`Message image ${idx + 1}`} 
+                                className="max-w-full h-auto rounded-lg cursor-pointer"
+                                onClick={() => window.open(imgUrl, '_blank')}
+                                style={{ maxHeight: '200px' }}
+                              />
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                      {message.text && <p>{message.text}</p>}
                       <div className={`flex items-center justify-between mt-1 text-xs ${
                         message.fromUser ? 'text-white/70' : 'text-gray-500'
                       }`}>
@@ -283,30 +548,58 @@ const ChatboxButton: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
-                
-                {/* Typing indicator */}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white border px-3 py-2 rounded-2xl rounded-bl-sm">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Footer - Input */}
             <div 
-              className="p-4 border-t bg-white rounded-b-2xl"
+              className="border-t bg-white rounded-b-2xl flex-shrink-0"
               style={{ borderColor: '#e5e7eb' }}
             >
-              <div className="flex items-center gap-2">
+              {/* Image previews */}
+              {imagePreviews.length > 0 && (
+                <div className="px-4 pt-2 pb-1 flex gap-2 overflow-x-auto" style={{ maxHeight: '80px' }}>
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative flex-shrink-0">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-14 h-14 object-cover rounded-lg border"
+                        style={{ borderColor: '#e5e7eb' }}
+                      />
+                      <button
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                        aria-label="Xóa ảnh"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="p-4 flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading || isSending || isUploadingImage || !conversationID}
+                  className="p-2 rounded-full border transition-all duration-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  style={{ borderColor: '#e5e7eb' }}
+                  aria-label="Chọn ảnh"
+                >
+                  <Camera className="w-4 h-4" style={{ color: '#014091' }} />
+                </button>
                 <input
                   ref={inputRef}
                   type="text"
@@ -318,16 +611,22 @@ const ChatboxButton: React.FC = () => {
                   style={{ 
                     borderColor: '#e5e7eb',
                   }}
-                  disabled={isTyping}
+                  disabled={isLoading || isSending || isUploadingImage || !conversationID}
                 />
                 <button
                   onClick={sendMessage}
-                  disabled={!inputMessage.trim() || isTyping}
-                  className="p-2 rounded-full text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={(!inputMessage.trim() && selectedImages.length === 0) || isLoading || isSending || isUploadingImage || !conversationID}
+                  className="p-2 rounded-full text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   style={{ backgroundColor: '#014091' }}
                   aria-label="Gửi tin nhắn"
                 >
-                  <Send className="w-4 h-4" />
+                  {isUploadingImage ? (
+                    <span className="text-xs">...</span>
+                  ) : isSending ? (
+                    <span className="text-xs">...</span>
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>

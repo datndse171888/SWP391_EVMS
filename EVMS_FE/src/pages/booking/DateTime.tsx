@@ -35,10 +35,24 @@ const DateTime: React.FC<DateTimeProps> = ({
   // UseStates & Variables
   // ================================
 
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
+  // Helper function to format date (defined before useState to avoid hoisting issues)
+  const getInitialDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
-  });
+  };
+
+  const getInitialDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T00:00:00');
+    if (isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState<string>(getInitialDate);
+  const [displayDate, setDisplayDate] = useState<string>(() => getInitialDisplayDate(getInitialDate()));
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [unavailableTimes, setUnavailableTimes] = useState<string[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
@@ -62,6 +76,35 @@ const DateTime: React.FC<DateTimeProps> = ({
   ];
 
   // ================================
+  // Helper Functions
+  // ================================
+
+  // Convert YYYY-MM-DD to DD/MM/YYYY
+  const formatDateForDisplay = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T00:00:00');
+    if (isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Convert DD/MM/YYYY to YYYY-MM-DD
+  const parseDateFromDisplay = (displayStr: string): string => {
+    if (!displayStr) return '';
+    const parts = displayStr.split('/');
+    if (parts.length !== 3) return '';
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return '';
+    const date = new Date(year, month - 1, day);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  };
+
+  // ================================
   // UseEffects & Functions
   // ================================
 
@@ -74,6 +117,7 @@ const DateTime: React.FC<DateTimeProps> = ({
         const timeStr = bookingDateTime.toTimeString().split(' ')[0];
 
         setSelectedDate(dateStr);
+        setDisplayDate(formatDateForDisplay(dateStr));
         setSelectedTime(timeStr);
       } catch (error) {
         console.error('Error parsing booking date:', error);
@@ -287,9 +331,45 @@ const DateTime: React.FC<DateTimeProps> = ({
   // ================================
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
+    const newDate = e.target.value; // YYYY-MM-DD from date input
     setSelectedDate(newDate);
+    setDisplayDate(formatDateForDisplay(newDate));
     setSelectedTime(''); // Reset selected time when date changes
+  };
+
+  const handleDisplayDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow typing DD/MM/YYYY format
+    setDisplayDate(value);
+    
+    // Try to parse and update selectedDate
+    const parsed = parseDateFromDisplay(value);
+    if (parsed) {
+      const minDate = getMinDate();
+      const maxDate = getMaxDate();
+      if (parsed >= minDate && parsed <= maxDate) {
+        setSelectedDate(parsed);
+      }
+    }
+  };
+
+  const handleDisplayDateBlur = () => {
+    // Validate and format on blur
+    const parsed = parseDateFromDisplay(displayDate);
+    if (parsed) {
+      const minDate = getMinDate();
+      const maxDate = getMaxDate();
+      if (parsed >= minDate && parsed <= maxDate) {
+        setSelectedDate(parsed);
+        setDisplayDate(formatDateForDisplay(parsed));
+      } else {
+        // Reset to current selectedDate if invalid
+        setDisplayDate(formatDateForDisplay(selectedDate));
+      }
+    } else {
+      // Reset to current selectedDate if invalid
+      setDisplayDate(formatDateForDisplay(selectedDate));
+    }
   };
 
   const handleTimeSelect = (timeValue: string) => {
@@ -353,24 +433,47 @@ const DateTime: React.FC<DateTimeProps> = ({
           </h3>
 
           <div className="bg-gray-50 p-6 rounded-lg border">
-            {/* <input
+            {/* Hidden date input for native date picker */}
+            <input
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
               min={getMinDate()}
               max={getMaxDate()}
-              className="w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
-            /> */}
-
-            <Input
-              type="date"
-              name="bookingDate"
-              label="Chọn ngày"
-              value={selectedDate}
-              onChange={handleDateChange}
-              min={getMinDate()}
-              max={getMaxDate()}
+              className="sr-only"
+              id="hidden-date-input"
             />
+
+            {/* Custom display input with DD/MM/YYYY format */}
+            <div className="relative">
+              <label className="block text-sm font-semibold text-orange-0 mb-2">Chọn ngày</label>
+              <input
+                type="text"
+                name="bookingDateDisplay"
+                value={displayDate}
+                onChange={handleDisplayDateChange}
+                onBlur={handleDisplayDateBlur}
+                placeholder="DD/MM/YYYY"
+                required
+                className="w-full px-3 pt-5 pb-2 border border-orange-1 hover:border-orange-0 focus:border-yellow-0 bg-azure-1/70 hover:bg-azure-0/20 focus:bg-blue-1/80 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-0 transition-all duration-200 ease-in-out backdrop-blur-sm text-gray-8 placeholder:text-gray-4 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const hiddenInput = document.getElementById('hidden-date-input') as HTMLInputElement;
+                  if (hiddenInput && 'showPicker' in hiddenInput) {
+                    hiddenInput.showPicker();
+                  } else {
+                    hiddenInput?.click();
+                  }
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800 transition-colors"
+                style={{ marginTop: '10px' }}
+                title="Mở lịch"
+              >
+                <Calendar className="w-5 h-5" />
+              </button>
+            </div>
 
             {selectedDate && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">

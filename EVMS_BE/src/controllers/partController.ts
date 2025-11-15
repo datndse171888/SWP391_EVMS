@@ -32,7 +32,7 @@ export async function getParts(req: Request, res: Response) {
       Part.countDocuments(filter),
     ]);
 
-    return res.json({ items, page, limit, total });
+    return res.json({ items, page, limit, total }); 
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
@@ -95,6 +95,17 @@ export async function getPartById(req: Request, res: Response) {
     }
     return res.json({ part });
   } catch (error) {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
+// Count total parts (all records)
+export async function countAllParts(req: Request, res: Response) {
+  try {
+    const total = await Part.countDocuments({});
+    // Return plain object (no wrappers)
+    return res.json({ totalParts: total });
+  } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 }

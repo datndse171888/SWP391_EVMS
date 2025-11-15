@@ -22,8 +22,18 @@ export async function createAppointment(req: Request, res: Response) {
       status,
     } = req.body;
 
-    if (!userID || !bookingDate) {
+    if (!userID || !bookingDate) { 
       return res.status(400).json({ message: 'Thiếu userID hoặc bookingDate' });
+    }
+
+    // Check if user is verified (for customer role)
+    if (req.user) {
+      const account = await User.findById(req.user.id);
+      if (account && account.role === 'customer' && !account.isVerified) {
+        return res.status(403).json({ 
+          message: 'Vui lòng xác thực tài khoản trước khi đặt lịch' 
+        });
+      }
     }
 
     // Validate ít nhất một trong serviceID hoặc servicePackageID
@@ -65,11 +75,11 @@ export async function createAppointment(req: Request, res: Response) {
         let selectedKey = '';
         if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
           const { ServicePackage } = await import('../models/ServicePackage.js');
-          const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          const pkg = (await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean()) as any;
           if (pkg?.periodicEnabled) { selectedPeriodic = true; selectedKey = `P:${servicePackageID}`; }
         } else if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
           const { Service } = await import('../models/Service.js');
-          const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+          const svc = (await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean()) as any;
           if (svc?.periodicEnabled) { selectedPeriodic = true; selectedKey = `S:${serviceID}`; }
         }
 
@@ -467,7 +477,7 @@ function buildBaseFilter(params: ReturnType<typeof parseListParams>) {
   return filter;
 }
 
-export async function listAppointments(req: Request, res: Response) {
+export async function listAppointments(req: Request, res: Response) { 
   try {
     if (!req.user) return res.status(401).json({ message: 'Authentication required' });
     const role = req.user.role;
@@ -498,20 +508,8 @@ export async function listAppointments(req: Request, res: Response) {
       })(),
     ]);
 
-    const totalPages = Math.ceil(total / params.limit) || 1;
-    return res.json({
-      data: docs,
-      pagination: { page: params.page, limit: params.limit, total, totalPages },
-      filters: {
-        status: params.status,
-        from: params.from,
-        to: params.to,
-        serviceId: params.serviceId,
-        packageId: params.packageId,
-        technicianId: params.technicianId,
-        userId: params.userId,
-      },
-    });
+    // Return plain data array (no wrappers)
+    return res.json(docs);
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi máy chủ' });
   }
@@ -595,8 +593,8 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
 
     // Resolve technicianId from current user
     // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
     if (!techDoc) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician cho người dùng hiện tại' });
     const technicianId = String(techDoc._id);
 
@@ -674,8 +672,8 @@ export async function getAppointmentById(req: Request, res: Response) {
     // Allow technician to view appointments they are assigned to
     if (role === 'technician') {
     // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean();
+    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
+      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
       if (!techDoc) {
         console.log('getAppointmentById - Technician profile not found');
         return res.status(403).json({ message: 'Insufficient permissions' });
@@ -1422,3 +1420,145 @@ export async function getServiceByAppointmentId(req: Request, res: Response) {
   }
 }
 
+// Dashboard: Count total pending appointments
+export async function countPendingAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const total = await Appointment.countDocuments({ status: 'pending' });
+    // Return plain object (no wrappers)
+    return res.status(200).json({ totalPending: total });
+  } catch (error) {
+    console.error('Count pending appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Dashboard: Count totals for confirmed and cancelled appointments
+export async function countConfirmedAndCancelledAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const [confirmed, cancelled] = await Promise.all([
+      Appointment.countDocuments({ status: 'confirmed' }),
+      Appointment.countDocuments({ status: 'cancelled' }),
+    ]);
+    // Return plain object (no wrappers)
+    return res.status(200).json({
+      totalConfirmed: confirmed,
+      totalCancelled: cancelled,
+    });
+  } catch (error) {
+    console.error('Count confirmed/cancelled appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Dashboard: Count total appointments (all statuses)
+export async function countAllAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+    const total = await Appointment.countDocuments({});
+    // Return plain object (no wrappers)
+    return res.status(200).json({ totalAll: total });
+  } catch (error) {
+    console.error('Count all appointments error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Technician dashboard counts - today (assigned to current technician)
+async function resolveCurrentTechnicianId(userId: string) {
+  const techDoc = (await Technician.findOne({ userID: userId }).select('_id').lean()
+    || await Technician.findOne({ userID: new mongoose.Types.ObjectId(userId) }).select('_id').lean()) as any;
+  return techDoc ? String(techDoc._id) : null;
+}
+
+function todayRange() {
+  const now = new Date();
+  const start = new Date(now); start.setHours(0, 0, 0, 0);
+  const end = new Date(now); end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+export async function countMyTodayAppointments(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    if (req.user.role !== 'technician') return res.status(403).json({ message: 'Chỉ kỹ thuật viên' });
+    const technicianId = await resolveCurrentTechnicianId(req.user.id);
+    if (!technicianId) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician' });
+    const { start, end } = todayRange();
+    const total = await Appointment.countDocuments({
+      bookingDate: { $gte: start, $lte: end },
+      status: { $nin: ['cancelled', 'no_show'] },
+      $or: [
+        { technicianLeaderID: technicianId },
+        { technicianSupport1ID: technicianId },
+        { technicianSupport2ID: technicianId },
+      ],
+    });
+    return res.json({ total });
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+export async function countMyTodayConfirmed(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    if (req.user.role !== 'technician') return res.status(403).json({ message: 'Chỉ kỹ thuật viên' });
+    const technicianId = await resolveCurrentTechnicianId(req.user.id);
+    if (!technicianId) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician' });
+    const { start, end } = todayRange();
+    const total = await Appointment.countDocuments({
+      bookingDate: { $gte: start, $lte: end },
+      status: 'confirmed',
+      $or: [
+        { technicianLeaderID: technicianId },
+        { technicianSupport1ID: technicianId },
+        { technicianSupport2ID: technicianId },
+      ],
+    });
+    return res.json({ total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+export async function countMyTodayInProgress(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    if (req.user.role !== 'technician') return res.status(403).json({ message: 'Chỉ kỹ thuật viên' });
+    const technicianId = await resolveCurrentTechnicianId(req.user.id);
+    if (!technicianId) return res.status(404).json({ message: 'Không tìm thấy hồ sơ technician' });
+    const { start, end } = todayRange();
+    const total = await Appointment.countDocuments({
+      bookingDate: { $gte: start, $lte: end },
+      status: 'in_progress',
+      $or: [
+        { technicianLeaderID: technicianId },
+        { technicianSupport1ID: technicianId },
+        { technicianSupport2ID: technicianId },
+      ],
+    });
+    return res.json({ total });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}

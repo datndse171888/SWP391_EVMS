@@ -3,7 +3,19 @@ import { Service } from '../models/Service.js';
 
 export async function createService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status, vehicleCategory } = req.body;
+    const {
+      name,
+      price,
+      duration,
+      description,
+      image,
+      status,
+      vehicleCategory,
+      periodicEnabled,
+      intervalMonths,
+      defaultTotalVisits
+    } = req.body;
+
     if (!name || price === undefined || duration === undefined || !vehicleCategory) {
       return res.status(400).json({ message: 'Thiếu name, price, duration hoặc vehicleCategory' });
     }
@@ -17,7 +29,28 @@ export async function createService(req: Request, res: Response) {
       return res.status(400).json({ message: 'vehicleCategory không hợp lệ (CAR | BICYCLE | MOTOBIKE)' });
     }
 
-    const created = await Service.create({ name, price, duration, description, image, status, vehicleCategory });
+    // Validate periodic fields
+    if (periodicEnabled) {
+      if (!intervalMonths || intervalMonths < 1 || intervalMonths > 24) {
+        return res.status(400).json({ message: 'intervalMonths phải từ 1-24 khi bật dịch vụ định kỳ' });
+      }
+      if (!defaultTotalVisits || defaultTotalVisits < 1 || defaultTotalVisits > 60) {
+        return res.status(400).json({ message: 'defaultTotalVisits phải từ 1-60 khi bật dịch vụ định kỳ' });
+      }
+    }
+
+    const created = await Service.create({
+      name,
+      price,
+      duration,
+      description,
+      image,
+      status,
+      vehicleCategory,
+      periodicEnabled: periodicEnabled || false,
+      intervalMonths: periodicEnabled ? intervalMonths : undefined,
+      defaultTotalVisits: periodicEnabled ? defaultTotalVisits : undefined
+    });
     return res.status(201).json({ message: 'Tạo dịch vụ thành công', service: created });
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -62,8 +95,19 @@ export async function getServiceById(req: Request, res: Response) {
 
 export async function updateService(req: Request, res: Response) {
   try {
-    const { name, price, duration, description, image, status, vehicleCategory } = req.body;
-    
+    const {
+      name,
+      price,
+      duration,
+      description,
+      image,
+      status,
+      vehicleCategory,
+      periodicEnabled,
+      intervalMonths,
+      defaultTotalVisits
+    } = req.body;
+
     if (price !== undefined && (typeof price !== 'number' || price < 0)) {
       return res.status(400).json({ message: 'Price phải là số không âm' });
     }
@@ -74,9 +118,40 @@ export async function updateService(req: Request, res: Response) {
       }
     }
 
+    // Validate periodic fields
+    if (periodicEnabled) {
+      if (intervalMonths !== undefined && (intervalMonths < 1 || intervalMonths > 24)) {
+        return res.status(400).json({ message: 'intervalMonths phải từ 1-24 khi bật dịch vụ định kỳ' });
+      }
+      if (defaultTotalVisits !== undefined && (defaultTotalVisits < 1 || defaultTotalVisits > 60)) {
+        return res.status(400).json({ message: 'defaultTotalVisits phải từ 1-60 khi bật dịch vụ định kỳ' });
+      }
+    }
+
+    const updateData: any = {
+      name,
+      price,
+      duration,
+      description,
+      image,
+      status,
+      vehicleCategory,
+      periodicEnabled: periodicEnabled !== undefined ? periodicEnabled : undefined
+    };
+
+    // Only set periodic fields if periodicEnabled is true
+    if (periodicEnabled) {
+      updateData.intervalMonths = intervalMonths;
+      updateData.defaultTotalVisits = defaultTotalVisits;
+    } else if (periodicEnabled === false) {
+      // Clear periodic fields if disabled
+      updateData.intervalMonths = undefined;
+      updateData.defaultTotalVisits = undefined;
+    }
+
     const updated = await Service.findByIdAndUpdate(
       req.params.id,
-      { name, price, duration, description, image, status, vehicleCategory },
+      updateData,
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });

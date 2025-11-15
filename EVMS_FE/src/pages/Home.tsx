@@ -213,6 +213,7 @@ const Home: React.FC = () => {
                   backgroundColor: 'rgba(0, 0, 0, 0.3)',
                   fontFamily: 'Inter, sans-serif'
                 }}
+                onClick={() => navigate('/process-guide')}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
@@ -343,6 +344,7 @@ const Home: React.FC = () => {
                   backgroundColor: '#f6ae2d',
                   color: '#014091'
                 }}
+                onClick={() => navigate('/about-us')}
               >
                 THÊM VỀ CHÚNG TÔI
               </button>
@@ -798,6 +800,7 @@ const Home: React.FC = () => {
                   backgroundColor: '#f6ae2d',
                   color: '#014091'
                 }}
+                onClick={() => navigate('/parts-explore')}
               >
                 KHÁM PHÁ THÊM
               </button>

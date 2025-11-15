@@ -103,6 +103,52 @@ export async function getInventoriesWithFullPart(req: Request, res: Response) {
   }
 }
 
+// Count totals for low_stock and in_stock items
+export async function countInventoryByStatus(req: Request, res: Response) {
+  try {
+    // Use the same threshold logic as calculateStatus:
+    // - quantity === 0        => out_of_stock
+    // - 1..LOW_STOCK_THRESHOLD => low_stock
+    // - > LOW_STOCK_THRESHOLD => in_stock
+    const LOW_STOCK_THRESHOLD = 10;
+    const agg = await Inventory.aggregate([
+      {
+        $group: {
+          _id: null,
+          // totalOutOfStock: {
+          //   $sum: {
+          //     $cond: [{ $eq: ['$quantity', 0] }, 1, 0]
+          //   }
+          // },
+          totalLowStock: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gt: ['$quantity', 0] },
+                    { $lte: ['$quantity', LOW_STOCK_THRESHOLD] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          totalInStock: {
+            $sum: {
+              $cond: [{ $gt: ['$quantity', LOW_STOCK_THRESHOLD] }, 1, 0]
+            }
+          }
+        }
+      }
+    ]);
+    const result = agg[0] || { totalOutOfStock: 0, totalLowStock: 0, totalInStock: 0 };
+    return res.json({ totalLowStock: result.totalLowStock, totalInStock: result.totalInStock, totalOutOfStock: result.totalOutOfStock });
+  } catch {
+    return res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+}
+
 // Trả về toàn bộ tồn kho với đầy đủ Part, KHÔNG phân trang (dùng cho FE phân trang client-side)
 export async function getAllInventoriesWithFullPart(req: Request, res: Response) {
   try {

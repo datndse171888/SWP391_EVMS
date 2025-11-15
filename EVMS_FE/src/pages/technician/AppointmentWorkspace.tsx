@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { technicianApi } from '../../api/TechnicianApi';
 import type { ChecklistRequest, ChecklistResponse, Task, TaskStatus } from '../../types/Checklist';
@@ -19,8 +20,6 @@ import { VehicleApi } from '../../api/VehicleApi';
 import type { ReportRequest, ReportResponse } from '../../types/Report';
 import { ReportApi } from '../../api/ReportApi';
 
-type ReportStage = 'before-service' | 'after-service';
-
 const AppointmentWorkspace: React.FC = () => {
 
   // ===================================
@@ -31,10 +30,7 @@ const AppointmentWorkspace: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  // search & filter
-  const [searchParams] = useSearchParams();
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // Chỉ dùng cho lần load đầu tiên
 
   const { user } = useAuth();
 
@@ -85,7 +81,7 @@ const AppointmentWorkspace: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-update currentStep based on progress (only for leader)
   useEffect(() => {
@@ -124,10 +120,10 @@ const AppointmentWorkspace: React.FC = () => {
       nextStep = 1; // Need before report
     }
     if (currentStep !== nextStep) setCurrentStep(nextStep);
-  }, [techInfo?.role, beforeReport?._id, checklist.length, afterReport?._id]);
+  }, [techInfo?.role, beforeReport?._id, checklist.length, afterReport?._id, checklist, currentStep, techInfo, beforeReport, afterReport]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (showLoading = false) => {
+    if (showLoading) setIsInitialLoading(true);
     try {
       const techInfoResponse = await technicianApi.getTechnicianInfo(user?.id || '');
       const techInfoData: CheckingResponse<any> = techInfoResponse.data;
@@ -467,7 +463,36 @@ const AppointmentWorkspace: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch appointment data:', error);
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+    }
+  }
+
+  // Refresh chỉ checklist (không load lại toàn bộ)
+  const refreshChecklist = async () => {
+    if (!appointmentId) return;
+    try {
+      const checklistResponse = await ChecklistApi.getByAppointmentId(appointmentId);
+      const checklistData: ChecklistResponse[] = Array.isArray(checklistResponse.data)
+        ? checklistResponse.data
+        : [];
+      setChecklist(checklistData);
+    } catch (error: any) {
+      console.error('Failed to refresh checklist:', error);
+    }
+  }
+
+  // Refresh chỉ reports (không load lại toàn bộ)
+  const refreshReports = async () => {
+    if (!appointmentId) return;
+    try {
+      const reportsResponse = await ReportApi.getReportsByAppointment(appointmentId);
+      const reportsData: ReportResponse[] = reportsResponse.data?.data || [];
+      const before = reportsData.find(r => r.stage === 'before-service');
+      const after = reportsData.find(r => r.stage === 'after-service');
+      if (before) setBeforeReport(before);
+      if (after) setAfterReport(after);
+    } catch (error) {
+      console.error('Failed to refresh reports:', error);
     }
   }
 
@@ -475,9 +500,7 @@ const AppointmentWorkspace: React.FC = () => {
     if (!appointmentId) return;
     setIsRefreshingChecklist(true);
     try {
-      const res = await ChecklistApi.getByAppointmentId(appointmentId);
-      const items: ChecklistResponse[] = Array.isArray(res.data) ? res.data : [];
-      setChecklist(items);
+      await refreshChecklist();
     } catch (e) {
       console.error('Failed to refresh checklist:', e);
     } finally {
@@ -504,17 +527,20 @@ const AppointmentWorkspace: React.FC = () => {
       const response = await ReportApi.createReport(reportData);
       const createdReport: ReportResponse = response.data;
 
+      // Optimistic update - cập nhật ngay lập tức
       setBeforeReport(createdReport);
       setShowBeforeReportForm(false);
       setBeforeReportDetails('');
       setBeforeReportImage('');
       setCurrentStep(2); // Move to next step
 
-      // Refresh data
-      await fetchData();
+      // Chỉ refresh reports, không load lại toàn bộ
+      await refreshReports();
     } catch (error: any) {
       console.error('Failed to create report:', error);
       alert(error.response?.data?.message || 'Không thể tạo báo cáo. Vui lòng thử lại.');
+      // Rollback nếu lỗi
+      await refreshReports();
     } finally {
       setIsSubmittingReport(false);
     }
@@ -539,19 +565,31 @@ const AppointmentWorkspace: React.FC = () => {
       const response = await ReportApi.createReport(reportData);
       const createdReport: ReportResponse = response.data;
 
+      // Optimistic update - cập nhật ngay lập tức
       setAfterReport(createdReport);
       setShowAfterReportForm(false);
       setAfterReportDetails('');
       setAfterReportImage('');
 
-      // Backend already updates status to awaiting_payment. Update local state optimistically.
-      setAppointment(prev => prev ? { ...prev, status: 'awaiting_payment' } as any : prev);
+      // Cập nhật trạng thái appointment -> awaiting_payment (optimistic)
+      setAppointment(prev => prev ? ({ ...prev, status: 'awaiting_payment' } as any) : prev);
+      try {
+        await AppointmentApi.updateAppointmentStatus(appointmentId, {
+          status: 'awaiting_payment'
+        });
+      } catch (err) {
+        console.warn('Không thể cập nhật trạng thái awaiting_payment:', err);
+        // Rollback nếu lỗi
+        await fetchData(false);
+      }
 
-      // Refresh data
-      await fetchData();
+      // Chỉ refresh reports, không load lại toàn bộ
+      await refreshReports();
     } catch (error: any) {
       console.error('Failed to create report:', error);
       alert(error.response?.data?.message || 'Không thể tạo báo cáo. Vui lòng thử lại.');
+      // Rollback nếu lỗi
+      await refreshReports();
     } finally {
       setIsSubmittingReport(false);
     }
@@ -617,46 +655,58 @@ const AppointmentWorkspace: React.FC = () => {
       const response = await ChecklistApi.createChecklist(request);
       const createdTasks: ChecklistResponse[] = response.data;
 
-      // Refresh checklist
-      await fetchData();
-
-      // Reset everything
+      // Optimistic update - cập nhật ngay lập tức
+      setChecklist(createdTasks);
+      setAppointment(prev => prev ? ({ ...prev, status: 'in_progress' } as any) : prev);
+      
+      // Reset form ngay lập tức
       setDraftTasks([]);
       setCurrentTaskName('');
       setCurrentTaskDescription('');
       setCurrentTaskNote('');
       setShowCreateTaskForm(false);
 
+      // Cập nhật trạng thái appointment -> in_progress (background)
+      try {
+        await AppointmentApi.updateAppointmentStatus(appointmentId, {
+          status: 'in_progress'
+        });
+      } catch (err) {
+        console.warn('Không thể cập nhật trạng thái in_progress:', err);
+        // Rollback nếu lỗi
+        await refreshChecklist();
+      }
+
+      // Chỉ refresh checklist để đảm bảo sync, không load lại toàn bộ
+      await refreshChecklist();
+
       alert(`Đã tạo thành công ${createdTasks.length} task(s)!`);
     } catch (error: any) {
       console.error('Failed to create tasks:', error);
       alert(error.response?.data?.message || 'Không thể tạo tasks. Vui lòng thử lại.');
+      // Rollback nếu lỗi
+      await refreshChecklist();
     } finally {
       setIsCreatingTasks(false);
     }
   }
 
-  // Handle assign technician to task
-  const handleAssignTechnician = async (taskId: string, technicianID: string) => {
-    try {
-      await ChecklistApi.assignTechnician(taskId, technicianID);
-      // Refresh checklist
-      await fetchData();
-    } catch (error: any) {
-      console.error('Failed to assign technician:', error);
-      alert(error.response?.data?.message || 'Không thể gán technician. Vui lòng thử lại.');
-    }
-  }
-
   // Handle update task status
   const handleUpdateTaskStatus = async (taskId: string, status: TaskStatus) => {
+    // Optimistic update - cập nhật ngay lập tức
+    setChecklist(prev => prev.map(task => 
+      task._id === taskId ? { ...task, status } : task
+    ));
+
     try {
       await ChecklistApi.updateStatus(taskId, status);
-      // Refresh checklist
-      await fetchData();
+      // Chỉ refresh checklist để đảm bảo sync, không load lại toàn bộ
+      await refreshChecklist();
     } catch (error: any) {
       console.error('Failed to update task status:', error);
       alert(error.response?.data?.message || 'Không thể cập nhật trạng thái. Vui lòng thử lại.');
+      // Rollback nếu lỗi
+      await refreshChecklist();
     }
   }
 
@@ -683,6 +733,16 @@ const AppointmentWorkspace: React.FC = () => {
   //     checklist: checklist
   //   });
   // }
+
+  if (isInitialLoading) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="bg-white rounded-2xl shadow-sm p-6 text-sm text-gray-500">
+          Đang tải dữ liệu...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4">

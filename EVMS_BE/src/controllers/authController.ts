@@ -133,7 +133,7 @@ export async function register(req: Request, res: Response) {
     }
 
     // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[`~!@#$%^&*\-_=+/\\|/?><,.]).{8,}$/;
     if (!passwordRegex.test(formatPassword)) {
       return res.status(400).json({ 
         message: 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt' 
@@ -227,12 +227,9 @@ export async function login(req: Request, res: Response) {
       return res.status(403).json({ message: 'Tài khoản đã bị vô hiệu hóa' });
     }
 
-    // Check if account is verified
-    if (!user.isVerified) {
-      return res.status(403).json({ 
-        message: 'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực tài khoản.' 
-      });
-    }
+    // ⚠️ KHÔNG check isVerified ở đây
+    // User vẫn có thể login dù chưa verify
+    // Hệ thống sẽ hiển thị cảnh báo và chặn các tính năng quan trọng ở frontend
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
@@ -311,6 +308,7 @@ export async function loginWithGoogle(req: Request, res: Response) {
         passwordHash,
         photoURL: normalizedPhoto,
         role: 'customer',
+        isVerified: true, // Google login users are auto-verified
       });
     } else {
       if (user.isDisabled) {
@@ -364,6 +362,7 @@ export async function loginWithGoogle(req: Request, res: Response) {
         role: user.role,
         gender: user.gender,
         isDisabled: user.isDisabled,
+        isVerified: user.isVerified ?? true, // Google login users are auto-verified
       },
     });
   } catch (error) {

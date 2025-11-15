@@ -16,8 +16,7 @@ const Header: React.FC = () => {
     { name: 'DỊCH VỤ', path: '/service', hasDropdown: true },
     { name: 'LINH KIỆN', path: '/parts' },
     { name: 'ĐỘI NGŨ KỸ THUẬT VIÊN', path: '/technicians' },
-    { name: 'GIỚI THIỆU', path: '/introduction' },
-    { name: 'LIÊN HỆ', path: '/contact' },
+    { name: 'VỀ CHÚNG TÔI', path: '/about' },
   ];
 
   const isActive = (path: string) => {
@@ -27,6 +26,12 @@ const Header: React.FC = () => {
              location.pathname === '/carService' || 
              location.pathname === '/motoService' || 
              location.pathname === '/bikeService';
+    }
+    if (path === '/about') {
+      // Check if current path is about, introduction, or contact (all merged into about)
+      return location.pathname === '/about' || 
+             location.pathname === '/introduction' || 
+             location.pathname === '/contact';
     }
     return location.pathname === path;
   };

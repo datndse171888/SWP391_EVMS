@@ -14,16 +14,18 @@ import { AdminLayout } from './components/layout/AdminLayout'
 import { StaffLayout } from './components/layout/StaffLayout'
 import { TechnicianLayout } from './components/layout/TechnicianLayout'
 import { Dashboard } from './pages/admin/Dashboard'
+import { Revenue } from './pages/admin/Revenue'
 import { Users } from './pages/admin/Users'
 import { Technicians } from './pages/admin/Technicians'
 import { Services } from './pages/admin/Services'
 import { Parts as AdminParts } from './pages/admin/Parts'
-import Introduction from './pages/Introduction'
+import About from './pages/About'
 import { Register } from './pages/auth/Register'
 import { Test } from './Test'
 import Service from './pages/service/Service'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { ForgotPassword } from './pages/auth/ForgotPassword'
+import VerifyOTP from './pages/auth/VerifyOTP'
 import StaffDashboard from './pages/staff/StaffDashboard';
 import { BikeService } from './pages/service/BikeService';
 import { CarService } from './pages/service/CarService';
@@ -42,15 +44,23 @@ import TechnicianSchedule from './pages/technician/TechnicianSchedule';
 import AppointmentWorkspace from './pages/technician/AppointmentWorkspace';
 import TechnicianProfile from './pages/technician/TechnicianProfile';
 import Profile from './pages/user/Profile';
+import AdminProfile from './pages/admin/AdminProfile';
+import ServicePackages from './pages/admin/ServicePackages';
+import Appointments from './pages/admin/Appointments';
+import Staffs from './pages/admin/Staffs';
 import FeedbackPage from './pages/user/FeedBack';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import Maintenance from './pages/user/Maintenance';
 import MyVehicles from './pages/user/MyVehicles';
 import AddVehicle from './pages/user/AddVehicle';
 import PaymentCallback from './pages/payment/PaymentCallback';
-import Contact from './pages/Contact';
 import ButtonRegister from './components/ButtonRegister';
 import ChatboxButton from './components/ui/ChatboxButton'
+import Introduction from './pages/Introduction'
+import Contact from './pages/Contact'
+import AboutUs from './pages/AboutUs'
+import PartsExplore from './pages/PartsExplore'
+import ProcessGuide from './pages/ProcessGuide'
 
 // Placeholder components for different dashboards
 const CustomerDashboard = () => <div className="p-6"><h1 className="text-2xl font-bold">Customer Dashboard</h1></div>;
@@ -64,8 +74,12 @@ export const Router: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={<><Home /> <ChatboxButton /> <ButtonRegister /> </>} />
-          <Route path="/introduction" element={<><Introduction /><ButtonRegister /></>} />
+          <Route path="/about" element={<><About /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/introduction" element={<><Introduction /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/contact" element={<><Contact /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/about-us" element={<><AboutUs /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/parts-explore" element={<><PartsExplore /> <ChatboxButton /> <ButtonRegister /></>} />
+          <Route path="/process-guide" element={<><ProcessGuide /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/service" element={<><Service /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/carService" element={<><CarService /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/bikeService" element={<><BikeService /> <ChatboxButton /> <ButtonRegister /></>} />
@@ -80,6 +94,7 @@ export const Router: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/test" element={<Test />} />
@@ -117,6 +132,13 @@ export const Router: React.FC = () => {
             </AdminLayout>
           </AdminRoute>
         } />
+        <Route path="/admin/revenue" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Revenue />
+            </AdminLayout>
+          </AdminRoute>
+        } />
         <Route path="/admin/parts" element={
           <AdminRoute>
             <AdminLayout>
@@ -142,6 +164,34 @@ export const Router: React.FC = () => {
           <AdminRoute>
             <AdminLayout>
               <Technicians />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminProfile />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/service-packages" element={
+          <AdminRoute>
+            <AdminLayout>
+              <ServicePackages />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/appointments" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Appointments />
+            </AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/staffs" element={
+          <AdminRoute>
+            <AdminLayout>
+              <Staffs />
             </AdminLayout>
           </AdminRoute>
         } />

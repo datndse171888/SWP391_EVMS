@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -7,8 +7,30 @@ export const appointmentRouter = Router();
 // Create appointment (authenticated users)
 appointmentRouter.post('/', authMiddleware, createAppointment);
 
-// List appointments (admin/staff only)
 appointmentRouter.get('/', authMiddleware, listAppointments);
+
+// Count total pending appointments (admin/staff)
+// Request: GET /api/appointments/count/pending
+// Response: { success: true, data: { totalPending: number } }
+// Test: http://localhost:4000/api/appointments/count/pending
+appointmentRouter.get('/count/pending', authMiddleware, countPendingAppointments);
+
+// Count totals for confirmed and cancelled appointments (admin/staff)
+// Request: GET /api/appointments/count/confirmed-cancelled
+// Response: { success: true, data: { totalConfirmed: number, totalCancelled: number } }
+// Test: http://localhost:4000/api/appointments/count/confirmed-cancelled
+appointmentRouter.get('/count/confirmed-cancelled', authMiddleware, countConfirmedAndCancelledAppointments);
+
+// Count total appointments (all statuses) (admin/staff)
+// Request: GET /api/appointments/count/all
+// Response: { success: true, data: { totalAll: number } }
+// Test: http://localhost:4000/api/appointments/count/all
+appointmentRouter.get('/count/all', authMiddleware, countAllAppointments);
+
+// Technician self counts (today)
+appointmentRouter.get('/technician/me/count/today', authMiddleware, countMyTodayAppointments);
+appointmentRouter.get('/technician/me/count/today/confirmed', authMiddleware, countMyTodayConfirmed);
+appointmentRouter.get('/technician/me/count/today/in-progress', authMiddleware, countMyTodayInProgress);
 
 // List today's awaiting payment appointments (admin/staff)
 appointmentRouter.get('/today/awaiting-payment', authMiddleware, listTodayAwaitingPayment);
