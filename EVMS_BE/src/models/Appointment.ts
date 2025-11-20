@@ -39,6 +39,10 @@ const AppointmentSchema = new Schema<IAppointment>(
 // Useful compound indexes for queries (user appointments in a day, etc.)
 AppointmentSchema.index({ userID: 1, bookingDate: -1 });
 AppointmentSchema.index({ technicianLeaderID: 1, bookingDate: -1 });
+// Indexes to speed up reminder queries
+AppointmentSchema.index({ vehicleID: 1, status: 1, bookingDate: 1 });
+AppointmentSchema.index({ serviceID: 1 });
+AppointmentSchema.index({ servicePackageID: 1 });
 
 export const Appointment = mongoose.models.Appointment || mongoose.model<IAppointment>('Appointment', AppointmentSchema);
 

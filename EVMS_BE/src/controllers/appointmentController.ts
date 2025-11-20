@@ -636,16 +636,134 @@ export async function getAppointmentById(req: Request, res: Response) {
     console.log('getAppointmentById - Requested ID:', id);
     console.log('getAppointmentById - User role:', req.user.role);
     console.log('getAppointmentById - User ID:', req.user.id);
-    
+
     const includeParam = (req.query.include as string | undefined)?.trim();
     const fieldsParam = (req.query.fields as string | undefined)?.trim();
     const select = buildSelect(fieldsParam);
     const populates = buildPopulate(includeParam);
 
+    const includeNextPeriodic = String((req.query as any).includeNextPeriodic || '')
+      .toLowerCase() === 'true';
+
+    type PeriodicInfo = {
+      isPeriodicSubscription: boolean;
+      serviceType?: 'service' | 'servicePackage';
+      serviceName?: string;
+      totalVisits?: number;
+      completedVisits?: number;
+      remainingVisits?: number;
+      intervalMonths?: number;
+      nextAppointment?: any | null;
+      estimatedNextDate?: Date | null;
+      subscriptionStatus?: 'active' | 'completed' | 'expired';
+      lastCompletedDate?: Date | null;
+    } | null;
+
+    async function buildPeriodicInfo(appointmentDoc: any): Promise<PeriodicInfo> {
+      try {
+        if (!appointmentDoc) return null;
+        if (!appointmentDoc.vehicleID) return null;
+
+        const hasPackage = Boolean(appointmentDoc.servicePackageID);
+        const hasService = Boolean(appointmentDoc.serviceID);
+        if (!hasPackage && !hasService) return null;
+
+        const now = new Date();
+        let periodicEnabled = false;
+        let intervalMonths: number | undefined = undefined;
+        let totalVisits: number | undefined = undefined;
+        let serviceName: string | undefined = undefined;
+        let serviceType: 'service' | 'servicePackage' = hasPackage ? 'servicePackage' : 'service';
+
+        if (hasPackage) {
+          const { ServicePackage } = await import('../models/ServicePackage.js');
+          const pkg = await ServicePackage.findById(appointmentDoc.servicePackageID)
+            .select('periodicEnabled intervalMonths defaultTotalVisits name')
+            .lean();
+          if (!pkg) return null;
+          periodicEnabled = Boolean((pkg as any).periodicEnabled);
+          intervalMonths = (pkg as any).intervalMonths ?? undefined;
+          totalVisits = (pkg as any).defaultTotalVisits ?? undefined;
+          serviceName = (pkg as any).name;
+        } else if (hasService) {
+          const { Service } = await import('../models/Service.js');
+          const svc = await Service.findById(appointmentDoc.serviceID)
+            .select('periodicEnabled intervalMonths defaultTotalVisits name')
+            .lean();
+          if (!svc) return null;
+          periodicEnabled = Boolean((svc as any).periodicEnabled);
+          intervalMonths = (svc as any).intervalMonths ?? undefined;
+          totalVisits = (svc as any).defaultTotalVisits ?? undefined;
+          serviceName = (svc as any).name;
+        }
+
+        if (!periodicEnabled) return null;
+
+        const completedFilter: any = {
+          vehicleID: appointmentDoc.vehicleID,
+          status: 'completed',
+        };
+        if (hasPackage) completedFilter.servicePackageID = appointmentDoc.servicePackageID;
+        if (hasService) completedFilter.serviceID = appointmentDoc.serviceID;
+
+        const [completedVisits, lastCompleted] = await Promise.all([
+          Appointment.countDocuments(completedFilter),
+          Appointment.findOne(completedFilter).sort({ bookingDate: -1 }).select('bookingDate').lean()
+        ]);
+
+        const nextFilter: any = {
+          vehicleID: appointmentDoc.vehicleID,
+          status: { $in: ['pending', 'confirmed'] },
+          bookingDate: { $gt: now },
+        };
+        if (hasPackage) nextFilter.servicePackageID = appointmentDoc.servicePackageID;
+        if (hasService) nextFilter.serviceID = appointmentDoc.serviceID;
+
+        const nextAppointment = await Appointment.findOne(nextFilter)
+          .sort({ bookingDate: 1 })
+          .select('_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID')
+          .lean();
+
+        const remainingVisits = typeof totalVisits === 'number'
+          ? Math.max(0, Number(totalVisits) - Number(completedVisits || 0))
+          : undefined;
+
+        const subscriptionStatus: 'active' | 'completed' | 'expired' | undefined =
+          typeof remainingVisits === 'number'
+            ? (remainingVisits > 0 ? 'active' : 'completed')
+            : undefined;
+
+        let estimatedNextDate: Date | null = null;
+        if (!nextAppointment && subscriptionStatus !== 'completed' && intervalMonths && intervalMonths > 0) {
+          const base = (lastCompleted?.bookingDate ? new Date(lastCompleted.bookingDate) : now);
+          const est = new Date(base);
+          est.setMonth(est.getMonth() + Number(intervalMonths));
+          estimatedNextDate = est;
+        }
+
+        return {
+          isPeriodicSubscription: true,
+          serviceType,
+          serviceName,
+          totalVisits: typeof totalVisits === 'number' ? totalVisits : undefined,
+          completedVisits: Number(completedVisits || 0),
+          remainingVisits,
+          intervalMonths: typeof intervalMonths === 'number' ? intervalMonths : undefined,
+          nextAppointment: nextAppointment || null,
+          estimatedNextDate,
+          subscriptionStatus,
+          lastCompletedDate: lastCompleted?.bookingDate ? new Date(lastCompleted.bookingDate) : null,
+        };
+      } catch (e) {
+        console.error('buildPeriodicInfo error:', e);
+        return null;
+      }
+    }
+
     let query = Appointment.findById(id);
     if (select) query = query.select(select);
     let doc = await query.populate(populates);
-    
+
     if (!doc) {
       console.log('getAppointmentById - Appointment not found in database');
       return res.status(404).json({ message: 'Không tìm thấy appointment' });
@@ -661,34 +779,46 @@ export async function getAppointmentById(req: Request, res: Response) {
 
     const role = req.user.role;
     if (role === 'admin' || role === 'staff') {
+      if (includeNextPeriodic) {
+        const periodicInfo = await buildPeriodicInfo(doc);
+        return res.json({ data: doc, periodicInfo });
+      }
       return res.json({ data: doc });
     }
 
     // Allow customer to view their own appointments
     if (role === 'customer' && String(doc.userID) === req.user.id) {
+      if (includeNextPeriodic) {
+        const periodicInfo = await buildPeriodicInfo(doc);
+        return res.json({ data: doc, periodicInfo });
+      }
       return res.json({ data: doc });
     }
 
     // Allow technician to view appointments they are assigned to
     if (role === 'technician') {
-    // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
+      // Resolve technician profile by userID (accept both ObjectId and string)
+      const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean()
+        || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
       if (!techDoc) {
         console.log('getAppointmentById - Technician profile not found');
         return res.status(403).json({ message: 'Insufficient permissions' });
       }
       const technicianId = String(techDoc._id);
       console.log('getAppointmentById - Technician ID:', technicianId);
-      
-      const isAssigned = 
+
+      const isAssigned =
         String(doc.technicianLeaderID) === technicianId ||
         String(doc.technicianSupport1ID) === technicianId ||
         String(doc.technicianSupport2ID) === technicianId;
-      
+
       console.log('getAppointmentById - Is assigned:', isAssigned);
-      
+
       if (isAssigned) {
+        if (includeNextPeriodic) {
+          const periodicInfo = await buildPeriodicInfo(doc);
+          return res.json({ data: doc, periodicInfo });
+        }
         return res.json({ data: doc });
       } else {
         console.log('getAppointmentById - Technician not assigned to this appointment');
@@ -1483,6 +1613,301 @@ export async function countAllAppointments(req: Request, res: Response) {
   }
 }
 
+// Maintenance reminders list for staff/admin
+export async function listMaintenanceReminders(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const windowDaysRaw = parseInt(String(req.query.windowDays ?? '7'), 10);
+    const windowDays = Math.min(Math.max(isNaN(windowDaysRaw) ? 7 : windowDaysRaw, 1), 60);
+    const typeParam = String(req.query.type || 'all').toLowerCase(); // 'periodic' | 'vehicleschedule' | 'all'
+    const hasAppointmentParam = (req.query.hasAppointment as string | undefined)?.toLowerCase(); // 'true' | 'false'
+    const vehicleCategory = (req.query.vehicleCategory as string | undefined)?.toUpperCase() as ('CAR'|'MOTOBIKE'|'BICYCLE'|undefined);
+
+    const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
+    const limitRaw = Math.max(parseInt(String(req.query.limit || '10'), 10) || 10, 1);
+    const limit = Math.min(limitRaw, 100);
+    const sortField = String(req.query.sort || 'dueDate');
+    const order = String(req.query.order || 'asc');
+    const includeParam = (req.query.include as string | undefined)?.trim();
+    const include = new Set((includeParam || '').split(',').map(s => s.trim()).filter(Boolean));
+
+    const now = new Date();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const deadline = new Date(today); deadline.setDate(deadline.getDate() + windowDays);
+
+    // Helper: due status
+    const getDueStatus = (d: Date | null | undefined): 'overdue' | 'dueToday' | 'upcoming' | null => {
+      if (!d) return null;
+      const dd = new Date(d); dd.setHours(0,0,0,0);
+      if (dd.getTime() < today.getTime()) return 'overdue';
+      if (dd.getTime() === today.getTime()) return 'dueToday';
+      if (dd.getTime() > today.getTime() && dd.getTime() <= deadline.getTime()) return 'upcoming';
+      return null;
+    };
+
+    // 1) PERIODIC SUBSCRIPTIONS
+    const periodicPipeline: any[] = [
+      { $match: {
+          vehicleID: { $ne: null },
+          $or: [ { serviceID: { $ne: null } }, { servicePackageID: { $ne: null } } ],
+          status: { $in: ['completed','pending','confirmed'] }
+        }
+      },
+      { $addFields: {
+          isCompleted: { $eq: ['$status', 'completed'] },
+          isWindow: { $and: [ { $in: ['$status', ['pending','confirmed']] }, { $gte: ['$bookingDate', today] }, { $lte: ['$bookingDate', deadline] } ] }
+        }
+      },
+      { $group: {
+          _id: { vehicleID: '$vehicleID', serviceID: '$serviceID', servicePackageID: '$servicePackageID' },
+          completedVisits: { $sum: { $cond: ['$isCompleted', 1, 0] } },
+          lastCompletedDate: { $max: { $cond: ['$isCompleted', '$bookingDate', null] } },
+          nextScheduledDate: { $min: { $cond: ['$isWindow', '$bookingDate', null] } }
+        }
+      }
+    ];
+
+    const periodicGroups = await Appointment.aggregate(periodicPipeline);
+
+    // Collect IDs
+    const vehicleIds: string[] = [];
+    const serviceIds: string[] = [];
+    const packageIds: string[] = [];
+    for (const g of periodicGroups) {
+      const vid = String(g._id.vehicleID);
+      if (!vehicleIds.includes(vid)) vehicleIds.push(vid);
+      if (g._id.serviceID) {
+        const sid = String(g._id.serviceID);
+        if (!serviceIds.includes(sid)) serviceIds.push(sid);
+      }
+      if (g._id.servicePackageID) {
+        const pid = String(g._id.servicePackageID);
+        if (!packageIds.includes(pid)) packageIds.push(pid);
+      }
+    }
+
+    // Load vehicles map
+    const vehicles = await Vehicle.find({ _id: { $in: vehicleIds } })
+      .select('_id userID plateNumber vehicleCategory brand lastMaintenanceDate nextMaintenanceDate maintenanceCycleMonths')
+      .lean();
+    const vehicleMap = new Map<string, any>(vehicles.map(v => [String(v._id), v]));
+
+    // Load config maps for services/packages
+    const serviceMap = new Map<string, any>();
+    const packageMap = new Map<string, any>();
+    if (serviceIds.length > 0) {
+      const { Service } = await import('../models/Service.js');
+      const svcs = await Service.find({ _id: { $in: serviceIds } })
+        .select('_id name periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      svcs.forEach(s => serviceMap.set(String(s._id), s));
+    }
+    if (packageIds.length > 0) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const pkgs = await ServicePackage.find({ _id: { $in: packageIds } })
+        .select('_id name periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      pkgs.forEach(p => packageMap.set(String(p._id), p));
+    }
+
+    type ReminderItem = {
+      type: 'periodic' | 'vehicleSchedule';
+      dueDate: Date;
+      dueStatus: 'overdue' | 'dueToday' | 'upcoming';
+      nextAppointment?: any | null;
+      vehicle?: any;
+      user?: any;
+      periodicSummary?: any;
+      scheduleSummary?: any;
+    };
+
+    const periodicItems: ReminderItem[] = [];
+
+    for (const g of periodicGroups) {
+      const vid = String(g._id.vehicleID);
+      const veh = vehicleMap.get(vid);
+      if (!veh) continue;
+      if (vehicleCategory && veh.vehicleCategory !== vehicleCategory) continue;
+
+      const isPkg = Boolean(g._id.servicePackageID);
+      const cfg = isPkg ? packageMap.get(String(g._id.servicePackageID)) : serviceMap.get(String(g._id.serviceID));
+      if (!cfg || !cfg.periodicEnabled) continue;
+
+      const totalVisits = typeof cfg.defaultTotalVisits === 'number' ? cfg.defaultTotalVisits : undefined;
+      const intervalMonths = typeof cfg.intervalMonths === 'number' ? cfg.intervalMonths : undefined;
+      const completedVisits = Number(g.completedVisits || 0);
+      const remainingVisits = typeof totalVisits === 'number' ? Math.max(0, totalVisits - completedVisits) : undefined;
+
+      // Skip if fully completed and no nextScheduledDate
+      if (typeof remainingVisits === 'number' && remainingVisits <= 0 && !g.nextScheduledDate) continue;
+
+      const nextScheduledDate: Date | null = g.nextScheduledDate ? new Date(g.nextScheduledDate) : null;
+      let dueDate: Date | null = nextScheduledDate;
+      if (!dueDate && g.lastCompletedDate && intervalMonths) {
+        dueDate = computeNextMaintenanceDate(new Date(g.lastCompletedDate), intervalMonths);
+      }
+      // Fallback: nếu chưa có lần hoàn thành và chưa đặt lịch, dùng vehicle.nextMaintenanceDate nếu có
+      if (!dueDate && veh?.nextMaintenanceDate) {
+        const vNext = new Date(veh.nextMaintenanceDate);
+        if (!isNaN(vNext.getTime())) {
+          dueDate = vNext;
+        }
+      }
+
+      const dueStatus = getDueStatus(dueDate);
+      if (!dueDate || !dueStatus) continue; // outside window
+
+      // hasAppointment filter
+      const hasNext = Boolean(nextScheduledDate);
+      if (hasAppointmentParam === 'true' && !hasNext) continue;
+      if (hasAppointmentParam === 'false' && hasNext) continue;
+
+      // Resolve nextAppointment document if exists
+      let nextAppointment: any | null = null;
+      if (nextScheduledDate) {
+        const filter: any = { vehicleID: g._id.vehicleID, status: { $in: ['pending','confirmed'] }, bookingDate: { $gte: nextScheduledDate } };
+        if (isPkg) filter.servicePackageID = g._id.servicePackageID; else filter.serviceID = g._id.serviceID;
+        nextAppointment = await Appointment.findOne(filter)
+          .sort({ bookingDate: 1 })
+          .select('_id userID vehicleID serviceID servicePackageID bookingDate status')
+          .lean();
+      }
+
+      const item: ReminderItem = {
+        type: 'periodic',
+        dueDate: dueDate!,
+        dueStatus,
+        nextAppointment: nextAppointment || null,
+      };
+
+      if (include.has('vehicle')) {
+        item.vehicle = { _id: veh._id, plateNumber: veh.plateNumber, vehicleCategory: veh.vehicleCategory, brand: veh.brand };
+      }
+
+      item.periodicSummary = {
+        serviceType: isPkg ? 'servicePackage' : 'service',
+        serviceId: isPkg ? String(g._id.servicePackageID) : String(g._id.serviceID),
+        serviceName: cfg.name,
+        totalVisits,
+        completedVisits,
+        remainingVisits,
+        intervalMonths,
+        vehicleID: vid,
+      };
+
+      periodicItems.push(item);
+    }
+
+    // 2) VEHICLE SCHEDULE REMINDERS
+    const vehicleQuery: any = {
+      $or: [
+        { isMaintenanceDue: true },
+        { nextMaintenanceDate: { $lte: deadline } }
+      ]
+    };
+    if (vehicleCategory) vehicleQuery.vehicleCategory = vehicleCategory;
+
+    const vehiclesDue = await Vehicle.find(vehicleQuery)
+      .select('_id userID plateNumber vehicleCategory brand lastMaintenanceDate nextMaintenanceDate maintenanceCycleMonths')
+      .lean();
+
+    const vehicleItems: ReminderItem[] = [];
+    for (const veh of vehiclesDue) {
+      const dueDate: Date | null = veh.nextMaintenanceDate ? new Date(veh.nextMaintenanceDate) : null;
+      const dueStatus = getDueStatus(dueDate);
+      if (!dueDate || !dueStatus) continue;
+
+      // Find next appointment for this vehicle (any service)
+      const nextAppointment = await Appointment.findOne({
+        vehicleID: veh._id,
+        status: { $in: ['pending','confirmed'] },
+        bookingDate: { $gt: now }
+      })
+        .sort({ bookingDate: 1 })
+        .select('_id userID vehicleID serviceID servicePackageID bookingDate status')
+        .lean();
+
+      const hasNext = Boolean(nextAppointment);
+      if (hasAppointmentParam === 'true' && !hasNext) continue;
+      if (hasAppointmentParam === 'false' && hasNext) continue;
+
+      const item: ReminderItem = {
+        type: 'vehicleSchedule',
+        dueDate: dueDate,
+        dueStatus,
+        nextAppointment: nextAppointment || null,
+      };
+
+      if (include.has('vehicle')) {
+        item.vehicle = { _id: veh._id, plateNumber: veh.plateNumber, vehicleCategory: veh.vehicleCategory, brand: veh.brand };
+      }
+
+      item.scheduleSummary = {
+        lastMaintenanceDate: veh.lastMaintenanceDate || null,
+        nextMaintenanceDate: veh.nextMaintenanceDate || null,
+        maintenanceCycleMonths: veh.maintenanceCycleMonths || null,
+        vehicleID: String(veh._id)
+      };
+
+      vehicleItems.push(item);
+    }
+
+    // Merge according to type filter
+    let items: ReminderItem[] = [];
+    if (typeParam === 'periodic') items = periodicItems;
+    else if (typeParam === 'vehicleschedule') items = vehicleItems;
+    else items = periodicItems.concat(vehicleItems);
+
+    // Include user if requested: fetch users for all involved vehicles
+    if (include.has('user')) {
+      const vIds = new Set<string>();
+      for (const it of items) {
+        const vehId = it.periodicSummary?.vehicleID || it.scheduleSummary?.vehicleID;
+        if (vehId) vIds.add(String(vehId));
+      }
+      const vDocs = await Vehicle.find({ _id: { $in: Array.from(vIds) } }).select('_id userID').lean();
+      const userIds = vDocs.map(v => String(v.userID));
+      const users = await User.find({ _id: { $in: userIds } }).select('_id userName fullName email phoneNumber').lean();
+      const uMap = new Map<string, any>(users.map(u => [String(u._id), u]));
+      const vMap = new Map<string, any>(vDocs.map(v => [String(v._id), v]));
+      for (const it of items) {
+        const vehId = String(it.periodicSummary?.vehicleID || it.scheduleSummary?.vehicleID || '');
+        const vdoc = vehId ? vMap.get(vehId) : null;
+        const uid = vdoc ? String(vdoc.userID) : null;
+        if (uid) it.user = uMap.get(uid) || undefined;
+      }
+    }
+
+    // Sort
+    items.sort((a, b) => {
+      const av = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+      const bv = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+      return (order === 'desc' ? -1 : 1) * (av - bv);
+    });
+
+    // Pagination
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const paged = items.slice(start, start + limit);
+
+    return res.status(200).json({
+      success: true,
+      data: paged,
+      pagination: { page, limit, total, totalPages },
+      filters: { windowDays: windowDays, type: typeParam, vehicleCategory, hasAppointment: hasAppointmentParam }
+    });
+  } catch (error) {
+    console.error('listMaintenanceReminders error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách nhắc hẹn bảo dưỡng' });
+  }
+}
+
 // Technician dashboard counts - today (assigned to current technician)
 async function resolveCurrentTechnicianId(userId: string) {
   const techDoc = (await Technician.findOne({ userID: userId }).select('_id').lean()
@@ -1560,5 +1985,59 @@ export async function countMyTodayInProgress(req: Request, res: Response) {
     return res.json({ total });
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Send maintenance reminder email (admin/staff)
+export async function sendMaintenanceReminderEmail(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const { toEmail, fullName, dueDate, plateNumber, vehicleBrand, vehicleCategory, serviceName, remainingVisits } = req.body || {};
+    if (!toEmail) return res.status(400).json({ message: 'Thiếu toEmail' });
+
+    const { transporter } = await import('../services/emailService.js');
+
+    const prettyDate = (() => {
+      try { return new Date(dueDate).toLocaleString('vi-VN'); } catch { return String(dueDate || ''); }
+    })();
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+        <div style="background:#014091;color:#fff;padding:16px;border-radius:8px 8px 0 0;">
+          <h2 style="margin:0;font-size:20px;">EVMS - Nhắc hẹn bảo dưỡng</h2>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-top:none;padding:16px;border-radius:0 0 8px 8px;background:#fff;">
+          <p>Chào ${fullName || 'Quý khách'},</p>
+          <p>Đây là email nhắc nhở lịch bảo dưỡng định kỳ cho phương tiện của bạn.</p>
+          <ul>
+            ${plateNumber ? `<li><strong>Biển số:</strong> ${plateNumber}</li>` : ''}
+            ${vehicleBrand ? `<li><strong>Hãng xe:</strong> ${vehicleBrand}</li>` : ''}
+            ${vehicleCategory ? `<li><strong>Loại xe:</strong> ${vehicleCategory}</li>` : ''}
+            ${serviceName ? `<li><strong>Gói/Dịch vụ:</strong> ${serviceName}</li>` : ''}
+            ${typeof remainingVisits === 'number' ? `<li><strong>Số lần còn lại:</strong> ${remainingVisits}</li>` : ''}
+            ${dueDate ? `<li><strong>Đến hạn:</strong> ${prettyDate}</li>` : ''}
+          </ul>
+          <p>Vui lòng phản hồi email hoặc đặt lịch sớm để đảm bảo phương tiện luôn trong tình trạng tốt nhất.</p>
+          <p>Trân trọng,<br/>EVMS</p>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: 'EVMS <doantrinh489@gmail.com>',
+      to: toEmail,
+      subject: `Nhắc hẹn bảo dưỡng - ${plateNumber || ''} ${prettyDate}`.trim(),
+      html,
+    });
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('sendMaintenanceReminderEmail error:', e);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi gửi email nhắc hẹn' });
   }
 }
