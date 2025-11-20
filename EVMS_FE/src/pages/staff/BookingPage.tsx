@@ -31,7 +31,7 @@ type AppointmentLite = {
   servicePrice?: number
 }
 
-type PartItem = Part
+type PartItem = Part & { id: string }
 
 type CartLine = {
   part: PartItem
@@ -399,14 +399,15 @@ const BookingPage: React.FC = () => {
                       return typeof pid === 'string' ? pid : (pid as unknown as { toString?: () => string })?.toString?.() || String(pid)
                     }).filter((id): id is string => Boolean(id))
                     console.log('📦 Part IDs to fetch:', partIds)
-                    const partsMap = new Map<string, Part>()
+                    const partsMap = new Map<string, PartItem>()
                     
                     // Fetch each part (you might want to optimize this with a batch API)
                     await Promise.all(partIds.map(async (partId: string) => {
                       try {
                         const partRes = await PartApi.getPartById(partId)
                         if (partRes.data?.part) {
-                          partsMap.set(partId, partRes.data.part)
+                          const raw = partRes.data.part as Part
+                          partsMap.set(partId, { ...raw, id: String(raw._id) })
                           console.log(`✅ Fetched part ${partId}:`, partRes.data.part.name)
                         }
                       } catch (e) {
@@ -626,13 +627,14 @@ const BookingPage: React.FC = () => {
                           return obj.toString?.() || String(pid)
                         }).filter((id): id is string => Boolean(id))
                         console.log('📦 Part IDs to fetch (appointment not in list):', partIds)
-                        const partsMap = new Map<string, Part>()
+                        const partsMap = new Map<string, PartItem>()
                         
                         await Promise.all(partIds.map(async (partId: string) => {
                           try {
                             const partRes = await PartApi.getPartById(partId)
                             if (partRes.data?.part) {
-                              partsMap.set(partId, partRes.data.part)
+                              const raw = partRes.data.part as Part
+                              partsMap.set(partId, { ...raw, id: String(raw._id) })
                               console.log(`✅ Fetched part ${partId} (appointment not in list):`, partRes.data.part.name)
                             }
                           } catch (e) {

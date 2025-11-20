@@ -69,12 +69,23 @@ axiosInstance.interceptors.response.use(
         case 401:
           // Unauthorized - clear token and redirect to login
           // Skip redirect for payment callback endpoints (they don't require auth)
-          const isPaymentCallback = error.config?.url?.includes('/payments/payos/confirm') || 
-                                   error.config?.url?.includes('/payments/webhook');
-          if (!isPaymentCallback) {
+          {
+          const url = error.config?.url || '';
+          const pathname = window.location?.pathname || '';
+          const isPaymentCallbackApi =
+            url.includes('/payments/payos/confirm') ||
+            url.includes('/payments/webhook') ||
+            url.includes('/payments/status') ||
+            url.includes('/payments');
+          const isOnPaymentCallbackPage = pathname.startsWith('/payment/callback');
+
+          if (!isPaymentCallbackApi && !isOnPaymentCallbackPage) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
-            window.location.href = '/login';
+            const current = `${pathname}${window.location?.search || ''}`;
+            const redirect = encodeURIComponent(current || '/');
+            window.location.href = `/login?redirect=${redirect}`;
+          }
           }
           break;
 
