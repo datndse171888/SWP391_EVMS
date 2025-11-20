@@ -19,6 +19,7 @@ import { slotTimeRouter } from './slotTime.js';
 import { paymentRouter } from './payment.js';
 import { vehicleConditionReportRouter } from './vehicleConditionReport.js';
 import { billRouter } from './bills.js';
+import { feedbackRouter } from './feedback.js';
 
 export const router = Router();
 
@@ -42,4 +43,5 @@ router.use('/slottimes', slotTimeRouter);
 router.use('/payments', paymentRouter);
 router.use('/bills', billRouter);
 router.use('/vehicle-condition-reports', vehicleConditionReportRouter);
+router.use('/feedbacks', feedbackRouter);
 // router.use('/service-orders', serviceOrderRouter);
