@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button';
 import type { AccountLogin } from '../../types/Account';
@@ -11,6 +11,7 @@ import { useAlert } from '../../hooks/useAlert';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithGoogle, isLoading, user } = useAuth();
   const [error, setError] = useState<string>('');
 
@@ -24,25 +25,33 @@ export const Login: React.FC = () => {
   // Handle redirect after successful login
   useEffect(() => {
     if (user && !isLoading) {
-      // Redirect based on user role
-      switch (user.role) {
-        case 'admin':
-          navigate('/admin');
-          break;
-        case 'staff':
-          navigate('/staff/dashboard');
-          break;
-        case 'technician':
-          navigate('/technician/dashboard');
-          break;
-        case 'customer':
-          navigate('/');
-          break;
-        default:
-          navigate('/');
+      // Check if there's a redirect parameter
+      const redirectPath = searchParams.get('redirect');
+
+      if (redirectPath) {
+        // Redirect to the original page
+        navigate(decodeURIComponent(redirectPath));
+      } else {
+        // Redirect based on user role
+        switch (user.role) {
+          case 'admin':
+            navigate('/admin');
+            break;
+          case 'staff':
+            navigate('/staff/dashboard');
+            break;
+          case 'technician':
+            navigate('/technician/dashboard');
+            break;
+          case 'customer':
+            navigate('/');
+            break;
+          default:
+            navigate('/');
+        }
       }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, searchParams]);
 
   const handleLogin = async () => {
     setError('');

@@ -53,6 +53,7 @@ export const messageApi = {
   getMessagesByConversation: (conversationID: string, params?: {
     page?: number;
     limit?: number;
+    excludeBot?: boolean;
   }) => {
     return api.get<MessageListResponse>(`/messages/by-conversation/${conversationID}`, { params });
   },

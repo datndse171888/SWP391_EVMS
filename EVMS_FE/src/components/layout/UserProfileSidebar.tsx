@@ -112,7 +112,7 @@ export const UserProfileSidebar: React.FC = () => {
               ? 'bg-white shadow-sm'
               : 'text-gray-600 hover:bg-opacity-10'
           }`}
-          style={{ 
+          style={{
             color: isActive('/my-vehicles') ? '#014091' : '#5f6777'
           }}
           onMouseEnter={(e) => {
@@ -127,6 +127,54 @@ export const UserProfileSidebar: React.FC = () => {
           }}
         >
           Phương tiện của tôi
+        </Link>
+
+        <Link
+          to="/feedback"
+          className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+            isActive('/feedback')
+              ? 'bg-white shadow-sm'
+              : 'text-gray-600 hover:bg-opacity-10'
+          }`}
+          style={{
+            color: isActive('/feedback') ? '#014091' : '#5f6777'
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive('/feedback')) {
+              e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive('/feedback')) {
+              e.currentTarget.style.backgroundColor = '';
+            }
+          }}
+        >
+          Phản hồi & Đánh giá
+        </Link>
+
+        <Link
+          to="/my-feedbacks"
+          className={`text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+            isActive('/my-feedbacks')
+              ? 'bg-white shadow-sm'
+              : 'text-gray-600 hover:bg-opacity-10'
+          }`}
+          style={{
+            color: isActive('/my-feedbacks') ? '#014091' : '#5f6777'
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive('/my-feedbacks')) {
+              e.currentTarget.style.backgroundColor = 'rgba(9, 145, 243, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive('/my-feedbacks')) {
+              e.currentTarget.style.backgroundColor = '';
+            }
+          }}
+        >
+          Lịch sử phản hồi
         </Link>
       </nav>
     </div>

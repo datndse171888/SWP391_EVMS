@@ -32,45 +32,62 @@ async function getOrCreateSystemBot(): Promise<mongoose.Types.ObjectId> {
 }
 
 export async function createConversation(req: Request, res: Response) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const { userID } = req.body as { userID?: string };
+    // Ưu tiên lấy userID từ token (an toàn hơn), fallback body.userID để tương thích FE cũ
+    const tokenUserId = (req.user?.id as string | undefined) || undefined;
+    const bodyUserId = (req.body as { userID?: string })?.userID;
+    const userID = tokenUserId || bodyUserId;
 
     if (!userID || !mongoose.Types.ObjectId.isValid(userID)) {
+      await session.abortTransaction();
       return res.status(400).json({ message: 'userID không hợp lệ (sai định dạng ObjectId)' });
     }
 
-    const existedUser = await User.findById(userID).select('_id').lean();
+    const existedUser = await User.findById(userID).session(session).select('_id').lean();
     if (!existedUser) {
+      await session.abortTransaction();
       return res.status(404).json({ message: 'userID không tồn tại' });
     }
 
-    const conversation = await Conversation.create({
-      userID,
-      status: 'open',
-      createdAt: new Date(),
-    });
+    // Tạo conversation
+    const conversation = await Conversation.create([
+      {
+        userID,
+        status: 'open',
+        createdAt: new Date(),
+      },
+    ], { session });
 
-    // Tạo tin nhắn chào tự động từ system bot
+    let firstMessage: any | null = null;
     try {
       const botUserID = await getOrCreateSystemBot();
-      await Message.create({
-        conversationID: conversation._id,
-        senderID: botUserID,
-        content: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
-        timestamp: new Date(),
-      });
+      const msgs = await Message.create([
+        {
+          conversationID: conversation[0]._id,
+          senderID: botUserID,
+          content: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
+          timestamp: new Date(),
+        },
+      ], { session });
+      firstMessage = msgs[0];
     } catch (messageError) {
-      // Log lỗi nhưng không fail việc tạo conversation
+      // Log lỗi nhưng KHÔNG hủy giao dịch tạo conversation
       console.error('Lỗi tạo tin nhắn chào:', messageError);
     }
 
-    return res.status(201).json({ success: true, data: conversation });
+    await session.commitTransaction();
+    return res.status(201).json({ success: true, data: conversation[0], firstMessage });
   } catch (error) {
+    await session.abortTransaction();
     console.error('Lỗi tạo conversation:', error);
     if ((error as any)?.code === 11000) {
       return res.status(400).json({ message: 'Trùng khóa duy nhất. Có thể còn index unique cũ trên trường conversationID, hãy drop index đó.' });
     }
     return res.status(500).json({ message: 'Lỗi máy chủ khi tạo cuộc hội thoại' });
+  } finally {
+    session.endSession();
   }
 }
 
@@ -96,32 +113,66 @@ export async function getConversationByID(req: Request, res: Response) {
 
 // Customer lấy conversation của chính họ
 export async function getMyConversation(req: Request, res: Response) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     if (!req.user) {
+      await session.abortTransaction();
       return res.status(401).json({ message: 'Yêu cầu đăng nhập' });
     }
     const userID = req.user.id as string;
 
     if (!mongoose.Types.ObjectId.isValid(userID)) {
+      await session.abortTransaction();
       return res.status(400).json({ message: 'userID không hợp lệ' });
     }
 
-    // Tìm conversation mới nhất của user (status open hoặc assigned)
-    const conv = await Conversation.findOne({ 
+    // Tìm conversation mới nhất của user (ưu tiên open/assigned). Nếu không có, tự tạo 1 conv + tin nhắn chào.
+    let conv = await Conversation.findOne({ 
       userID,
       status: { $in: ['open', 'assigned'] }
     })
       .sort({ createdAt: -1 })
+      .session(session)
       .lean();
 
     if (!conv) {
-      return res.status(404).json({ message: 'Không tìm thấy conversation' });
+      // Thử lấy bất kỳ conversation mới nhất
+      conv = await Conversation.findOne({ userID }).sort({ createdAt: -1 }).session(session).lean();
     }
 
+    if (!conv) {
+      // Auto create when first open chat
+      const created = await Conversation.create([
+        { userID, status: 'open', createdAt: new Date() },
+      ], { session });
+
+      // Tạo tin nhắn chào
+      try {
+        const botUserID = await getOrCreateSystemBot();
+        await Message.create([
+          {
+            conversationID: created[0]._id,
+            senderID: botUserID,
+            content: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
+            timestamp: new Date(),
+          },
+        ], { session });
+      } catch (e) {
+        console.error('Lỗi tạo tin nhắn chào (auto):', e);
+      }
+      await session.commitTransaction();
+      return res.status(200).json({ success: true, data: created[0] });
+    }
+
+    await session.commitTransaction();
     return res.status(200).json({ success: true, data: conv });
   } catch (error) {
+    await session.abortTransaction();
     console.error('Lỗi lấy conversation của user:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ khi lấy cuộc hội thoại' });
+  } finally {
+    session.endSession();
   }
 }
 

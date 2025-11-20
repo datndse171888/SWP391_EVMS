@@ -284,7 +284,7 @@ const ChatWithCustomer: React.FC = () => {
       // Gọi API getConversationByID và getMessagesByConversation song song
       const [conversationResponse, messagesResponse] = await Promise.all([
         conversationApi.getConversationByID(conversationID),
-        messageApi.getMessagesByConversation(conversationID, { limit: 100 })
+        messageApi.getMessagesByConversation(conversationID, { limit: 100, excludeBot: true })
       ]);
 
       const conversation = conversationResponse.data.data;
