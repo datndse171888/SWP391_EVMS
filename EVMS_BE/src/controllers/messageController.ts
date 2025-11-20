@@ -88,7 +88,7 @@ export async function listMessagesByConversationID(req: Request, res: Response) 
       return res.status(400).json({ message: 'conversationID không hợp lệ' });
     }
 
-    // Tìm bot user ID để exclude
+    // Tìm bot user ID (tuỳ chọn loại trừ qua query)
     const BOT_EMAIL = 'evms.bot@system.local';
     const botUser = await User.findOne({ email: BOT_EMAIL }).select('_id');
     const botUserID = botUser?._id;
@@ -97,9 +97,10 @@ export async function listMessagesByConversationID(req: Request, res: Response) 
     const limit = parseInt((req.query.limit as string) || '20', 10);
     const skip = (page - 1) * limit;
 
-    // Filter để exclude bot messages
+    // Mặc định KHÔNG loại bot để client (khách) thấy tin nhắn chào. Có thể loại bằng ?excludeBot=true
+    const excludeBot = String(req.query.excludeBot || 'false') === 'true';
     const filter: any = { conversationID };
-    if (botUserID) {
+    if (excludeBot && botUserID) {
       filter.senderID = { $ne: botUserID };
     }
 

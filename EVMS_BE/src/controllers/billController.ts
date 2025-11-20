@@ -8,7 +8,7 @@ import { decreaseInventoryByPartId } from './inventoryController.js';
 // Tạo bill với status 'pending'
 export async function createBill(req: Request, res: Response) {
   try {
-    const { appointmentID, items, subtotal, tax, totalAmount, dueDate, description } = req.body as {
+    const { appointmentID, items, subtotal, tax, totalAmount, dueDate, description, paymentMethod } = req.body as {
       appointmentID?: string;
       items?: BillItem[];
       subtotal?: number;
@@ -16,6 +16,7 @@ export async function createBill(req: Request, res: Response) {
       totalAmount?: number;
       dueDate?: string | Date;
       description?: string;
+      paymentMethod?: 'CASH' | 'PAYOS';
     };
 
     if (!appointmentID) {
@@ -85,6 +86,7 @@ export async function createBill(req: Request, res: Response) {
       tax: taxValue,
       totalAmount: computedTotal,
       status: 'pending',
+      paymentMethod: paymentMethod, // có thể là 'CASH' khi tạo từ luồng tiền mặt
       description: description || undefined, // Ghi chú/mô tả cho bill
     } as Partial<IBill>);
 

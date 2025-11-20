@@ -12,6 +12,7 @@ export interface BillResponse {
   tax: number
   totalAmount: number
   status: BillStatus
+  paymentMethod?: 'CASH' | 'PAYOS'
   description?: string
   createdAt?: string
   updatedAt?: string
@@ -43,6 +44,7 @@ export interface CreateBillRequest {
   totalAmount?: number
   dueDate?: string
   description?: string // Ghi chú/mô tả cho bill
+  paymentMethod?: 'CASH' | 'PAYOS'
 }
 
 export const BillApi = {

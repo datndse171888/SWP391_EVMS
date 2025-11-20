@@ -795,11 +795,17 @@ const BookingPage: React.FC = () => {
 
   const canProceedStep1 = !!selectedAppointment
   const canProceedStep2 = true // optional; allow continue even with empty cart
-  const canProceedStep3 = paymentMethod !== ''
+  const canProceedStep3 = paymentMethod !== '' && !(paymentMethod === 'PAYOS' && note.trim() === '')
 
   const handlePay = async () => {
     if (!selectedAppointment) {
       setError('Vui lòng chọn lịch hẹn')
+      return
+    }
+    if (paymentMethod === 'PAYOS' && note.trim() === '') {
+      setError('Vui lòng nhập mô tả (PayOS yêu cầu).')
+      // focus vào textarea mô tả
+      requestAnimationFrame(() => noteTextareaRef.current?.focus())
       return
     }
 
@@ -824,6 +830,7 @@ const BookingPage: React.FC = () => {
             tax: 0,
             totalAmount: grandTotal,
             description: note || undefined, // Lưu note vào bill description
+            paymentMethod: 'CASH',
           })
           billId = billRes.data.bill?._id || ''
           setBillId(billId)
@@ -1071,6 +1078,12 @@ const BookingPage: React.FC = () => {
 
   const Step2 = () => {
     const q = normalize(partsSearch)
+    // Pagination: default 3 rows x 2 columns per page; allow user to change rows per page
+    const COLS_PER_ROW = 2
+    const [rowsPerPage, setRowsPerPage] = useState(3)
+    const [page, setPage] = useState(1)
+    const ITEMS_PER_PAGE = rowsPerPage * COLS_PER_ROW
+
     // Ẩn các item hết hàng (quantity === 0)
     const source = inventoryItems.filter(inv => inv.quantity > 0)
     const filteredInventory = q
@@ -1084,6 +1097,14 @@ const BookingPage: React.FC = () => {
         })
       : source
 
+    // Reset về trang 1 khi tìm kiếm hoặc danh sách thay đổi / đổi số hàng mỗi trang
+    useEffect(() => { setPage(1) }, [q, inventoryItems, rowsPerPage])
+
+    const totalPages = Math.max(1, Math.ceil(filteredInventory.length / ITEMS_PER_PAGE))
+    const safePage = Math.min(page, totalPages)
+    const startIndex = (safePage - 1) * ITEMS_PER_PAGE
+    const currentPageItems = filteredInventory.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+
     // Không dùng badge trạng thái; chỉ hiển thị số lượng nổi bật
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
@@ -1091,16 +1112,49 @@ const BookingPage: React.FC = () => {
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-3">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold" style={{ color: '#014091' }}>Chọn linh kiện (tuỳ chọn)</h3>
-            <div className="relative">
-              <input
-                value={partsSearch}
-                onChange={(e) => { setPartsSearch(e.target.value) }}
-                placeholder="Tìm theo tên, mã hoặc NSX..."
-                className="w-72 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <div className="flex items-center gap-2">
+              {/* Rows per page selector */}
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-gray-600 whitespace-nowrap">Hàng/trang</label>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs"
+                >
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                  <option value={5}>5</option>
+                </select>
+              </div>
+              {/* Page jump */}
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-gray-600 whitespace-nowrap">Tới trang</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={safePage}
+                  onChange={(e) => {
+                    const v = Number(e.target.value || 1)
+                    const next = Math.max(1, Math.min(v, totalPages))
+                    setPage(next)
+                  }}
+                  className="w-16 px-2 py-1 border border-gray-300 rounded text-xs"
+                />
+              </div>
+              {/* Search */}
+              <div className="relative">
+                <input
+                  value={partsSearch}
+                  onChange={(e) => { setPartsSearch(e.target.value) }}
+                  placeholder="Tìm theo tên, mã hoặc NSX..."
+                  className="w-72 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
             </div>
           </div>
           {error && (
@@ -1111,7 +1165,7 @@ const BookingPage: React.FC = () => {
 
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {filteredInventory.map(inv => (
+              {currentPageItems.map(inv => (
                 <div key={inv._id} className="border border-gray-200 rounded-lg p-3 flex items-start justify-between relative">
                   <div className="min-w-0 pr-16">
                     <div className="text-sm font-semibold text-gray-900 truncate">{inv.partID.name}</div>
@@ -1137,6 +1191,28 @@ const BookingPage: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Pagination */}
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-xs text-gray-600">Trang {safePage}/{totalPages} • {filteredInventory.length} sản phẩm</div>
+              <div className="flex items-center gap-2">
+                <button
+                  className={`px-2 py-1 border rounded text-xs ${safePage <= 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => safePage > 1 && setPage(safePage - 1)}
+                  disabled={safePage <= 1}
+                >
+                  Trước
+                </button>
+                <button
+                  className={`px-2 py-1 border rounded text-xs ${safePage >= totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => safePage < totalPages && setPage(safePage + 1)}
+                  disabled={safePage >= totalPages}
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+
             {partsLoading && (
               <div className="mt-2 text-xs text-gray-600">Đang tải dữ liệu...</div>
             )}

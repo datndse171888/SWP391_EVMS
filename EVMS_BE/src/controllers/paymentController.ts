@@ -255,6 +255,7 @@ export async function createPayOSPayment(req: Request, res: Response) {
           tax: taxValue,
           totalAmount: computedTotal,
           status: 'pending',
+          paymentMethod: 'PAYOS',
           description: note || description, // Lưu note/description vào Bill
         }], { session });
 
