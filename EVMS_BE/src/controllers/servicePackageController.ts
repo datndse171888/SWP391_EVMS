@@ -22,9 +22,9 @@ export async function createServicePackage(req: Request, res: Response) {
       });
     }
 
-    // Giới hạn giảm giá < 15%
-    if (discount !== undefined && (discount < 0 || discount >= 15)) {
-      return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    // Giới hạn giảm giá <= 80%
+    if (discount !== undefined && (discount < 0 || discount > 80)) {
+      return res.status(400).json({ message: 'Giảm giá phải >= 0 và <= 80%' });
     }
 
     // Validate periodic fields
@@ -213,9 +213,9 @@ export async function updateServicePackage(req: Request, res: Response) {
       }
     }
 
-    // Giới hạn giảm giá < 15%
-    if (discount !== undefined && (discount < 0 || discount >= 15)) {
-      return res.status(400).json({ message: 'Giảm giá phải >= 0 và < 15%' });
+    // Giới hạn giảm giá <= 80%
+    if (discount !== undefined && (discount < 0 || discount > 80)) {
+      return res.status(400).json({ message: 'Giảm giá phải >= 0 và <= 80%' });
     }
 
     // Validate periodic fields
