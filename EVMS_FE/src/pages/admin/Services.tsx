@@ -3,6 +3,7 @@ import { fetchServices } from '../../api/ServiceApi'
 import { ServiceApi } from '../../api/ServiceApi'
 import { ServiceModal } from '../../components/ServiceModal'
 import type { ServiceResponse } from '../../types/Service'
+import { useAlert } from '../../hooks/useAlert'
 
 interface ServicesResponsePagination {
   currentPage: number
@@ -14,6 +15,7 @@ interface ServicesResponsePagination {
 }
 
 export const Services: React.FC = () => {
+  const { showAlert, AlertComponent } = useAlert();
   const [services, setServices] = useState<ServiceResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [searchTerm, setSearchTerm] = useState<string>('')
@@ -113,11 +115,12 @@ export const Services: React.FC = () => {
           throw new Error('Failed to create service');
         }
 
+        showAlert('success', 'Tạo dịch vụ thành công!');
         loadData();
         setIsModalOpen(false);
       } catch (error) {
         console.error('Error creating service:', error);
-        alert('Failed to create service. Please try again.');
+        showAlert('error', 'Không thể tạo dịch vụ. Vui lòng thử lại.');
       }
     } else {
       try {
@@ -128,11 +131,12 @@ export const Services: React.FC = () => {
           throw new Error('Failed to update service');
         }
 
+        showAlert('success', 'Cập nhật dịch vụ thành công!');
         loadData();
         setIsModalOpen(false);
       } catch (error) {
         console.error('Error updating service:', error);
-        alert('Failed to update service. Please try again.');
+        showAlert('error', 'Không thể cập nhật dịch vụ. Vui lòng thử lại.');
       }
     }
 
@@ -152,10 +156,11 @@ export const Services: React.FC = () => {
         throw new Error('Failed to delete service');
       }
 
+      showAlert('success', 'Xóa dịch vụ thành công!');
       loadData();
     } catch (error) {
       console.error('Error deleting service:', error);
-      alert('Failed to delete service. Please try again.');
+      showAlert('error', 'Không thể xóa dịch vụ. Vui lòng thử lại.');
     }
   };
 
@@ -355,6 +360,9 @@ export const Services: React.FC = () => {
         service={selectedService}
         mode={modalMode}
       />
+
+      {/* Alert Component */}
+      {AlertComponent}
     </div>
   )
 }

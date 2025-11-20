@@ -3,11 +3,11 @@ import { Package, Plus, Search, Edit2, Trash2, Filter } from 'lucide-react';
 import type { ServicePackageResponse } from '../../types/ServicePackage';
 import type { VehicleCategory } from '../../types/Vehicle';
 import { ServicePackageModal } from '../../components/ServicePackageModal';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:4000/api/service-packages';
+import { api } from '../../utils/Axios';
+import { useAlert } from '../../hooks/useAlert';
 
 const ServicePackages = () => {
+  const { showAlert, AlertComponent } = useAlert();
   const [packages, setPackages] = useState<ServicePackageResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,12 +40,12 @@ const ServicePackages = () => {
         params.status = filterStatus;
       }
 
-      const response = await axios.get(API_URL, { params });
+      const response = await api.get('/service-packages', { params });
       setPackages(response.data.items || []);
       setTotalPages(Math.ceil((response.data.total || 0) / itemsPerPage));
     } catch (error) {
       console.error('Error loading packages:', error);
-      alert('Không thể tải dữ liệu gói dịch vụ');
+      showAlert('error', 'Không thể tải dữ liệu gói dịch vụ');
     } finally {
       setLoading(false);
     }
@@ -65,15 +65,12 @@ const ServicePackages = () => {
 
   const handleSave = async (packageData: Partial<ServicePackageResponse>) => {
     try {
-      const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       if (modalMode === 'create') {
-        await axios.post(API_URL, packageData, config);
-        alert('Tạo gói dịch vụ thành công!');
+        await api.post('/service-packages', packageData);
+        showAlert('success', 'Tạo gói dịch vụ thành công!');
       } else {
-        await axios.put(`${API_URL}/${packageData._id}`, packageData, config);
-        alert('Cập nhật gói dịch vụ thành công!');
+        await api.put(`/service-packages/${packageData._id}`, packageData);
+        showAlert('success', 'Cập nhật gói dịch vụ thành công!');
       }
 
       loadData();
@@ -81,7 +78,7 @@ const ServicePackages = () => {
     } catch (error: any) {
       console.error('Error saving package:', error);
       const message = error.response?.data?.message || 'Có lỗi xảy ra';
-      alert(`Lỗi: ${message}`);
+      showAlert('error', message);
     }
   };
 
@@ -89,15 +86,13 @@ const ServicePackages = () => {
     if (!confirm('Bạn có chắc muốn xóa gói dịch vụ này?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Xóa gói dịch vụ thành công!');
+      await api.delete(`/service-packages/${id}`);
+      showAlert('success', 'Xóa gói dịch vụ thành công!');
       loadData();
     } catch (error: any) {
       console.error('Error deleting package:', error);
-      alert(`Lỗi: ${error.response?.data?.message || 'Không thể xóa gói dịch vụ'}`);
+      const message = error.response?.data?.message || 'Không thể xóa gói dịch vụ';
+      showAlert('error', message);
     }
   };
 
@@ -337,6 +332,9 @@ const ServicePackages = () => {
         package={selectedPackage}
         mode={modalMode}
       />
+
+      {/* Alert Component */}
+      {AlertComponent}
     </div>
   );
 };
