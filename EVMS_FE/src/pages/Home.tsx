@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import homeImage from '../assets/images/home1.jpg';
 import cleanImage from '../assets/images/clean.png';
 import motobyImage from '../assets/images/motoby.jpg';
 import scheduleImage from '../assets/images/schedule.png';
 import chartImage from '../assets/images/chart.jpg';
 import { useNavigate } from 'react-router-dom';
+import type { ServicePackageResponse } from '../types/ServicePackage';
+import type { ServiceResponse } from '../types/Service';
+import { ServicePackageApi } from '../api/ServicePackageApi';
 
 // Add custom animations
 const customStyles = `
@@ -60,6 +63,37 @@ const Home: React.FC = () => {
   // Factory images slider state
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+
+  // Service packages state
+  const [servicePackages, setServicePackages] = useState<ServicePackageResponse[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // Load service packages
+  useEffect(() => {
+    const loadServicePackages = async () => {
+      try {
+        setLoadingPackages(true);
+        const response = await ServicePackageApi.getServicePackage();
+
+        const packages = response.data.items || [];
+
+        // Sort by discount % (highest first)
+        const sortedPackages = packages.sort((a: ServicePackageResponse, b: ServicePackageResponse) => {
+          const discountA = a.discount || 0;
+          const discountB = b.discount || 0;
+          return discountB - discountA;
+        });
+
+        setServicePackages(sortedPackages);
+      } catch (error) {
+        console.error('Error loading service packages:', error);
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+
+    loadServicePackages();
+  }, []);
 
   const factoryImages = [
     {
@@ -546,221 +580,162 @@ const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Basic Plan */}
-            <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
-              <div className="bg-gray-100 rounded-xl p-8 h-full">
-                <h3
-                  className="text-3xl font-bold mb-4 text-center"
-                  style={{ color: '#014091' }}
-                >
-                  Cơ Bản
-                </h3>
-                <p className="text-gray-500 mb-6 text-center">
-                  Dịch vụ bảo dưỡng cơ bản cho xe điện với các kiểm tra thiết yếu
-                </p>
-                <div className="mb-6 text-center">
-                  <span
-                    className="text-5xl font-bold"
-                    style={{ color: '#014091' }}
-                  >
-                    200.000₫
-                  </span>
-                  <span className="text-gray-500 ml-2">/lần</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Kiểm tra pin lithium-ion</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Kiểm tra hệ thống điện</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Kiểm tra an toàn cơ bản</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-400">Bảo dưỡng động cơ điện</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-400">Cập nhật phần mềm OTA</span>
-                  </li>
-                </ul>
-                <button
-                  className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    color: 'white',
-                    backgroundColor: '#014091'
-                  }}
-                >
-                  CHỌN GÓI
-                </button>
-                <p className="text-xs text-gray-400 mt-4 text-center">
-                  *Áp dụng cho xe máy điện và xe đạp điện
-                </p>
-              </div>
+          {loadingPackages ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600">Đang tải gói dịch vụ...</p>
             </div>
-
-            {/* Standard Plan - Featured */}
-            <div className="bg-white rounded-2xl p-2 shadow-xl transition-all duration-300 relative transform scale-105">
-              {/* Best Choice Ribbon */}
-              <div
-                className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold"
-                style={{
-                  backgroundColor: '#f6ae2d',
-                  color: '#014091'
-                }}
-              >
-                LỰA CHỌN TỐT NHẤT
-              </div>
-
-              <div
-                className="rounded-xl p-8 h-full"
-                style={{
-                  background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
-                }}
-              >
-                <h3 className="text-3xl font-bold mb-4 text-white text-center">
-                  Tiêu Chuẩn
-                </h3>
-                <p className="text-white mb-6 text-center">
-                  Dịch vụ bảo dưỡng toàn diện với đầy đủ tính năng cho xe điện
-                </p>
-                <div className="mb-6 text-center">
-                  <span className="text-5xl font-bold text-white">
-                    500.000₫
-                  </span>
-                  <span className="text-white ml-2">/lần</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-white">Kiểm tra pin lithium-ion</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-white">Bảo dưỡng động cơ điện</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-white">Cập nhật phần mềm OTA</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-white">Kiểm tra hệ thống sạc</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-white">Bảo hành 6 tháng</span>
-                  </li>
-                </ul>
-                <button
-                  className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    color: '#014091',
-                    backgroundColor: '#f6ae2d'
-                  }}
-                >
-                  CHỌN GÓI
-                </button>
-                <p className="text-xs text-white mt-4 text-center">
-                  *Áp dụng cho tất cả loại xe điện
-                </p>
-              </div>
+          ) : servicePackages.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">Chưa có gói dịch vụ nào</p>
             </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {(() => {
+                // Get top 3 packages with highest discount
+                const topPackages = servicePackages.slice(0, 3);
 
-            {/* Premium Plan */}
-            <div className="bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative">
-              <div className="bg-gray-100 rounded-xl p-8 h-full">
-                <h3
-                  className="text-3xl font-bold mb-4 text-center"
-                  style={{ color: '#014091' }}
-                >
-                  Cao Cấp
-                </h3>
-                <p className="text-gray-500 mb-6 text-center">
-                  Dịch vụ bảo dưỡng cao cấp với hỗ trợ 24/7 và bảo hành dài hạn
-                </p>
-                <div className="mb-6 text-center">
-                  <span
-                    className="text-5xl font-bold"
-                    style={{ color: '#014091' }}
-                  >
-                    800.000₫
-                  </span>
-                  <span className="text-gray-500 ml-2">/lần</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Tất cả dịch vụ Tiêu Chuẩn</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Hỗ trợ kỹ thuật 24/7</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Bảo hành 12 tháng</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Dịch vụ tại nhà</span>
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Ưu tiên đặt lịch</span>
-                  </li>
-                </ul>
-                <button
-                  className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    color: 'white',
-                    backgroundColor: '#014091'
-                  }}
-                >
-                  CHỌN GÓI
-                </button>
-                <p className="text-xs text-gray-400 mt-4 text-center">
-                  *Dành cho khách hàng doanh nghiệp
-                </p>
-              </div>
+                // Arrange: 2nd highest in left, highest in middle, 3rd highest in right
+                const arrangedPackages = [
+                  topPackages[1] || topPackages[0], // Left (2nd highest)
+                  topPackages[0], // Middle (highest)
+                  topPackages[2] || topPackages[0]  // Right (3rd highest)
+                ];
+
+                return arrangedPackages.map((pkg, index) => {
+                  if (!pkg) return null;
+
+                  const isMiddle = index === 1;
+                  const discountedPrice = pkg.price;
+                  const originalPrice = pkg.discount > 0 ? pkg.price / (1 - pkg.discount / 100) : pkg.price;
+                  const services = Array.isArray(pkg.services) ? pkg.services : [];
+
+                  return (
+                    <div
+                      key={pkg._id}
+                      className={`bg-white rounded-2xl p-2 shadow-lg hover:shadow-xl transition-all duration-300 relative ${
+                        isMiddle ? 'transform scale-105' : ''
+                      }`}
+                    >
+                      {isMiddle && (
+                        <div
+                          className="absolute -top-2 -right-2 px-4 py-1 rounded-lg text-sm font-bold z-10"
+                          style={{
+                            backgroundColor: '#f6ae2d',
+                            color: '#014091'
+                          }}
+                        >
+                          TIẾT KIỆM NHẤT
+                        </div>
+                      )}
+
+                      <div
+                        className={`rounded-xl p-8 h-full ${
+                          isMiddle
+                            ? ''
+                            : 'bg-gray-100'
+                        }`}
+                        style={
+                          isMiddle
+                            ? {
+                                background: `linear-gradient(135deg, #67a9fd, #8abdfe, #014091)`
+                              }
+                            : {}
+                        }
+                      >
+                        <h3
+                          className={`text-3xl font-bold mb-4 text-center ${
+                            isMiddle ? 'text-white' : ''
+                          }`}
+                          style={!isMiddle ? { color: '#014091' } : {}}
+                        >
+                          {pkg.name}
+                        </h3>
+                        <p className={`mb-6 text-center ${isMiddle ? 'text-white' : 'text-gray-500'}`}>
+                          {pkg.description || 'Gói dịch vụ chất lượng'}
+                        </p>
+
+                        {/* Price */}
+                        <div className="mb-6 text-center">
+                          {pkg.discount > 0 && (
+                            <div className="mb-2">
+                              <span className={`text-2xl line-through ${isMiddle ? 'text-white/70' : 'text-gray-400'}`}>
+                                {Math.round(originalPrice).toLocaleString('vi-VN')}₫
+                              </span>
+                              <span
+                                className="ml-2 px-2 py-1 rounded text-sm font-bold"
+                                style={{
+                                  backgroundColor: '#f6ae2d',
+                                  color: '#014091'
+                                }}
+                              >
+                                -{pkg.discount}%
+                              </span>
+                            </div>
+                          )}
+                          <span
+                            className={`text-5xl font-bold ${isMiddle ? 'text-white' : ''}`}
+                            style={!isMiddle ? { color: '#014091' } : {}}
+                          >
+                            {discountedPrice.toLocaleString('vi-VN')}₫
+                          </span>
+                          <span className={`ml-2 ${isMiddle ? 'text-white' : 'text-gray-500'}`}>/lần</span>
+                        </div>
+
+                        {/* Services List */}
+                        <ul className="space-y-4 mb-8">
+                          {services.slice(0, 5).map((service: any, idx: number) => (
+                            <li key={idx} className="flex items-center">
+                              <svg className={`w-5 h-5 mr-3 ${isMiddle ? 'text-green-400' : 'text-green-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              <span className={isMiddle ? 'text-white' : 'text-gray-700'}>
+                                {typeof service === 'string' ? service : service.name}
+                              </span>
+                            </li>
+                          ))}
+                          {services.length > 5 && (
+                            <li className="flex items-center">
+                              <svg className={`w-5 h-5 mr-3 ${isMiddle ? 'text-green-400' : 'text-green-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              <span className={isMiddle ? 'text-white' : 'text-gray-700'}>
+                                Và {services.length - 5} dịch vụ khác...
+                              </span>
+                            </li>
+                          )}
+                        </ul>
+
+                        <button
+                          onClick={() => navigate('/booking')}
+                          className="w-full py-3 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
+                          style={
+                            isMiddle
+                              ? {
+                                  color: '#014091',
+                                  backgroundColor: '#f6ae2d'
+                                }
+                              : {
+                                  color: 'white',
+                                  backgroundColor: '#014091'
+                                }
+                          }
+                        >
+                          CHỌN GÓI
+                        </button>
+
+                        {pkg.periodicEnabled && (
+                          <p className={`text-xs mt-4 text-center ${isMiddle ? 'text-white' : 'text-gray-400'}`}>
+                            *Gói định kỳ {pkg.intervalMonths} tháng
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
