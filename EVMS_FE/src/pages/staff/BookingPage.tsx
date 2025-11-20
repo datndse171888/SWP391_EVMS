@@ -859,10 +859,10 @@ const BookingPage: React.FC = () => {
         }
       } else if (paymentMethod === 'PAYOS') {
         // Thanh toán PayOS - tạo payment link và redirect
-        // Sử dụng tunnel URL nếu có (cho local development), không thì dùng window.location.origin
-        const frontendBaseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin
-        const returnUrl = `${frontendBaseUrl}/payment/callback?appointmentId=${selectedAppointment.id}`
-        const cancelUrl = `${frontendBaseUrl}/staff/booking`
+        // Luôn dùng origin hiện tại để tránh lệch domain/tunnel và mất token; đồng thời loại bỏ double slash
+        const origin = window.location.origin.replace(/\/+$/, '')
+        const returnUrl = `${origin}/payment/callback?appointmentId=${selectedAppointment.id}`
+        const cancelUrl = `${origin}/staff/booking` 
 
         // Chuẩn bị bill items từ cart - chỉ cần partID và quantity
         // Backend sẽ tự động lấy thông tin Part từ database
