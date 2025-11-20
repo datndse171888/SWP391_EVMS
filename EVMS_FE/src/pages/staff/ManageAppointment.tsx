@@ -122,7 +122,9 @@ const ManageAppointment: React.FC = () => {
         setRemindersLoading(true);
         setRemindersError('');
         const resp = await getMaintenanceReminders({ windowDays: 3, type: 'all', include: 'user,vehicle', order: 'asc' });
-        const picked = (resp.data || []).filter((x) => x.dueStatus === 'dueToday' || x.dueStatus === 'upcoming');
+        const picked = (resp.data || [])
+          .filter((x) => (x.dueStatus === 'dueToday' || x.dueStatus === 'upcoming'))
+          .filter((x) => !x.nextAppointment); // nếu khách đã có lịch sắp tới thì ẩn khỏi nhắc nhở
         setReminders(picked);
       } catch (e: any) {
         setRemindersError(e?.response?.data?.message || e?.message || 'Không thể tải nhắc nhở định kỳ');

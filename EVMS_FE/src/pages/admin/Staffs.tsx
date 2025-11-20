@@ -49,28 +49,36 @@ export const Staffs: React.FC = () => {
       setLoading(true)
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: limit.toString()
+        limit: limit.toString(),
+        role: 'staff', // yêu cầu BE trả đúng trang nhân viên
       })
-      
-      const response = await fetch(`http://localhost:4000/api/users?${params}`)
+
+      const baseUrl = (import.meta as any).env?.VITE_BASE_API_URL || 'http://localhost:4000/api'
+      const response = await fetch(`${baseUrl}/users?${params.toString()}`)
       const data: UsersResponse = await response.json()
-      
-      if (data.success) {
-        // Filter only staff users
-        let filteredUsers = data.data.users.filter(user => user.role === 'staff')
-        
-        // Filter by search term
+
+      if (data && data.success && data.data) {
+        // Danh sách đã được BE lọc role=staff; chỉ áp dụng tìm kiếm client-side
+        let filteredUsers = data.data.users
+
         if (searchTerm) {
-          filteredUsers = filteredUsers.filter(user => 
-            user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+          const q = searchTerm.toLowerCase().trim()
+          filteredUsers = filteredUsers.filter(user =>
+            (user.fullName || '').toLowerCase().includes(q) ||
+            (user.email || '').toLowerCase().includes(q) ||
+            (user.userName || '').toLowerCase().includes(q) ||
+            (user.phoneNumber || '').toLowerCase().includes(q)
           )
         }
-        
+
+        // Ẩn các tài khoản hệ thống/bot
+        const EXCLUDED_EMAILS = new Set(['evms.bot@system.local'])
+        filteredUsers = filteredUsers.filter(u => !EXCLUDED_EMAILS.has((u.email || '').toLowerCase()) && (u.role || '').toLowerCase() !== 'bot')
+
         setUsers(filteredUsers)
-        setTotalPages(Math.ceil(filteredUsers.length / limit))
+        // Ưu tiên totalPages từ BE (đã theo role=staff nếu BE hỗ trợ)
+        const pg = data.data.pagination
+        setTotalPages(pg?.totalPages || (pg?.totalUsers ? Math.ceil(pg.totalUsers / limit) : Math.max(1, Math.ceil(filteredUsers.length / limit))))
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách nhân viên:', error)

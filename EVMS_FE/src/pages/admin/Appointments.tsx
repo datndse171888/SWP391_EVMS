@@ -10,6 +10,10 @@ const Appointments: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentResponse | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  // Modal danh sách khi bấm vào "+N khác"
+  const [showListModal, setShowListModal] = useState(false);
+  const [listModalDate, setListModalDate] = useState<Date | null>(null);
+  const [listModalAppointments, setListModalAppointments] = useState<AppointmentResponse[]>([]);
 
   useEffect(() => {
     fetchAppointments();
@@ -19,8 +23,11 @@ const Appointments: React.FC = () => {
     setLoading(true);
     try {
       const response = await AppointmentApi.getAllAppointments();
-      const data = response.data?.data || [];
-      setAppointments(data);
+      // BE trả về mảng thuần (admin/staff): res.json(docs)
+      // nên cần tương thích cả hai dạng: array thuần hoặc object có data
+      const raw: any = response.data as any;
+      const data = Array.isArray(raw) ? raw : (raw?.data || []);
+      setAppointments(data as any);
     } catch (error) {
       console.error('Lỗi khi lấy danh sách lịch hẹn:', error);
     } finally {
@@ -114,6 +121,18 @@ const Appointments: React.FC = () => {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  const openListModal = (date: Date, list: AppointmentResponse[]) => {
+    setListModalDate(date);
+    setListModalAppointments(list);
+    setShowListModal(true);
+  };
+
+  const closeListModal = () => {
+    setShowListModal(false);
+    setListModalDate(null);
+    setListModalAppointments([]);
   };
 
   const days = getDaysInMonth(currentDate);
@@ -226,10 +245,15 @@ const Appointments: React.FC = () => {
                                 </button>
                               </div>
                             ))}
-                            {dayAppointments.length > 3 && (
-                              <div className="text-xs text-gray-500 font-medium">
+                            {dayAppointments.length > 3 && date && (
+                              <button
+                                type="button"
+                                onClick={() => openListModal(date, dayAppointments)}
+                                className="text-xs text-blue-600 font-medium hover:underline"
+                                title="Xem tất cả lịch hẹn trong ngày"
+                              >
                                 +{dayAppointments.length - 3} khác
-                              </div>
+                              </button>
                             )}
                           </div>
                         </>
@@ -282,6 +306,49 @@ const Appointments: React.FC = () => {
           }}
           varient="staff"
         />
+      )}
+
+      {/* List Modal for "+N khác" */}
+      {showListModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-4 w-full max-w-lg max-h-[80vh] overflow-auto shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold text-gray-900">
+                Lịch hẹn ngày {listModalDate?.toLocaleDateString('vi-VN')}
+              </div>
+              <button
+                onClick={closeListModal}
+                className="text-gray-600 hover:text-gray-800 px-2 py-1 rounded"
+                aria-label="Đóng"
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="space-y-2">
+              {listModalAppointments.map((apt) => (
+                <div key={apt._id} className="flex items-center justify-between border rounded-lg p-2">
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {new Date(apt.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="text-xs text-gray-600">{apt.status}</div>
+                  </div>
+                  <button
+                    className="px-2 py-1 text-xs bg-gray-800 text-white rounded hover:bg-gray-900"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedAppointment(apt);
+                      setShowDetailModal(true);
+                      closeListModal();
+                    }}
+                  >
+                    Xem chi tiết
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
