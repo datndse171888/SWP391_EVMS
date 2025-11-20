@@ -123,7 +123,7 @@ const ManageAppointment: React.FC = () => {
 
         await Promise.all(uniqueUserIds.map(async (uid) => {
           try {
-            const ures = await UserApi.getUserById(uid);
+            const ures = await UserApi.getById(uid);
             const udata: { fullName?: string; userName?: string; phoneNumber?: string } | undefined = ures?.data;
             userCache.set(uid, {
               fullName: udata?.fullName,
