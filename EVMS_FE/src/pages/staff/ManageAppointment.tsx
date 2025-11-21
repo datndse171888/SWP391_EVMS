@@ -155,7 +155,14 @@ const ManageAppointment: React.FC = () => {
       setError('');
       try {
         const res = await AppointmentApi.getAllAppointments();
-        const baseList: AppointmentResponse[] = res.data?.data || [];
+        // Hỗ trợ cả 2 dạng response: mảng thuần hoặc FilteredDataResponse
+        const raw = res.data as unknown;
+        let baseList: AppointmentResponse[] = [];
+        if (Array.isArray(raw)) {
+          baseList = raw as AppointmentResponse[];
+        } else if (raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)) {
+          baseList = (raw as { data: AppointmentResponse[] }).data || [];
+        }
         // Helpers to read ids with various field names from BE
         const getServiceId = (a: unknown): string | undefined => {
           const obj = a as Record<string, unknown>;
