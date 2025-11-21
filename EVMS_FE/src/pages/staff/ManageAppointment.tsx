@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AppointmentApi } from '../../api/AppointmentApi';
 import { UserApi } from '../../api/UserApi';
 import { ServiceApi } from '../../api/ServiceApi';
@@ -68,13 +68,17 @@ const ManageAppointment: React.FC = () => {
         dueDate: it.dueDate,
         plateNumber: it.vehicle?.plateNumber,
         vehicleBrand: it.vehicle?.brand,
-        vehicleCategory: it.vehicle?.vehicleCategory as any,
+        vehicleCategory: (it.vehicle?.vehicleCategory as 'CAR' | 'MOTOBIKE' | 'BICYCLE' | undefined),
         serviceName: it.periodicSummary?.serviceName,
         remainingVisits: it.periodicSummary?.remainingVisits,
       });
       alert('Đã gửi email nhắc hẹn');
-    } catch (e: any) {
-      alert(e?.response?.data?.message || 'Gửi email thất bại');
+    } catch (e: unknown) {
+      const errMsg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (e as { message?: string }).message ||
+        'Gửi email thất bại';
+      alert(errMsg);
     } finally {
       setSendingIndex(null);
     }
@@ -119,30 +123,39 @@ const ManageAppointment: React.FC = () => {
     return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
-  useEffect(() => {
-    const fetchRemindersToday = async () => {
-      try {
-        setRemindersLoading(true);
-        setRemindersError('');
-        const resp = await getMaintenanceReminders({ windowDays: 3, type: 'all', include: 'user,vehicle', order: 'asc' });
-        const picked = (resp.data || [])
-          .filter((x) => (x.dueStatus === 'dueToday' || x.dueStatus === 'upcoming'))
-          .filter((x) => !x.nextAppointment); // nếu khách đã có lịch sắp tới thì ẩn khỏi nhắc nhở
-        setReminders(picked);
-      } catch (e: any) {
-        setRemindersError(e?.response?.data?.message || e?.message || 'Không thể tải nhắc nhở định kỳ');
-        setReminders([]);
-      } finally {
-        setRemindersLoading(false);
-      }
-    };
+  const fetchRemindersToday = useCallback(async () => {
+    try {
+      setRemindersLoading(true);
+      setRemindersError('');
+      const resp = await getMaintenanceReminders({
+        windowDays: 3,
+        type: 'all',
+        include: 'user,vehicle,periodicSummary',
+        order: 'asc',
+      });
+      const picked = (resp.data || []).filter(
+        (x) => x.dueStatus === 'dueToday' || x.dueStatus === 'upcoming' || x.dueStatus === 'overdue'
+      );
+      setReminders(picked);
+    } catch (e: unknown) {
+      const errMsg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (e as { message?: string }).message ||
+        'Không thể tải nhắc nhở định kỳ';
+      setRemindersError(errMsg);
+      setReminders([]);
+    } finally {
+      setRemindersLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError('');
       try {
         const res = await AppointmentApi.getAllAppointments();
-        const baseList: AppointmentResponse[] = res.data || [];
+        const baseList: AppointmentResponse[] = res.data?.data || [];
         // Helpers to read ids with various field names from BE
         const getServiceId = (a: unknown): string | undefined => {
           const obj = a as Record<string, unknown>;
@@ -189,7 +202,7 @@ const ManageAppointment: React.FC = () => {
         const servicePackageIds = Array.from(new Set(baseList.map(a => getServicePackageId(a)).filter(Boolean))) as string[];
 
         type ServiceLite = { name?: string; description?: string; vehicleCategory?: string; price?: number } | undefined;
-        type ServicePackageLite = { name?: string; services?: Array<{ name?: string }>; serviceIds?: string[]; data?: { services?: Array<{ name?: string }>; price?: number }; price?: number } | undefined;
+        type ServicePackageLite = { name?: string; vehicleCategory?: string; price?: number } | undefined;
 
         const serviceCache = new Map<string, ServiceLite>();
         const servicePackageCache = new Map<string, ServicePackageLite>();
@@ -221,7 +234,17 @@ const ManageAppointment: React.FC = () => {
           ...servicePackageIds.map(async (spid) => {
             try {
               const spres = await ServicePackageApi.getServicePackageById(spid);
-              servicePackageCache.set(spid, spres?.data);
+              const rawData = spres?.data as unknown;
+              const raw = rawData && typeof rawData === 'object' ? (rawData as Record<string, unknown>) : undefined;
+              if (raw) {
+                servicePackageCache.set(spid, {
+                  name: raw.name as string | undefined,
+                  vehicleCategory: raw.vehicleCategory as string | undefined,
+                  price: (raw.price as number | undefined) ?? (raw.data as { price?: number } | undefined)?.price,
+                });
+              } else {
+                servicePackageCache.set(spid, undefined);
+              }
             } catch {
               servicePackageCache.set(spid, undefined);
             }
@@ -271,7 +294,7 @@ const ManageAppointment: React.FC = () => {
               appointmentTime: formatTime(apt.bookingDate),
             bookingDateISO: apt.bookingDate,
               status: apt.status,
-              createdAt: apt.createdAt,
+              createdAt: apt.createdAt || apt.bookingDate || '',
               descriptionText: descriptionText || 'Dịch vụ',
               tags,
               detailText: svcDesc,
@@ -292,7 +315,7 @@ const ManageAppointment: React.FC = () => {
             }
             
             // Tính giá cho package
-            const packPrice = (pack?.price || pack?.data?.price) as number | undefined || 0;
+            const packPrice = pack?.price || 0;
             const finalPackPrice = apt.isPeriodicRecheck ? 0 : packPrice;
             
             return {
@@ -306,7 +329,7 @@ const ManageAppointment: React.FC = () => {
               appointmentTime: formatTime(apt.bookingDate),
               bookingDateISO: apt.bookingDate,
               status: apt.status,
-              createdAt: apt.createdAt,
+              createdAt: apt.createdAt || apt.bookingDate || '',
               descriptionText: descriptionText || 'Gói dịch vụ',
               tags,
               detailText: undefined,
@@ -329,7 +352,7 @@ const ManageAppointment: React.FC = () => {
             appointmentTime: formatTime(apt.bookingDate),
             bookingDateISO: apt.bookingDate,
             status: apt.status,
-            createdAt: apt.createdAt,
+            createdAt: apt.createdAt || apt.bookingDate || '',
             descriptionText: 'Dịch vụ',
             tags: [],
             detailText: undefined,
@@ -349,7 +372,13 @@ const ManageAppointment: React.FC = () => {
     };
     fetchRemindersToday();
     fetchData();
-  }, []);
+  }, [fetchRemindersToday]);
+
+  useEffect(() => {
+    if (selectedTab === 'reminder') {
+      fetchRemindersToday();
+    }
+  }, [selectedTab, fetchRemindersToday]);
 
   // Filter function
   const filterAppointments = (appointmentsInput: Appointment[]) => {

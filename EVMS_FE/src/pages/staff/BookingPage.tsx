@@ -44,6 +44,85 @@ type CartLine = {
 
 const currency = (v: number) => (v || 0).toLocaleString('vi-VN') + ' ₫'
 
+type ServiceLikeInfo = {
+  name?: string
+  description?: string
+  vehicleCategory?: string
+  price?: number
+  periodicEnabled?: boolean
+}
+
+type ServiceDetailPayload = {
+  type: 'service' | 'servicePackage'
+  service?: ServiceLikeInfo | null
+  servicePackage?: ServiceLikeInfo | null
+}
+
+const normalizeServiceLike = (input: unknown): ServiceLikeInfo | undefined => {
+  if (!input || typeof input !== 'object') return undefined
+  const obj = input as Record<string, unknown>
+  const rawPrice = obj.price
+  const parsedPrice =
+    typeof rawPrice === 'number'
+      ? rawPrice
+      : typeof rawPrice === 'string'
+        ? Number(rawPrice)
+        : undefined
+
+  return {
+    name: obj.name as string | undefined,
+    description: obj.description as string | undefined,
+    vehicleCategory: obj.vehicleCategory as string | undefined,
+    price: Number.isFinite(parsedPrice as number) ? (parsedPrice as number) : undefined,
+    periodicEnabled: Boolean((obj as { periodicEnabled?: boolean }).periodicEnabled),
+  }
+}
+
+const mergeAppointmentWithServiceDetail = (
+  appointment: AppointmentLite,
+  detail: ServiceDetailPayload
+): AppointmentLite => {
+  let reference: ServiceLikeInfo | undefined
+  let kind: AppointmentLite['kind'] = appointment.kind
+
+  if (detail.type === 'service') {
+    reference = detail.service || undefined
+    kind = 'service'
+  } else {
+    reference = detail.servicePackage || undefined
+    kind = 'package'
+  }
+
+  if (!reference) {
+    return { ...appointment, kind }
+  }
+
+  const derivedOriginalPrice =
+    typeof reference.price === 'number'
+      ? reference.price
+      : appointment.originalPrice
+
+  const periodicFlag =
+    appointment.isPeriodicRecheck || Boolean(reference.periodicEnabled)
+
+  const basePrice =
+    typeof derivedOriginalPrice === 'number'
+      ? derivedOriginalPrice
+      : appointment.servicePrice || 0
+
+  const finalServicePrice = periodicFlag ? 0 : basePrice
+
+  return {
+    ...appointment,
+    descriptionText: reference.name || appointment.descriptionText,
+    vehicleCategory: reference.vehicleCategory || appointment.vehicleCategory,
+    originalPrice: typeof derivedOriginalPrice === 'number' ? derivedOriginalPrice : appointment.originalPrice,
+    isPeriodicRecheck: periodicFlag,
+    servicePrice: finalServicePrice,
+    kind,
+  }
+}
+
 const BookingPage: React.FC = () => {
   const [activeStep, setActiveStep] = useState<StepKey>(1)
   const [loading, setLoading] = useState(false)
@@ -75,12 +154,17 @@ const BookingPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  // Derived totals - Tính giá: Nếu isPeriodicRecheck = true → 0đ, ngược lại lấy giá gốc
+  // Derived totals - Tính giá:
+  // - Nếu isPeriodicRecheck = true → luôn 0đ (dịch vụ miễn phí, như các trang khác)
+  // - Ngược lại ưu tiên originalPrice, fallback sang servicePrice
   const serviceFee = useMemo(() => {
     if (!selectedAppointment) return 0
-    // Nếu là lịch tái định kỳ miễn phí → giá = 0đ
+    // Lịch tái định kỳ miễn phí
     if (selectedAppointment.isPeriodicRecheck) return 0
-    // Ngược lại lấy giá gốc
+    // Ngược lại: dùng originalPrice nếu có, fallback servicePrice
+    if (typeof selectedAppointment.originalPrice === 'number') {
+      return selectedAppointment.originalPrice || 0
+    }
     return selectedAppointment.servicePrice || 0
   }, [selectedAppointment])
   const partsTotal = useMemo(() => cartLines.reduce((sum, l) => sum + l.part.price * l.quantity, 0), [cartLines])
@@ -159,8 +243,8 @@ const BookingPage: React.FC = () => {
       const serviceIds = Array.from(new Set(source.map(a => getServiceId(a)).filter((x): x is string => Boolean(x))))
       const servicePackageIds = Array.from(new Set(source.map(a => getServicePackageId(a)).filter((x): x is string => Boolean(x))))
 
-      type ServiceLite = { name?: string; description?: string; vehicleCategory?: string; price?: number } | undefined
-      type ServicePackageLite = { name?: string; vehicleCategory?: string; price?: number } | undefined
+      type ServiceLite = ServiceLikeInfo | undefined
+      type ServicePackageLite = ServiceLikeInfo | undefined
       const serviceCache = new Map<string, ServiceLite>()
       const servicePackageCache = new Map<string, ServicePackageLite>()
 
@@ -180,6 +264,7 @@ const BookingPage: React.FC = () => {
                 description: (so.description as string | undefined),
                 vehicleCategory: (so.vehicleCategory as string | undefined),
                 price: (so.price as number | undefined),
+                periodicEnabled: Boolean((so as { periodicEnabled?: boolean }).periodicEnabled),
               })
             } else {
               serviceCache.set(sid, undefined)
@@ -191,8 +276,22 @@ const BookingPage: React.FC = () => {
         ...servicePackageIds.map(async (pid) => {
           try {
             const pres = await ServicePackageApi.getServicePackageById(pid)
-            const raw = pres?.data as unknown as { name?: string; vehicleCategory?: string; price?: number }
-            servicePackageCache.set(pid, raw)
+            const raw = pres?.data as unknown as Record<string, unknown>
+            const getProp = (o: unknown, key: string) => (o && typeof o === 'object' && key in (o as Record<string, unknown>) ? (o as Record<string, unknown>)[key] : undefined)
+            const packObj = (raw && (raw as Record<string, unknown>).name)
+              ? raw
+              : (getProp(raw, 'servicePackage') || getProp(getProp(raw, 'data'), 'servicePackage') || getProp(raw, 'data') || undefined)
+            if (packObj && typeof packObj === 'object') {
+              const po = packObj as Record<string, unknown>
+              servicePackageCache.set(pid, {
+                name: po.name as string | undefined,
+                vehicleCategory: po.vehicleCategory as string | undefined,
+                price: po.price as number | undefined,
+                periodicEnabled: Boolean((po as { periodicEnabled?: boolean }).periodicEnabled),
+              })
+            } else {
+              servicePackageCache.set(pid, undefined)
+            }
           } catch {
             servicePackageCache.set(pid, undefined)
           }
@@ -205,27 +304,36 @@ const BookingPage: React.FC = () => {
         const tags: string[] = []
         let vehicleCategory: string | undefined
         let servicePrice: number | undefined
+        let originalPrice: number | undefined
+        let isPeriodicCalculated = getIsPeriodicRecheck(apt)
 
-        const embeddedService = (apt as unknown as { service?: { name?: string; description?: string; vehicleCategory?: string } }).service
+        const embeddedService = (apt as unknown as { service?: ServiceLikeInfo }).service
         const sid = getServiceId(apt)
         const pid = getServicePackageId(apt)
-        const isPeriodicRecheck = getIsPeriodicRecheck(apt)
-        
-        let originalPrice: number | undefined
+        const embeddedServicePeriodic = Boolean((embeddedService as ServiceLikeInfo | undefined)?.periodicEnabled)
+
         if (embeddedService?.name || sid) {
           const svc = embeddedService?.name ? embeddedService : (sid ? serviceCache.get(sid) : undefined)
           descriptionText = svc?.name || 'Dịch vụ'
           vehicleCategory = svc?.vehicleCategory
-          originalPrice = (svc as { price?: number } | undefined)?.price
-          // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
-          servicePrice = isPeriodicRecheck ? 0 : originalPrice
+          originalPrice = svc?.price
+          const svcPeriodic = Boolean(svc?.periodicEnabled)
+          const finalIsPeriodic = isPeriodicCalculated || embeddedServicePeriodic || svcPeriodic
+          servicePrice = finalIsPeriodic ? 0 : originalPrice
+          isPeriodicCalculated = finalIsPeriodic
         } else if (pid) {
           const pack = servicePackageCache.get(pid)
           descriptionText = pack?.name || 'Gói dịch vụ'
           vehicleCategory = pack?.vehicleCategory
-          originalPrice = (pack as { price?: number } | undefined)?.price
-          // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
-          servicePrice = isPeriodicRecheck ? 0 : originalPrice
+          originalPrice = pack?.price
+          const packPeriodic = Boolean(pack?.periodicEnabled)
+          const finalIsPeriodic = getIsPeriodicRecheck(apt) || packPeriodic
+          servicePrice = finalIsPeriodic ? 0 : originalPrice
+          isPeriodicCalculated = finalIsPeriodic
+        }
+        if (typeof servicePrice !== 'number') {
+          const fallbackPrice = typeof originalPrice === 'number' ? originalPrice : 0
+          servicePrice = isPeriodicCalculated ? 0 : fallbackPrice
         }
         if (vehicleCategory) {
           tags.push(vehicleCategory === 'MOTOBIKE' ? 'Xe máy' : vehicleCategory === 'CAR' ? 'Ô tô' : vehicleCategory === 'BICYCLE' ? 'Xe đạp' : vehicleCategory)
@@ -246,7 +354,7 @@ const BookingPage: React.FC = () => {
           kind: pid ? 'package' : 'service',
           servicePrice,
           originalPrice,
-          isPeriodicRecheck,
+          isPeriodicRecheck: isPeriodicCalculated,
         }
       })
       setAppointments(ui)
@@ -316,37 +424,59 @@ const BookingPage: React.FC = () => {
         // Find and select the appointment
         const appointment = appointments.find(a => a.id === finalAppointmentId)
         if (appointment) {
+          // Luôn cố gắng đồng bộ lại cờ isPeriodicRecheck từ BE
+          AppointmentApi.getAppointmentById(finalAppointmentId)
+            .then((detailRes) => {
+              type AppointmentDetailPayload = {
+                isPeriodicRecheck?: boolean | string;
+              };
+
+              type AppointmentDetailResponseShape = {
+                data?: AppointmentDetailPayload;
+              } | AppointmentDetailPayload;
+
+              const detail = detailRes as unknown as AppointmentDetailResponseShape;
+              const raw: AppointmentDetailPayload | undefined =
+                'data' in detail && detail.data
+                  ? detail.data
+                  : (detail as AppointmentDetailPayload);
+
+              if (raw && typeof raw.isPeriodicRecheck !== 'undefined') {
+                const isPeriodic =
+                  raw.isPeriodicRecheck === true ||
+                  raw.isPeriodicRecheck === 'true';
+                if (isPeriodic !== appointment.isPeriodicRecheck) {
+                  // Cập nhật lại selectedAppointment nếu vẫn đang xem đúng appointment đó
+                  setSelectedAppointment((prev) => {
+                    if (!prev || prev.id !== finalAppointmentId) return prev
+                    const updated: AppointmentLite = {
+                      ...prev,
+                      isPeriodicRecheck: isPeriodic,
+                      // Nếu là tái định kỳ → dịch vụ miễn phí
+                      servicePrice: isPeriodic ? 0 : prev.servicePrice,
+                    }
+                    return updated
+                  })
+                }
+              }
+            })
+            .catch((e: unknown) => {
+              console.error('❌ Failed to sync isPeriodicRecheck from getAppointmentById:', e)
+            })
+
           // Nếu appointment không có servicePrice, fetch lại bằng getServiceByAppointmentId
           const finalAppointment = appointment
           if (!appointment.servicePrice && (appointment.kind === 'service' || appointment.kind === 'package')) {
             AppointmentApi.getServiceByAppointmentId(finalAppointmentId).then((serviceRes) => {
               if (serviceRes.data?.success && serviceRes.data.data) {
                 const { type, service, servicePackage } = serviceRes.data.data
-                if (type === 'service' && service) {
-                  console.log('✅ Fetched service for appointment (in list):', service.name, service.price)
-                  const originalPrice = service.price
-                  const updatedAppointment = {
-                    ...appointment,
-                    originalPrice,
-                    servicePrice: appointment.isPeriodicRecheck ? 0 : originalPrice,
-                    descriptionText: service.name,
-                    vehicleCategory: service.vehicleCategory,
-                    kind: 'service' as const,
-                  }
-                  setSelectedAppointment(updatedAppointment)
-                } else if (type === 'servicePackage' && servicePackage) {
-                  console.log('✅ Fetched servicePackage for appointment (in list):', servicePackage.name, servicePackage.price)
-                  const originalPrice = servicePackage.price
-                  const updatedAppointment = {
-                    ...appointment,
-                    originalPrice,
-                    servicePrice: appointment.isPeriodicRecheck ? 0 : originalPrice,
-                    descriptionText: servicePackage.name,
-                    vehicleCategory: servicePackage.vehicleCategory,
-                    kind: 'package' as const,
-                  }
-                  setSelectedAppointment(updatedAppointment)
+                const detailPayload: ServiceDetailPayload = {
+                  type,
+                  service: normalizeServiceLike(service),
+                  servicePackage: normalizeServiceLike(servicePackage),
                 }
+                const updatedAppointment = mergeAppointmentWithServiceDetail(appointment, detailPayload)
+                setSelectedAppointment(updatedAppointment)
               }
             }).catch((e: unknown) => {
               console.error('❌ Failed to fetch service for appointment:', e)
@@ -381,37 +511,14 @@ const BookingPage: React.FC = () => {
                   console.log('🔍 Fetching service from appointmentID:', appointmentIdStr)
                   try {
                     const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
-                    if (serviceRes.data?.success && serviceRes.data.data) {
+                    if (serviceRes.data?.success && serviceRes.data.data && finalAppointment) {
                       const { type, service, servicePackage } = serviceRes.data.data
-                      if (type === 'service' && service) {
-                        console.log('✅ Fetched service:', service.name, service.price)
-                        // Update selectedAppointment với service info
-                        if (finalAppointment) {
-                          const originalPrice = service.price
-                          setSelectedAppointment({
-                            ...finalAppointment,
-                            originalPrice,
-                            servicePrice: finalAppointment.isPeriodicRecheck ? 0 : originalPrice,
-                            descriptionText: service.name,
-                            vehicleCategory: service.vehicleCategory,
-                            kind: 'service',
-                          })
-                        }
-                      } else if (type === 'servicePackage' && servicePackage) {
-                        console.log('✅ Fetched servicePackage:', servicePackage.name, servicePackage.price)
-                        // Update selectedAppointment với servicePackage info
-                        if (finalAppointment) {
-                          const originalPrice = servicePackage.price
-                          setSelectedAppointment({
-                            ...finalAppointment,
-                            originalPrice,
-                            servicePrice: finalAppointment.isPeriodicRecheck ? 0 : originalPrice,
-                            descriptionText: servicePackage.name,
-                            vehicleCategory: servicePackage.vehicleCategory,
-                            kind: 'package',
-                          })
-                        }
+                      const detailPayload: ServiceDetailPayload = {
+                        type,
+                        service: normalizeServiceLike(service),
+                        servicePackage: normalizeServiceLike(servicePackage),
                       }
+                      setSelectedAppointment(mergeAppointmentWithServiceDetail(finalAppointment, detailPayload))
                     }
                   } catch (e) {
                     console.error('❌ Failed to fetch service from appointmentID:', e)
@@ -549,42 +656,7 @@ const BookingPage: React.FC = () => {
                 }
               }
               
-              // Fetch service/servicePackage info từ appointmentID (dùng getServiceByAppointmentId)
-              let descriptionText: string | undefined
-              let originalPrice: number | undefined
-              let servicePrice: number | undefined
-              let vehicleCategory: string | undefined
-              let kind: 'service' | 'package' = 'service'
-              
-              try {
-                const appointmentIdStr = String(apt._id || apt.id || '')
-                console.log('🔍 Fetching service from appointmentID (not in list):', appointmentIdStr)
-                const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
-                if (serviceRes.data?.success && serviceRes.data.data) {
-                  const { type, service, servicePackage } = serviceRes.data.data
-                  if (type === 'service' && service) {
-                    console.log('✅ Fetched service (not in list):', service.name, service.price)
-                    descriptionText = service.name
-                    originalPrice = service.price
-                    // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
-                    servicePrice = isPeriodicRecheck ? 0 : originalPrice
-                    vehicleCategory = service.vehicleCategory
-                    kind = 'service'
-                  } else if (type === 'servicePackage' && servicePackage) {
-                    console.log('✅ Fetched servicePackage (not in list):', servicePackage.name, servicePackage.price)
-                    descriptionText = servicePackage.name
-                    originalPrice = servicePackage.price
-                    // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
-                    servicePrice = isPeriodicRecheck ? 0 : originalPrice
-                    vehicleCategory = servicePackage.vehicleCategory
-                    kind = 'package'
-                  }
-                }
-              } catch (e) {
-                console.error('❌ Failed to fetch service from appointmentID:', e)
-              }
-              
-              const newAppointment: AppointmentLite = {
+              let newAppointment: AppointmentLite = {
                 id: String(apt._id || apt.id || ''),
                 userID: apt.userID,
                 vehicleID: apt.vehicleID,
@@ -594,13 +666,31 @@ const BookingPage: React.FC = () => {
                 dateText: apt.bookingDate ? new Date(apt.bookingDate).toLocaleDateString('vi-VN') : '',
                 timeText: apt.bookingDate ? new Date(apt.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
                 status: apt.status,
-                descriptionText,
-                vehicleCategory,
-                kind,
-                servicePrice,
-                originalPrice,
+                descriptionText: 'Dịch vụ',
+                vehicleCategory: undefined,
+                kind: 'service',
+                servicePrice: undefined,
+                originalPrice: undefined,
                 isPeriodicRecheck,
               }
+
+              try {
+                const appointmentIdStr = String(apt._id || apt.id || '')
+                console.log('🔍 Fetching service from appointmentID (not in list):', appointmentIdStr)
+                const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
+                if (serviceRes.data?.success && serviceRes.data.data) {
+                  const { type, service, servicePackage } = serviceRes.data.data
+                  const detailPayload: ServiceDetailPayload = {
+                    type,
+                    service: normalizeServiceLike(service),
+                    servicePackage: normalizeServiceLike(servicePackage),
+                  }
+                  newAppointment = mergeAppointmentWithServiceDetail(newAppointment, detailPayload)
+                }
+              } catch (e) {
+                console.error('❌ Failed to fetch service from appointmentID:', e)
+              }
+
               setSelectedAppointment(newAppointment)
               setPaymentMethod('PAYOS')
               setPaymentSuccess(true)
@@ -628,29 +718,14 @@ const BookingPage: React.FC = () => {
                         const serviceRes = await AppointmentApi.getServiceByAppointmentId(appointmentIdStr)
                         if (serviceRes.data?.success && serviceRes.data.data) {
                           const { type, service, servicePackage } = serviceRes.data.data
-                          if (type === 'service' && service) {
-                            console.log('✅ Fetched service from bill:', service.name, service.price)
-                            const originalPrice = service.price
-                            setSelectedAppointment({
-                              ...newAppointment,
-                              originalPrice,
-                              servicePrice: newAppointment.isPeriodicRecheck ? 0 : originalPrice,
-                              descriptionText: service.name,
-                              vehicleCategory: service.vehicleCategory,
-                              kind: 'service',
-                            })
-                          } else if (type === 'servicePackage' && servicePackage) {
-                            console.log('✅ Fetched servicePackage from bill:', servicePackage.name, servicePackage.price)
-                            const originalPrice = servicePackage.price
-                            setSelectedAppointment({
-                              ...newAppointment,
-                              originalPrice,
-                              servicePrice: newAppointment.isPeriodicRecheck ? 0 : originalPrice,
-                              descriptionText: servicePackage.name,
-                              vehicleCategory: servicePackage.vehicleCategory,
-                              kind: 'package',
-                            })
+                          const detailPayload: ServiceDetailPayload = {
+                            type,
+                            service: normalizeServiceLike(service),
+                            servicePackage: normalizeServiceLike(servicePackage),
                           }
+                          const enhanced = mergeAppointmentWithServiceDetail(newAppointment, detailPayload)
+                          newAppointment = enhanced
+                          setSelectedAppointment(enhanced)
                         }
                       } catch (e) {
                         console.error('❌ Failed to fetch service from bill.appointmentID:', e)
@@ -1142,7 +1217,8 @@ const BookingPage: React.FC = () => {
       : source
 
     // Reset về trang 1 khi tìm kiếm hoặc danh sách thay đổi / đổi số hàng mỗi trang
-    useEffect(() => { setPage(1) }, [q, inventoryItems, rowsPerPage])
+    // Chỉ phụ thuộc vào q và rowsPerPage; inventoryItems thay đổi đã được phản ánh qua filteredInventory
+    useEffect(() => { setPage(1) }, [q, rowsPerPage])
 
     const totalPages = Math.max(1, Math.ceil(filteredInventory.length / ITEMS_PER_PAGE))
     const safePage = Math.min(page, totalPages)
