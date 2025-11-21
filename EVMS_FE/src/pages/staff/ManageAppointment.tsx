@@ -41,6 +41,9 @@ interface Appointment {
   tags: string[];
   detailText?: string;
   kind?: 'service' | 'package';
+  price?: number; // Giá cuối cùng của appointment (0đ nếu isPeriodicRecheck = true)
+  originalPrice?: number; // Giá gốc từ service/package (để hiển thị gạch ngang)
+  isPeriodicRecheck?: boolean; // Flag lịch tái định kỳ miễn phí
 }
 
 const ManageAppointment: React.FC = () => {
@@ -139,8 +142,8 @@ const ManageAppointment: React.FC = () => {
         const serviceIds = Array.from(new Set(baseList.map(a => getServiceId(a)).filter(Boolean))) as string[];
         const servicePackageIds = Array.from(new Set(baseList.map(a => getServicePackageId(a)).filter(Boolean))) as string[];
 
-        type ServiceLite = { name?: string; description?: string; vehicleCategory?: string } | undefined;
-        type ServicePackageLite = { name?: string; services?: Array<{ name?: string }>; serviceIds?: string[]; data?: { services?: Array<{ name?: string }> } } | undefined;
+        type ServiceLite = { name?: string; description?: string; vehicleCategory?: string; price?: number } | undefined;
+        type ServicePackageLite = { name?: string; services?: Array<{ name?: string }>; serviceIds?: string[]; data?: { services?: Array<{ name?: string }>; price?: number }; price?: number } | undefined;
 
         const serviceCache = new Map<string, ServiceLite>();
         const servicePackageCache = new Map<string, ServicePackageLite>();
@@ -160,6 +163,7 @@ const ManageAppointment: React.FC = () => {
                   name: (so.name as string | undefined),
                   description: (so.description as string | undefined),
                   vehicleCategory: (so.vehicleCategory as string | undefined),
+                  price: (so.price as number | undefined),
                 });
               } else {
                 serviceCache.set(sid, undefined);
@@ -191,7 +195,7 @@ const ManageAppointment: React.FC = () => {
           const embeddedService = (apt as unknown as { service?: { name?: string; description?: string; vehicleCategory?: string } }).service;
 
           if (embeddedService?.name || svcId) {
-            const svc = embeddedService?.name ? embeddedService as { name?: string; description?: string; vehicleCategory?: string } : serviceCache.get(svcId || '');
+            const svc = embeddedService?.name ? embeddedService as { name?: string; description?: string; vehicleCategory?: string; price?: number } : serviceCache.get(svcId || '');
             const svcName = (svc?.name) || 'Dịch vụ';
             descriptionText = svcName;
             // Thêm chi tiết mô tả (không phải tag)
@@ -205,6 +209,11 @@ const ManageAppointment: React.FC = () => {
             vc = (svc as { vehicleCategory?: string }).vehicleCategory as string;
             tags.push(vc === 'MOTOBIKE' ? 'Xe máy' : (vc === 'CAR' ? 'Ô tô' : (vc === 'BICYCLE' ? 'Xe đạp' : vc)));
           }
+          
+          // Tính giá: Nếu isPeriodicRecheck = true → 0đ, ngược lại lấy giá gốc
+          const originalPrice = (svc as { price?: number } | undefined)?.price || 0;
+          const finalPrice = apt.isPeriodicRecheck ? 0 : originalPrice;
+          
           return {
               id: apt._id,
               customerName: u.fullName || u.userName || `Khách ${apt._id.slice(-4)}`,
@@ -221,6 +230,9 @@ const ManageAppointment: React.FC = () => {
               tags,
               detailText: svcDesc,
             kind: 'service',
+            price: finalPrice,
+            originalPrice: originalPrice,
+            isPeriodicRecheck: apt.isPeriodicRecheck || false,
             };
           } else if (apt.servicePackageID) {
             const pack = pkgId ? servicePackageCache.get(pkgId) : undefined;
@@ -232,24 +244,53 @@ const ManageAppointment: React.FC = () => {
             if (vcLabelPack) {
               tags.push(vcLabelPack);
             }
+            
+            // Tính giá cho package
+            const packPrice = (pack?.price || pack?.data?.price) as number | undefined || 0;
+            const finalPackPrice = apt.isPeriodicRecheck ? 0 : packPrice;
+            
+            return {
+              id: apt._id,
+              customerName: u.fullName || u.userName || `Khách ${apt._id.slice(-4)}`,
+              customerPhone: u.phoneNumber || '---',
+              vehicleType: '',
+              vehicleCategory: vcPack,
+              serviceType: '',
+              appointmentDate: formatDate(apt.bookingDate),
+              appointmentTime: formatTime(apt.bookingDate),
+              bookingDateISO: apt.bookingDate,
+              status: apt.status,
+              createdAt: apt.createdAt,
+              descriptionText: descriptionText || 'Gói dịch vụ',
+              tags,
+              detailText: undefined,
+              kind: 'package',
+              price: finalPackPrice,
+              originalPrice: packPrice,
+              isPeriodicRecheck: apt.isPeriodicRecheck || false,
+            };
           }
 
+          // Fallback nếu không có service và không có package
           return {
             id: apt._id,
             customerName: u.fullName || u.userName || `Khách ${apt._id.slice(-4)}`,
             customerPhone: u.phoneNumber || '---',
             vehicleType: '',
-            vehicleCategory: (apt.servicePackageID ? ((servicePackageCache.get(getServicePackageId(apt) || '') as { vehicleCategory?: string } | undefined)?.vehicleCategory as string | undefined) : undefined),
+            vehicleCategory: undefined,
             serviceType: '',
             appointmentDate: formatDate(apt.bookingDate),
             appointmentTime: formatTime(apt.bookingDate),
             bookingDateISO: apt.bookingDate,
             status: apt.status,
             createdAt: apt.createdAt,
-            descriptionText: descriptionText || 'Dịch vụ',
-            tags,
+            descriptionText: 'Dịch vụ',
+            tags: [],
             detailText: undefined,
-            kind: apt.servicePackageID ? 'package' : 'service',
+            kind: 'service',
+            price: 0,
+            originalPrice: 0,
+            isPeriodicRecheck: false,
           };
         });
 
@@ -667,20 +708,25 @@ const ManageAppointment: React.FC = () => {
           {appointment.descriptionText}
         </p>
 
-        {/* Tags or detail description (for single service) */}
-        {appointment.tags && appointment.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-1 mb-2 flex-shrink-0">
-            {appointment.tags.map((tag) => (
-              <span key={tag} className="px-1.5 py-0.5 bg-white bg-opacity-60 text-gray-700 rounded-full text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[16ch]">
-                {tag}
+        {/* Price display */}
+        <div className="mb-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {appointment.isPeriodicRecheck ? (
+              <>
+                <span className="text-xs text-gray-400 line-through">
+                  {(appointment.originalPrice || 0).toLocaleString('vi-VN')}đ
+                </span>
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                  0đ (Miễn phí)
+                </span>
+              </>
+            ) : (
+              <span className="text-sm font-bold text-orange-600">
+                {(appointment.price || 0).toLocaleString('vi-VN')}đ
               </span>
-            ))}
+            )}
           </div>
-        ) : (
-          appointment.detailText ? (
-            <div className="text-xs text-gray-500 mb-2 line-clamp-2">{appointment.detailText}</div>
-          ) : null
-        )}
+        </div>
 
         {/* Time info */}
         <div className="mb-2 flex-shrink-0">
@@ -1028,14 +1074,21 @@ const ManageAppointment: React.FC = () => {
                   <div className="mt-2">{getStatusBadge(selectedAppointment.status)}</div>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="text-xs text-gray-500">Thẻ</div>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {(selectedAppointment.tags || []).length > 0 ? (
-                      selectedAppointment.tags.map((t) => (
-                        <span key={t} className="px-2 py-0.5 bg-white border rounded-full text-xs text-gray-700">{t}</span>
-                      ))
+                  <div className="text-xs text-gray-500">Giá tiền</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    {selectedAppointment.isPeriodicRecheck ? (
+                      <>
+                        <span className="text-sm text-gray-400 line-through">
+                          {(selectedAppointment.originalPrice || 0).toLocaleString('vi-VN')}đ
+                        </span>
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          0đ (Miễn phí)
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-sm text-gray-600">—</span>
+                      <span className="text-lg font-bold text-orange-600">
+                        {(selectedAppointment.price || 0).toLocaleString('vi-VN')}đ
+                      </span>
                     )}
                   </div>
                 </div>

@@ -12,6 +12,7 @@ export interface IAppointment extends Document {
   servicePackageID?: mongoose.Types.ObjectId; // ref ServicePackage
   bookingDate: Date;
   status: AppointmentStatus;
+  isPeriodicRecheck?: boolean; // true nếu là lần đặt lịch tái kiểm tra định kỳ (giá = 0đ)
 }
 
 const AppointmentSchema = new Schema<IAppointment>(
@@ -31,6 +32,10 @@ const AppointmentSchema = new Schema<IAppointment>(
       enum: ['pending', 'confirmed', 'in_progress', 'awaiting_payment', 'completed', 'cancelled', 'no_show'],
       default: 'pending',
       index: true,
+    },
+    isPeriodicRecheck: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

@@ -1,6 +1,6 @@
 // src/components/ui/AppointmentCard.tsx - Updated
 import React, { useEffect, useState } from 'react'
-import type { AppointmentResponse, AppointmentStatus } from '../../types/Appoitment';
+import type { AppointmentResponse } from '../../types/Appoitment';
 import { Calendar, Car, Clock, Package, User, Wrench } from 'lucide-react';
 import { formatDate, formatTime } from '../../utils/DataFormat';
 import { Button } from './Button';
@@ -20,7 +20,6 @@ interface AppointmentCardProps {
     handleViewDetail: (appointment: AppointmentResponse) => void;
     handleApprove?: (appointmentId: string) => void;
     handleReject?: (appointmentId: string) => void;
-    handleCancel?: (appointmentId: string) => void;
     variant?: 'staff' | 'user'; // New prop to determine which variant to show
 }
 
@@ -29,7 +28,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     handleViewDetail,
     handleApprove,
     handleReject,
-    handleCancel,
     variant
 }) => {
     // ===================================
@@ -47,6 +45,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
     useEffect(() => {
         fetchAppointmentDetails();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchAppointmentDetails = async () => {
@@ -77,11 +76,14 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 // Fallback to old method if API fails
                 if (appointment.servicePackageID) {
                     try {
-                        const servicePackageResponse = await ServicePackageApi.getServicePackageById(
-                            typeof appointment.servicePackageID === 'string' 
-                                ? appointment.servicePackageID 
-                                : (appointment.servicePackageID as any)?._id || appointment.servicePackageID
-                        );
+                        let packageId: string;
+                        if (typeof appointment.servicePackageID === 'string') {
+                            packageId = appointment.servicePackageID;
+                        } else {
+                            const packageObj = appointment.servicePackageID as { _id?: string; toString?: () => string };
+                            packageId = packageObj._id || packageObj.toString?.() || String(appointment.servicePackageID);
+                        }
+                        const servicePackageResponse = await ServicePackageApi.getServicePackageById(packageId);
                         const servicePackageData: ServicePackageResponse = servicePackageResponse.data;
                         setServicePackage(servicePackageData);
                     } catch (error) {
@@ -89,11 +91,14 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     }
                 } else if (appointment.serviceID) {
                     try {
-                        const serviceResponse = await ServiceApi.getServiceById(
-                            typeof appointment.serviceID === 'string' 
-                                ? appointment.serviceID 
-                                : (appointment.serviceID as any)?._id || appointment.serviceID
-                        );
+                        let serviceId: string;
+                        if (typeof appointment.serviceID === 'string') {
+                            serviceId = appointment.serviceID;
+                        } else {
+                            const serviceObj = appointment.serviceID as { _id?: string; toString?: () => string };
+                            serviceId = serviceObj._id || serviceObj.toString?.() || String(appointment.serviceID);
+                        }
+                        const serviceResponse = await ServiceApi.getServiceById(serviceId);
                         const serviceData: ServiceResponse = serviceResponse.data;
                         setService(serviceData);
                     } catch (error) {
@@ -109,13 +114,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     // ===================================
     // Helper Functions
     // ===================================
-
-    const canCancelAppointment = () => {
-        return variant === 'user' &&
-            appointment.status !== 'in_progress' &&
-            appointment.status !== 'cancelled' &&
-            appointment.status !== 'completed';
-    };
 
     // ===================================
     // Render
@@ -226,19 +224,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         </Button>
                     </div>
                 )}
-
-                {/* User cancel action for specific statuses */}
-                {variant === 'user' && canCancelAppointment()
-                    && (
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancel?.(appointment._id)}
-                        >
-                            Hủy hẹn
-                        </Button>
-                    )}
             </div>
         </div>
     );

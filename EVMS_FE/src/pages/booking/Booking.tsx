@@ -28,6 +28,7 @@ const Booking: React.FC = () => {
         serviceID: '',
         servicePackageID: '',
     });
+    const [lockVehicle, setLockVehicle] = useState<boolean>(false);
 
     // Update userID when user is loaded
     useEffect(() => {
@@ -49,6 +50,7 @@ const Booking: React.FC = () => {
 
     const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('CAR');
     const [lockService, setLockService] = useState<boolean>(false);
+    const [isPeriodic, setIsPeriodic] = useState<boolean>(false);
     const steps = [
         { step: 1, info: 'Chọn phương tiện' },
         { step: 2, info: 'Chọn dịch vụ' },
@@ -85,6 +87,7 @@ const Booking: React.FC = () => {
         const serviceId = params.get('serviceId') || '';
         const servicePackageId = params.get('servicePackageId') || '';
         const lock = params.get('lockService') === '1';
+        const periodic = params.get('periodic') === '1';
 
         if (vehicleId) {
             setFormData(prev => ({
@@ -97,9 +100,13 @@ const Booking: React.FC = () => {
         if (lock && (serviceId || servicePackageId)) {
             setLockService(true);
         }
+        if (params.get('lockVehicle') === '1') {
+            setLockVehicle(true);
+        }
+        if (periodic) setIsPeriodic(true);
 
-        // If all preselected, skip service step
-        if (vehicleId && (serviceId || servicePackageId)) {
+        // Nếu có preselect và KHÔNG phải luồng định kỳ, cho phép bỏ qua bước chọn dịch vụ để vào chọn giờ
+        if (!periodic && vehicleId && (serviceId || servicePackageId)) {
             setStep(3);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,6 +124,7 @@ const Booking: React.FC = () => {
                             console.log(formData);
                             setStep(2);
                         }}
+                        lockedVehicle={lockVehicle}
                     />
                 )
             case 2:
@@ -150,6 +158,7 @@ const Booking: React.FC = () => {
                 return (
                     <Confirmation
                         formData={formData}
+                        isPeriodic={isPeriodic}
                         onPrevious={() => setStep(3)}
                         onComplete={handleBookingComplete}
                     />

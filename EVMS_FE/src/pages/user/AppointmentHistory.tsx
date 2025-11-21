@@ -49,10 +49,12 @@ const AppointmentHistory = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointments, searchTerm, selectedStatus, dateRange]);
 
 
@@ -63,7 +65,8 @@ const AppointmentHistory = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const appointmentResponse = await AppointmentApi.getAppointmentByMe();
+      // Fetch appointments sorted by creation date (newest first)
+      const appointmentResponse = await AppointmentApi.getAppointmentByMeSorted();
       const appointmentData: FilteredDataResponse<AppointmentResponse> = appointmentResponse.data;
       setAppointments(appointmentData.data);
     } catch (error) {
@@ -83,16 +86,6 @@ const AppointmentHistory = () => {
     setShowDetailModal(true);
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    try {
-      await AppointmentApi.cancelAppointment(appointmentId);
-      showAlert('success', 'Hủy lịch hẹn thành công');
-      fetchData(); // Refresh data
-    } catch (error) {
-      console.error('Error canceling appointment:', error);
-      showAlert('error', 'Không thể hủy lịch hẹn');
-    }
-  };
 
   // Clear all filters
   const handleClearAllFilters = () => {
@@ -133,8 +126,15 @@ const AppointmentHistory = () => {
       });
     }
 
-    // Sort by booking date (newest first)
-    filtered.sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
+    // Sort by creation date (newest created first - mới đặt lịch hiển thị đầu tiên)
+    filtered.sort((a, b) => {
+      // If createdAt exists, use it for sorting
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      // Fallback to bookingDate if createdAt is missing
+      return new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime();
+    });
 
     setFilteredAppointments(filtered);
     setCurrentPage(1); // Reset to first page when filters change
@@ -403,7 +403,6 @@ const AppointmentHistory = () => {
                       key={appointment._id}
                       appointment={appointment}
                       handleViewDetail={handleViewDetail}
-                      handleCancel={handleCancelAppointment}
                       variant="user"
                     />
                   ))}

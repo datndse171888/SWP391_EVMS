@@ -315,6 +315,10 @@ const Service: React.FC<ServicePropsExtended> = ({
   // ================================
 
   const handleServiceSelect = (serviceId: string) => {
+    if (locked) {
+      console.log('Blocked: Cannot select service when locked (periodic booking flow)');
+      return;
+    }
     const service = services.find((s) => s._id === serviceId);
     if (!service) return;
     const isPeriodic = !!(service as any).periodicEnabled;
@@ -329,6 +333,10 @@ const Service: React.FC<ServicePropsExtended> = ({
   };
 
   const handlePackageSelect = (packageId: string) => {
+    if (locked) {
+      console.log('Blocked: Cannot select package when locked (periodic booking flow)');
+      return;
+    }
     const pkg = servicePackages.find((p) => p._id === packageId);
     if (!pkg) return;
     const isPeriodic = !!(pkg as any).periodicEnabled;
@@ -345,10 +353,16 @@ const Service: React.FC<ServicePropsExtended> = ({
   const handleTabChange = (
     tab: 'packages' | 'services' | 'packages-periodic' | 'services-periodic'
   ) => {
+    if (locked) return; // khóa tab khi booking theo định kỳ
     setActiveTab(tab);
   };
 
   const handleNext = () => {
+    // Nếu đang đặt lịch theo định kỳ từ Maintenance: bỏ qua chọn dịch vụ
+    if (locked) {
+      onNext();
+      return;
+    }
     const isPeriodicSelection =
       selectedType === 'service'
         ? servicesPeriodic.some((s) => s._id === selectedId)
@@ -452,80 +466,95 @@ const Service: React.FC<ServicePropsExtended> = ({
         </p>
       </div>
 
-      {/* Tab Bar */}
-      <ServiceTabBar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        hasPackages={packagesNormal.length > 0}
-        hasServices={servicesNormal.length > 0}
-        hasPackagesPeriodic={packagesPeriodic.length > 0}
-        hasServicesPeriodic={servicesPeriodic.length > 0}
-        packageCount={packagesNormal.length}
-        serviceCount={servicesNormal.length}
-        packagePeriodicCount={packagesPeriodic.length}
-        servicePeriodicCount={servicesPeriodic.length}
-      />
+      {/* Tab Bar - Ẩn khi locked */}
+      {!locked && (
+        <ServiceTabBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          hasPackages={packagesNormal.length > 0}
+          hasServices={servicesNormal.length > 0}
+          hasPackagesPeriodic={packagesPeriodic.length > 0}
+          hasServicesPeriodic={servicesPeriodic.length > 0}
+          packageCount={packagesNormal.length}
+          serviceCount={servicesNormal.length}
+          packagePeriodicCount={packagesPeriodic.length}
+          servicePeriodicCount={servicesPeriodic.length}
+        />
+      )}
 
       {/* Tab Content Panels */}
-      <div className="mb-12">
-        {/* Service Packages - Non periodic */}
-        <TabContent
-          isActive={activeTab === 'packages'}
-          items={packagesNormal}
-          type="package"
-          selectedId={selectedId}
-          selectedType={selectedType}
-          onSelect={handlePackageSelect}
-          icon={<Package className="w-8 h-8 text-orange-500" />}
-          title="Gói dịch vụ"
-          description="Những gói dịch vụ toàn diện được thiết kế để tối ưu hóa chi phí bảo trì"
-          emptyMessage="Hiện chưa có gói dịch vụ nào"
-        />
+      {!locked ? (
+        <div className="mb-12">
+          {/* Service Packages - Non periodic */}
+          <TabContent
+            isActive={activeTab === 'packages'}
+            items={packagesNormal}
+            type="package"
+            selectedId={selectedId}
+            selectedType={selectedType}
+            onSelect={handlePackageSelect}
+            disabled={false}
+            icon={<Package className="w-8 h-8 text-orange-500" />}
+            title="Gói dịch vụ"
+            description="Những gói dịch vụ toàn diện được thiết kế để tối ưu hóa chi phí bảo trì"
+            emptyMessage="Hiện chưa có gói dịch vụ nào"
+          />
 
-        {/* Individual Services - Non periodic */}
-        <TabContent
-          isActive={activeTab === 'services'}
-          items={servicesNormal}
-          type="service"
-          selectedId={selectedId}
-          selectedType={selectedType}
-          onSelect={handleServiceSelect}
-          icon={<Wrench className="w-8 h-8 text-blue-500" />}
-          title="Dịch vụ đơn lẻ"
-          description="Các dịch vụ riêng lẻ giúp bạn chọn chính xác những gì bạn cần"
-          emptyMessage="Hiện chưa có dịch vụ đơn lẻ nào"
-        />
+          {/* Individual Services - Non periodic */}
+          <TabContent
+            isActive={activeTab === 'services'}
+            items={servicesNormal}
+            type="service"
+            selectedId={selectedId}
+            selectedType={selectedType}
+            onSelect={handleServiceSelect}
+            disabled={false}
+            icon={<Wrench className="w-8 h-8 text-blue-500" />}
+            title="Dịch vụ đơn lẻ"
+            description="Các dịch vụ riêng lẻ giúp bạn chọn chính xác những gì bạn cần"
+            emptyMessage="Hiện chưa có dịch vụ đơn lẻ nào"
+          />
 
-        {/* Service Packages - Periodic */}
-        <TabContent
-          isActive={activeTab === 'packages-periodic'}
-          items={packagesPeriodic}
-          type="package"
-          selectedId={selectedId}
-          selectedType={selectedType}
-          onSelect={handlePackageSelect}
-          disabled={!!activePeriodicKey}
-          icon={<Repeat className="w-8 h-8 text-green-500" />}
-          title="Gói dịch vụ định kỳ"
-          description="Các gói bảo dưỡng định kỳ đảm bảo xe của bạn luôn ở trạng thái tốt nhất"
-          emptyMessage="Hiện chưa có gói dịch vụ định kỳ nào"
-        />
+          {/* Service Packages - Periodic */}
+          <TabContent
+            isActive={activeTab === 'packages-periodic'}
+            items={packagesPeriodic}
+            type="package"
+            selectedId={selectedId}
+            selectedType={selectedType}
+            onSelect={handlePackageSelect}
+            disabled={!!activePeriodicKey}
+            icon={<Repeat className="w-8 h-8 text-green-500" />}
+            title="Gói dịch vụ định kỳ"
+            description="Các gói bảo dưỡng định kỳ đảm bảo xe của bạn luôn ở trạng thái tốt nhất"
+            emptyMessage="Hiện chưa có gói dịch vụ định kỳ nào"
+          />
 
-        {/* Individual Services - Periodic */}
-        <TabContent
-          isActive={activeTab === 'services-periodic'}
-          items={servicesPeriodic}
-          type="service"
-          selectedId={selectedId}
-          selectedType={selectedType}
-          onSelect={handleServiceSelect}
-          disabled={!!activePeriodicKey}
-          icon={<Clock className="w-8 h-8 text-purple-500" />}
-          title="Dịch vụ đơn lẻ định kỳ"
-          description="Các dịch vụ định kỳ được lập lịch tự động theo nhu cầu của bạn"
-          emptyMessage="Hiện chưa có dịch vụ đơn lẻ định kỳ nào"
-        />
-      </div>
+          {/* Individual Services - Periodic */}
+          <TabContent
+            isActive={activeTab === 'services-periodic'}
+            items={servicesPeriodic}
+            type="service"
+            selectedId={selectedId}
+            selectedType={selectedType}
+            onSelect={handleServiceSelect}
+            disabled={!!activePeriodicKey}
+            icon={<Clock className="w-8 h-8 text-purple-500" />}
+            title="Dịch vụ đơn lẻ định kỳ"
+            description="Các dịch vụ định kỳ được lập lịch tự động theo nhu cầu của bạn"
+            emptyMessage="Hiện chưa có dịch vụ đơn lẻ định kỳ nào"
+          />
+        </div>
+      ) : (
+        <div className="mb-12 py-12 text-center">
+          <div className="flex justify-center mb-4">
+            <Package className="w-12 h-12 text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-lg">
+            Bạn đang đặt lịch theo gói/dịch vụ định kỳ. Vui lòng nhấn "Tiếp theo" để chọn ngày giờ.
+          </p>
+        </div>
+      )}
 
       {(activeSub || locked) && (
         <div className="mt-4 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded px-3 py-2">
@@ -537,8 +566,8 @@ const Service: React.FC<ServicePropsExtended> = ({
         </div>
       )}
 
-      {/* Selection Summary */}
-      {selectedId && selectedType && (
+      {/* Selection Summary - Ẩn khi locked */}
+      {!locked && selectedId && selectedType && (
         <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg mt-8">
           <div className="flex items-center">
             <Check className="w-5 h-5 text-blue-600 mr-2" />
@@ -593,12 +622,14 @@ const Service: React.FC<ServicePropsExtended> = ({
           type="button"
           onClick={handleNext}
           disabled={
-            !selectedId ||
-            !selectedType ||
-            (!!activePeriodicKey &&
-              (selectedType === 'service'
-                ? servicesPeriodic.some((s) => s._id === selectedId)
-                : packagesPeriodic.some((p) => p._id === selectedId)))
+            !locked && (
+              !selectedId ||
+              !selectedType ||
+              (!!activePeriodicKey &&
+                (selectedType === 'service'
+                  ? servicesPeriodic.some((s) => s._id === selectedId)
+                  : packagesPeriodic.some((p) => p._id === selectedId)))
+            )
           }
         >
           Tiếp theo

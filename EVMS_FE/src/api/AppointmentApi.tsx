@@ -35,6 +35,11 @@ export const AppointmentApi = {
     return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me');
   },
 
+  getAppointmentByMeSorted: () => {
+    // Sort by createdAt (newest first) - mới đặt lịch hiển thị đầu tiên
+    return api.get<FilteredDataResponse<AppointmentResponse>>('/appointments/me?sort=createdAt&order=desc');
+  },
+
   getAppointmentByTechnician: (
     status?: AppointmentStatus,
     opts?: {
@@ -83,6 +88,23 @@ export const AppointmentApi = {
       service?: ServiceResponse;
       servicePackage?: ServicePackageResponse;
     }>>(`/appointments/${appointmentId}/service`);
+  },
+
+  getPeriodicVehicleForUser: (userId: string, params: { serviceId?: string; servicePackageId?: string }) => {
+    const q: string[] = []
+    if (userId) q.push(`userId=${encodeURIComponent(userId)}`)
+    if (params.serviceId) q.push(`serviceId=${encodeURIComponent(params.serviceId)}`)
+    if (params.servicePackageId) q.push(`servicePackageId=${encodeURIComponent(params.servicePackageId)}`)
+    const qs = q.length ? `?${q.join('&')}` : ''
+    type VehicleData = {
+      _id?: string;
+      id?: string;
+      brand?: string;
+      plateNumber?: string;
+      vehicleCategory?: string;
+      [key: string]: unknown;
+    };
+    return api.get<{ success: boolean; data?: { vehicle: VehicleData; appointmentId?: string; userID: string; serviceID?: string; servicePackageID?: string } }>(`/appointments/periodic/vehicle${qs}`)
   },
 
   // Dashboard technician counts

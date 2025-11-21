@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
+import { Service } from '../models/Service.js';
+import { ServicePackage } from '../models/ServicePackage.js';
 import { Vehicle } from '../models/Vehicle.js';
 import { getDefaultMaintenanceCycleMonths, computeNextMaintenanceDate, isDue } from '../utils/maintenance.js';
 import { Technician } from '../models/Technician.js';
@@ -20,6 +22,7 @@ export async function createAppointment(req: Request, res: Response) {
       bookingDate,
       reason,
       status,
+      isPeriodicRecheck,
     } = req.body;
 
     if (!userID || !bookingDate) { 
@@ -325,6 +328,81 @@ export async function createAppointment(req: Request, res: Response) {
     }
 
     // ============================================
+    // VALIDATION: isPeriodicRecheck (miễn phí) chỉ hợp lệ khi còn lượt
+    // ============================================
+    if (isPeriodicRecheck === true || isPeriodicRecheck === 'true') {
+      // Validate: Phải có vehicleID
+      if (!vehicleID || !mongoose.Types.ObjectId.isValid(vehicleID)) {
+        return res.status(400).json({ 
+          message: 'Lịch tái định kỳ yêu cầu phải có thông tin xe' 
+        });
+      }
+
+      // Validate: Phải có serviceID hoặc servicePackageID
+      if (!serviceID && !servicePackageID) {
+        return res.status(400).json({ 
+          message: 'Lịch tái định kỳ yêu cầu phải chọn dịch vụ hoặc gói dịch vụ' 
+        });
+      }
+
+      // Load config của service/package
+      let config: any = null;
+      if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
+        const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+        if (svc && svc.periodicEnabled && svc.intervalMonths && svc.defaultTotalVisits) {
+          config = svc;
+        }
+      } else if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
+        const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+        if (pkg && pkg.periodicEnabled && pkg.intervalMonths && pkg.defaultTotalVisits) {
+          config = pkg;
+        }
+      }
+
+      // Validate: Service/Package phải là periodic
+      if (!config) {
+        return res.status(400).json({ 
+          message: 'Dịch vụ/gói này không hỗ trợ bảo dưỡng định kỳ hoặc chưa được cấu hình' 
+        });
+      }
+
+      // Đếm số lượt đã dùng
+      const filter: any = { 
+        vehicleID: new mongoose.Types.ObjectId(vehicleID), 
+        status: 'completed' 
+      };
+      if (serviceID) filter.serviceID = new mongoose.Types.ObjectId(serviceID);
+      if (servicePackageID) filter.servicePackageID = new mongoose.Types.ObjectId(servicePackageID);
+
+      const visitsUsed = await Appointment.countDocuments(filter);
+      const remainingVisits = Math.max(0, (config.defaultTotalVisits || 0) - (visitsUsed || 0));
+
+      // Validate: Phải còn lượt
+      if (remainingVisits <= 0) {
+        return res.status(400).json({ 
+          message: `Bạn đã sử dụng hết ${config.defaultTotalVisits} lần của gói định kỳ này. Vui lòng đặt lịch bình thường hoặc chọn gói mới.`,
+          code: 'NO_REMAINING_VISITS',
+          data: {
+            totalVisits: config.defaultTotalVisits,
+            visitsUsed,
+            remainingVisits: 0
+          }
+        });
+      }
+
+      // Validate: Phải đã từng đặt lịch này trước đó (có startDate)
+      const firstCompleted = await Appointment.findOne(filter).sort({ bookingDate: 1 }).select('bookingDate').lean();
+      if (!firstCompleted) {
+        return res.status(400).json({ 
+          message: 'Không tìm thấy lịch sử sử dụng dịch vụ định kỳ này. Vui lòng đặt lịch bình thường cho lần đầu.',
+          code: 'NO_PERIODIC_HISTORY'
+        });
+      }
+
+      console.log(`✅ Validated periodic recheck: remainingVisits=${remainingVisits}/${config.defaultTotalVisits}, vehicleID=${vehicleID}`);
+    }
+
+    // ============================================
     // TẠO APPOINTMENT
     // ============================================
 
@@ -339,6 +417,7 @@ export async function createAppointment(req: Request, res: Response) {
       bookingDate: parsedBookingDate,
       reason: reason || undefined,
       status: status || 'pending',
+      isPeriodicRecheck: isPeriodicRecheck === true || isPeriodicRecheck === 'true' ? true : false,
     });
 
     return res.status(201).json(appointment);
@@ -410,6 +489,7 @@ const ALLOWED_APPOINTMENT_FIELDS = new Set([
   'bookingDate',
   'reason',
   'status',
+  'isPeriodicRecheck',
   'createdAt',
   'updatedAt',
 ]);
@@ -606,7 +686,7 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
       { technicianSupport2ID: technicianId },
     ];
 
-    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
+    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status isPeriodicRecheck technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
     const populates = buildPopulate(params.includeParam);
 
     const skip = (params.page - 1) * params.limit;
@@ -1465,6 +1545,85 @@ export async function countConfirmedAndCancelledAppointments(req: Request, res: 
 }
 
 // Dashboard: Count total appointments (all statuses)
+// Get vehicle by user + periodic service/servicePackage
+export async function getPeriodicVehicleForUser(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    let userId = String(req.query.userId || '').trim();
+    const serviceIdParam = (req.query.serviceId || req.query.serviceID || '').toString().trim();
+    const servicePackageIdParam = (req.query.servicePackageId || req.query.servicePackageID || req.query.packageId || '').toString().trim();
+    let serviceId = serviceIdParam;
+    let servicePackageId = servicePackageIdParam;
+
+    // Fallback: nếu không truyền userId, dùng id từ token
+    if (!userId && req.user?.id) userId = String(req.user.id);
+
+    if (!userId || (!serviceId && !servicePackageId)) {
+      return res.status(400).json({ message: 'Thiếu userId và serviceId/servicePackageId' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'userId không hợp lệ' });
+    }
+    if (serviceId && !mongoose.Types.ObjectId.isValid(serviceId)) {
+      return res.status(400).json({ message: 'serviceId không hợp lệ' });
+    }
+    if (servicePackageId && !mongoose.Types.ObjectId.isValid(servicePackageId)) {
+      return res.status(400).json({ message: 'servicePackageId không hợp lệ' });
+    }
+
+    // Permission: customer chỉ được hỏi xe của chính họ; admin/staff thì xem được tất cả
+    const role = req.user.role;
+    if (role === 'customer' && userId !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn chỉ có thể xem dữ liệu của chính mình' });
+    }
+
+    // Check periodicEnabled
+    let isPeriodic = false;
+    if (serviceId) {
+      const svc = await Service.findById(serviceId).select('periodicEnabled').lean();
+      if (!svc || !svc.periodicEnabled) return res.status(400).json({ message: 'Dịch vụ không phải định kỳ' });
+      isPeriodic = true;
+    } else if (servicePackageId) {
+      const pkg = await ServicePackage.findById(servicePackageId).select('periodicEnabled').lean();
+      if (!pkg || !pkg.periodicEnabled) return res.status(400).json({ message: 'Gói dịch vụ không phải định kỳ' });
+      isPeriodic = true;
+    }
+
+    if (!isPeriodic) {
+      return res.status(400).json({ message: 'Không phải dịch vụ/gói định kỳ' });
+    }
+
+    // Find any appointment that links this user with the periodic service/package
+    const filter: any = { userID: new mongoose.Types.ObjectId(userId) };
+    if (serviceId) filter.serviceID = new mongoose.Types.ObjectId(serviceId);
+    if (servicePackageId) filter.servicePackageID = new mongoose.Types.ObjectId(servicePackageId);
+
+    const apt = await Appointment.findOne(filter)
+      .sort({ bookingDate: -1 })
+      .select('vehicleID userID serviceID servicePackageID')
+      .populate({ path: 'vehicleID' })
+      .lean() as any;
+
+    if (!apt || !apt.vehicleID) {
+      return res.status(404).json({ message: 'Không tìm thấy lịch hẹn phù hợp hoặc không có thông tin xe' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        vehicle: apt.vehicleID,
+        appointmentId: apt._id,
+        userID: apt.userID,
+        serviceID: apt.serviceID,
+        servicePackageID: apt.servicePackageID
+      }
+    });
+  } catch (error) {
+    console.error('getPeriodicVehicleForUser error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy xe theo dịch vụ định kỳ' });
+  }
+}
+
 export async function countAllAppointments(req: Request, res: Response) {
   try {
     if (!req.user) {

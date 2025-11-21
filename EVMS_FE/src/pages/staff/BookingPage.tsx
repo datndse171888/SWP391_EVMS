@@ -29,6 +29,8 @@ type AppointmentLite = {
   vehicleCategory?: string
   kind?: 'service' | 'package'
   servicePrice?: number
+  originalPrice?: number // Giá gốc từ service/package
+  isPeriodicRecheck?: boolean // Flag lịch tái định kỳ miễn phí
 }
 
 type PartItem = Part & { id: string }
@@ -73,8 +75,14 @@ const BookingPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  // Derived totals
-  const serviceFee = selectedAppointment?.servicePrice || 0
+  // Derived totals - Tính giá: Nếu isPeriodicRecheck = true → 0đ, ngược lại lấy giá gốc
+  const serviceFee = useMemo(() => {
+    if (!selectedAppointment) return 0
+    // Nếu là lịch tái định kỳ miễn phí → giá = 0đ
+    if (selectedAppointment.isPeriodicRecheck) return 0
+    // Ngược lại lấy giá gốc
+    return selectedAppointment.servicePrice || 0
+  }, [selectedAppointment])
   const partsTotal = useMemo(() => cartLines.reduce((sum, l) => sum + l.part.price * l.quantity, 0), [cartLines])
   const grandTotal = serviceFee + partsTotal
 
@@ -84,7 +92,7 @@ const BookingPage: React.FC = () => {
     setError('')
     try {
       const res = await AppointmentApi.getTodayAwaitingPayment()
-      type BackendAppointment = { _id?: string; id?: string; userID?: string; vehicleID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown }
+        type BackendAppointment = { _id?: string; id?: string; userID?: string; vehicleID?: string; bookingDate?: string; status?: string; serviceID?: unknown; serviceId?: unknown; service?: unknown; servicePackageID?: unknown; servicePackageId?: unknown; servicePackage?: unknown; isPeriodicRecheck?: boolean | string }
       const list = (res?.data?.data || []) as BackendAppointment[]
       // Build minimal list; enrich with user name/phone
       const uniqueUserIds = Array.from(new Set(list.map(a => a.userID).filter((id): id is string => Boolean(id))))
@@ -113,6 +121,12 @@ const BookingPage: React.FC = () => {
 
       // API already returns today's appointments with awaiting_payment status
       const source = list
+
+      // Helper to get isPeriodicRecheck from appointment
+      const getIsPeriodicRecheck = (a: BackendAppointment): boolean => {
+        const raw = (a as unknown as Record<string, unknown>).isPeriodicRecheck
+        return raw === true || raw === 'true'
+      }
 
       // helpers to extract ids
       const getServiceId = (a: BackendAppointment): string | undefined => {
@@ -195,16 +209,23 @@ const BookingPage: React.FC = () => {
         const embeddedService = (apt as unknown as { service?: { name?: string; description?: string; vehicleCategory?: string } }).service
         const sid = getServiceId(apt)
         const pid = getServicePackageId(apt)
+        const isPeriodicRecheck = getIsPeriodicRecheck(apt)
+        
+        let originalPrice: number | undefined
         if (embeddedService?.name || sid) {
           const svc = embeddedService?.name ? embeddedService : (sid ? serviceCache.get(sid) : undefined)
           descriptionText = svc?.name || 'Dịch vụ'
           vehicleCategory = svc?.vehicleCategory
-          servicePrice = (svc as { price?: number } | undefined)?.price
+          originalPrice = (svc as { price?: number } | undefined)?.price
+          // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
+          servicePrice = isPeriodicRecheck ? 0 : originalPrice
         } else if (pid) {
           const pack = servicePackageCache.get(pid)
           descriptionText = pack?.name || 'Gói dịch vụ'
           vehicleCategory = pack?.vehicleCategory
-          servicePrice = (pack as { price?: number } | undefined)?.price
+          originalPrice = (pack as { price?: number } | undefined)?.price
+          // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
+          servicePrice = isPeriodicRecheck ? 0 : originalPrice
         }
         if (vehicleCategory) {
           tags.push(vehicleCategory === 'MOTOBIKE' ? 'Xe máy' : vehicleCategory === 'CAR' ? 'Ô tô' : vehicleCategory === 'BICYCLE' ? 'Xe đạp' : vehicleCategory)
@@ -224,6 +245,8 @@ const BookingPage: React.FC = () => {
           vehicleCategory,
           kind: pid ? 'package' : 'service',
           servicePrice,
+          originalPrice,
+          isPeriodicRecheck,
         }
       })
       setAppointments(ui)
@@ -301,9 +324,11 @@ const BookingPage: React.FC = () => {
                 const { type, service, servicePackage } = serviceRes.data.data
                 if (type === 'service' && service) {
                   console.log('✅ Fetched service for appointment (in list):', service.name, service.price)
+                  const originalPrice = service.price
                   const updatedAppointment = {
                     ...appointment,
-                    servicePrice: service.price,
+                    originalPrice,
+                    servicePrice: appointment.isPeriodicRecheck ? 0 : originalPrice,
                     descriptionText: service.name,
                     vehicleCategory: service.vehicleCategory,
                     kind: 'service' as const,
@@ -311,9 +336,11 @@ const BookingPage: React.FC = () => {
                   setSelectedAppointment(updatedAppointment)
                 } else if (type === 'servicePackage' && servicePackage) {
                   console.log('✅ Fetched servicePackage for appointment (in list):', servicePackage.name, servicePackage.price)
+                  const originalPrice = servicePackage.price
                   const updatedAppointment = {
                     ...appointment,
-                    servicePrice: servicePackage.price,
+                    originalPrice,
+                    servicePrice: appointment.isPeriodicRecheck ? 0 : originalPrice,
                     descriptionText: servicePackage.name,
                     vehicleCategory: servicePackage.vehicleCategory,
                     kind: 'package' as const,
@@ -360,9 +387,11 @@ const BookingPage: React.FC = () => {
                         console.log('✅ Fetched service:', service.name, service.price)
                         // Update selectedAppointment với service info
                         if (finalAppointment) {
+                          const originalPrice = service.price
                           setSelectedAppointment({
                             ...finalAppointment,
-                            servicePrice: service.price,
+                            originalPrice,
+                            servicePrice: finalAppointment.isPeriodicRecheck ? 0 : originalPrice,
                             descriptionText: service.name,
                             vehicleCategory: service.vehicleCategory,
                             kind: 'service',
@@ -372,9 +401,11 @@ const BookingPage: React.FC = () => {
                         console.log('✅ Fetched servicePackage:', servicePackage.name, servicePackage.price)
                         // Update selectedAppointment với servicePackage info
                         if (finalAppointment) {
+                          const originalPrice = servicePackage.price
                           setSelectedAppointment({
                             ...finalAppointment,
-                            servicePrice: servicePackage.price,
+                            originalPrice,
+                            servicePrice: finalAppointment.isPeriodicRecheck ? 0 : originalPrice,
                             descriptionText: servicePackage.name,
                             vehicleCategory: servicePackage.vehicleCategory,
                             kind: 'package',
@@ -500,8 +531,10 @@ const BookingPage: React.FC = () => {
                 servicePackageID?: unknown;
                 servicePackageId?: unknown;
                 servicePackage?: unknown;
+                isPeriodicRecheck?: boolean | string;
               }
               const apt = res.data as BackendAppointment
+              const isPeriodicRecheck = apt.isPeriodicRecheck === true || apt.isPeriodicRecheck === 'true'
               
               // Fetch user info
               let customerName = 'Khách hàng'
@@ -518,6 +551,7 @@ const BookingPage: React.FC = () => {
               
               // Fetch service/servicePackage info từ appointmentID (dùng getServiceByAppointmentId)
               let descriptionText: string | undefined
+              let originalPrice: number | undefined
               let servicePrice: number | undefined
               let vehicleCategory: string | undefined
               let kind: 'service' | 'package' = 'service'
@@ -531,13 +565,17 @@ const BookingPage: React.FC = () => {
                   if (type === 'service' && service) {
                     console.log('✅ Fetched service (not in list):', service.name, service.price)
                     descriptionText = service.name
-                    servicePrice = service.price
+                    originalPrice = service.price
+                    // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
+                    servicePrice = isPeriodicRecheck ? 0 : originalPrice
                     vehicleCategory = service.vehicleCategory
                     kind = 'service'
                   } else if (type === 'servicePackage' && servicePackage) {
                     console.log('✅ Fetched servicePackage (not in list):', servicePackage.name, servicePackage.price)
                     descriptionText = servicePackage.name
-                    servicePrice = servicePackage.price
+                    originalPrice = servicePackage.price
+                    // Tính giá cuối: 0đ nếu periodic, ngược lại lấy giá gốc
+                    servicePrice = isPeriodicRecheck ? 0 : originalPrice
                     vehicleCategory = servicePackage.vehicleCategory
                     kind = 'package'
                   }
@@ -560,6 +598,8 @@ const BookingPage: React.FC = () => {
                 vehicleCategory,
                 kind,
                 servicePrice,
+                originalPrice,
+                isPeriodicRecheck,
               }
               setSelectedAppointment(newAppointment)
               setPaymentMethod('PAYOS')
@@ -590,18 +630,22 @@ const BookingPage: React.FC = () => {
                           const { type, service, servicePackage } = serviceRes.data.data
                           if (type === 'service' && service) {
                             console.log('✅ Fetched service from bill:', service.name, service.price)
+                            const originalPrice = service.price
                             setSelectedAppointment({
                               ...newAppointment,
-                              servicePrice: service.price,
+                              originalPrice,
+                              servicePrice: newAppointment.isPeriodicRecheck ? 0 : originalPrice,
                               descriptionText: service.name,
                               vehicleCategory: service.vehicleCategory,
                               kind: 'service',
                             })
                           } else if (type === 'servicePackage' && servicePackage) {
                             console.log('✅ Fetched servicePackage from bill:', servicePackage.name, servicePackage.price)
+                            const originalPrice = servicePackage.price
                             setSelectedAppointment({
                               ...newAppointment,
-                              servicePrice: servicePackage.price,
+                              originalPrice,
+                              servicePrice: newAppointment.isPeriodicRecheck ? 0 : originalPrice,
                               descriptionText: servicePackage.name,
                               vehicleCategory: servicePackage.vehicleCategory,
                               kind: 'package',
@@ -1144,16 +1188,16 @@ const BookingPage: React.FC = () => {
                 />
               </div>
               {/* Search */}
-              <div className="relative">
-                <input
-                  value={partsSearch}
-                  onChange={(e) => { setPartsSearch(e.target.value) }}
-                  placeholder="Tìm theo tên, mã hoặc NSX..."
-                  className="w-72 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            <div className="relative">
+              <input
+                value={partsSearch}
+                onChange={(e) => { setPartsSearch(e.target.value) }}
+                placeholder="Tìm theo tên, mã hoặc NSX..."
+                className="w-72 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+              <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               </div>
             </div>
           </div>
@@ -1309,7 +1353,19 @@ const BookingPage: React.FC = () => {
             <div className="text-xs text-gray-600">
               Dịch vụ: <span className="font-medium">{selectedAppointment?.descriptionText || '—'}</span>
               {selectedAppointment?.vehicleCategory ? ` • ${selectedAppointment.vehicleCategory}` : ''}
-              <span className="ml-2">— Tạm tính: {currency(serviceFee)}</span>
+            </div>
+            <div className="text-xs text-gray-600 mt-1 flex items-center gap-2">
+              <span>Tạm tính:</span>
+              {selectedAppointment?.isPeriodicRecheck && selectedAppointment?.originalPrice ? (
+                <>
+                  <span className="text-gray-400 line-through">{currency(selectedAppointment.originalPrice)}</span>
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                    0đ (Miễn phí)
+                  </span>
+                </>
+              ) : (
+                <span className="font-semibold text-orange-600">{currency(serviceFee)}</span>
+              )}
             </div>
             {selectedAppointment && (
               <div className="text-xs text-gray-600 mt-1">Thời gian: {selectedAppointment.dateText} {selectedAppointment.timeText}</div>

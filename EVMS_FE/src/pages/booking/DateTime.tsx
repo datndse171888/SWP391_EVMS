@@ -4,7 +4,6 @@ import { Calendar, Clock, CheckCircle } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import type { CreateAppointmentRequest } from '../../types/Appoitment'
 import { formatDateTime } from '../../utils/DataFormat';
-import { Input } from '../../components/ui/Input';
 import { SlotTimeApi } from '../../api/SlotTimeApi';
 import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
@@ -58,6 +57,7 @@ const DateTime: React.FC<DateTimeProps> = ({
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
   const [serviceDurationMinutes, setServiceDurationMinutes] = useState<number | undefined>(undefined);
+  const [serviceName, setServiceName] = useState<string>('');
   const requiredSlotsBase = Math.max(1, Math.ceil((serviceDurationMinutes || 60) / 60));
   const [availabilityNote, setAvailabilityNote] = useState<string>('');
 
@@ -132,18 +132,33 @@ const DateTime: React.FC<DateTimeProps> = ({
       try {
         if (formData.serviceID) {
           const svcRes = await ServiceApi.getServiceById(formData.serviceID);
-          const minutes = Number((svcRes as any).data?.service?.duration ?? (svcRes as any).data?.duration);
-          if (!cancelled) setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+          type ServiceResponse = { data?: { service?: { duration?: number; name?: string }; duration?: number; name?: string } };
+          const svcData = (svcRes as unknown as ServiceResponse).data;
+          const minutes = Number(svcData?.service?.duration ?? svcData?.duration);
+          const name = String(svcData?.service?.name ?? svcData?.name ?? '');
+          if (!cancelled) {
+            setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+            setServiceName(name);
+          }
           return;
         }
         if (formData.servicePackageID) {
           const pkgRes = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
-          const minutes = Number((pkgRes as any).data?.duration ?? (pkgRes as any).data?.servicePackage?.duration);
-          if (!cancelled) setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+          type PackageResponse = { data?: { servicePackage?: { duration?: number; name?: string }; duration?: number; name?: string } };
+          const pkgData = (pkgRes as unknown as PackageResponse).data;
+          const minutes = Number(pkgData?.duration ?? pkgData?.servicePackage?.duration);
+          const name = String(pkgData?.servicePackage?.name ?? pkgData?.name ?? '');
+          if (!cancelled) {
+            setServiceDurationMinutes(Number.isFinite(minutes) ? minutes : undefined);
+            setServiceName(name);
+          }
           return;
         }
         // No selection yet
-        if (!cancelled) setServiceDurationMinutes(undefined);
+        if (!cancelled) {
+          setServiceDurationMinutes(undefined);
+          setServiceName('');
+        }
       } catch (e) {
         console.error('[DateTime] Fetch duration error:', e);
         if (!cancelled) setServiceDurationMinutes(undefined);
@@ -157,6 +172,7 @@ const DateTime: React.FC<DateTimeProps> = ({
     if (!selectedDate || !vehicleCategory) return;
     if (!formData.serviceID && !formData.servicePackageID) return;
     fetchAvailableSlots(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, vehicleCategory, formData.serviceID, formData.servicePackageID]);
 
   const fetchAvailableSlots = async (date: string) => {
@@ -179,7 +195,7 @@ const DateTime: React.FC<DateTimeProps> = ({
           const hh = String(dt.getHours()).padStart(2, '0');
           const mm = String(dt.getMinutes()).padStart(2, '0');
           apiHourSet.add(`${hh}:${mm}`);
-        } catch (e) {
+        } catch {
           console.warn('[DateTime] Skip invalid slot time:', s.startTime);
         }
       }
@@ -258,17 +274,6 @@ const DateTime: React.FC<DateTimeProps> = ({
     return true;
   };
 
-  const crossesLunchFrom = (startValue: string): boolean => {
-    const minutes = Number(serviceDurationMinutes);
-    if (!selectedDate || !startValue || !Number.isFinite(minutes) || minutes <= 0) return false;
-    const start = new Date(`${selectedDate}T${startValue}`);
-    if (isNaN(start.getTime())) return false;
-    const end = new Date(start);
-    end.setMinutes(end.getMinutes() + minutes);
-    const lunchStart = new Date(`${selectedDate}T12:00:00`);
-    const lunchEnd = new Date(`${selectedDate}T13:00:00`);
-    return start < lunchEnd && end > lunchStart;
-  };
 
   // Tính danh sách slot sẽ bị chiếm (bỏ qua 12:00-13:00 nếu vượt trưa)
   const getHighlightedTimes = (startValue?: string): string[] => {
@@ -276,7 +281,7 @@ const DateTime: React.FC<DateTimeProps> = ({
     if (!selectedDate || !startValue || !Number.isFinite(minutes) || minutes <= 0) return [];
     const slotsNeeded = Math.max(1, Math.ceil(minutes / 60));
     const result: string[] = [];
-    let current = new Date(`${selectedDate}T${startValue}`);
+    const current = new Date(`${selectedDate}T${startValue}`);
     for (let i = 0; i < slotsNeeded; i++) {
       const hh = String(current.getHours()).padStart(2, '0');
       result.push(`${hh}:00:00`);
@@ -396,19 +401,6 @@ const DateTime: React.FC<DateTimeProps> = ({
     onNext();
   };
 
-  const formatSelectedDateTime = () => {
-    if (!selectedDate || !selectedTime) return '';
-
-    const dateObj = new Date(`${selectedDate}T${selectedTime}`);
-    return dateObj.toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   // ================================
   // Render
@@ -460,11 +452,13 @@ const DateTime: React.FC<DateTimeProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const hiddenInput = document.getElementById('hidden-date-input') as HTMLInputElement;
-                  if (hiddenInput && 'showPicker' in hiddenInput) {
-                    hiddenInput.showPicker();
-                  } else {
-                    hiddenInput?.click();
+                  const hiddenInput = document.getElementById('hidden-date-input');
+                  if (hiddenInput && hiddenInput instanceof HTMLInputElement) {
+                    if ('showPicker' in hiddenInput && typeof hiddenInput.showPicker === 'function') {
+                      hiddenInput.showPicker();
+                    } else {
+                      hiddenInput.click();
+                    }
                   }
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -497,6 +491,9 @@ const DateTime: React.FC<DateTimeProps> = ({
                 <p className="text-green-700 text-sm">
                   {formatDateTime(`${selectedDate}T${selectedTime}`).time}
                 </p>
+                {serviceName && (
+                  <p className="text-green-700 text-sm mt-1">Dịch vụ: {serviceName}</p>
+                )}
                 {serviceDurationMinutes && (
                   <p className="text-green-700 text-xs mt-1">
                     Dịch vụ dự kiến: {Math.floor(serviceDurationMinutes / 60)}h {serviceDurationMinutes % 60}m • Yêu cầu {getRequiredSlotsForStart(selectedTime || undefined)} slot

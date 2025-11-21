@@ -54,9 +54,9 @@ export async function createConversation(req: Request, res: Response) {
     // Tạo conversation
     const conversation = await Conversation.create([
       {
-        userID,
-        status: 'open',
-        createdAt: new Date(),
+      userID,
+      status: 'open',
+      createdAt: new Date(),
       },
     ], { session });
 
@@ -66,9 +66,9 @@ export async function createConversation(req: Request, res: Response) {
       const msgs = await Message.create([
         {
           conversationID: conversation[0]._id,
-          senderID: botUserID,
-          content: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
-          timestamp: new Date(),
+        senderID: botUserID,
+        content: 'Xin chào! Chào mừng bạn đến với EVMS. Tôi có thể hỗ trợ gì cho bạn?',
+        timestamp: new Date(),
         },
       ], { session });
       firstMessage = msgs[0];

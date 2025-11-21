@@ -324,7 +324,12 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="text-sm font-medium text-gray-500">Giá dịch vụ</label>
-                                                    <p className="text-gray-900 font-semibold">{formatPrice(service.price)}</p>
+                                                    <p className="text-gray-900 font-semibold">
+                                                        {appointment.isPeriodicRecheck ? formatPrice(0) : formatPrice(service.price)}
+                                                    </p>
+                                                    {appointment.isPeriodicRecheck && (
+                                                        <p className="text-xs text-green-600 mt-1">(Tái kiểm tra định kỳ - đã thanh toán)</p>
+                                                    )}
                                                 </div>
 
                                                 <div>
@@ -367,7 +372,12 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="text-sm font-medium text-gray-500">Giá gói</label>
-                                                    <p className="text-gray-900 font-semibold">{formatPrice(servicePackage.price)}</p>
+                                                    <p className="text-gray-900 font-semibold">
+                                                        {appointment.isPeriodicRecheck ? formatPrice(0) : formatPrice(servicePackage.price)}
+                                                    </p>
+                                                    {appointment.isPeriodicRecheck && (
+                                                        <p className="text-xs text-green-600 mt-1">(Tái kiểm tra định kỳ - đã thanh toán)</p>
+                                                    )}
                                                 </div>
 
                                                 <div>
@@ -431,7 +441,10 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                                             <div className="flex justify-between font-semibold">
                                                 <span className="text-gray-600">Tổng chi phí:</span>
                                                 <span className="text-gray-900">
-                                                    {formatPrice(service ? service.price : servicePackage?.price || 0)}
+                                                    {appointment.isPeriodicRecheck 
+                                                        ? formatPrice(0)
+                                                        : formatPrice(service ? service.price : servicePackage?.price || 0)
+                                                    }
                                                 </span>
                                             </div>
                                         )}
