@@ -67,6 +67,42 @@ export async function createAppointment(req: Request, res: Response) {
       return res.status(400).json({ message: 'bookingDate không hợp lệ' });
     }
 
+    // Ràng buộc thời gian CHỈ CHO CUSTOMER theo Asia/Ho_Chi_Minh (UTC+07:00)
+    // - Không cho đặt quá khứ
+    // - Không cho đặt quá 7 ngày (bao gồm ngày thứ 7, inclusive)
+    // - Admin/Staff/Technician bypass ràng buộc này
+    if (req.user?.role === 'customer') {
+      const nowUtcMs = Date.now();
+      const vnOffsetMs = 7 * 60 * 60 * 1000; // UTC+07:00, không DST
+
+      // Tính mốc bắt đầu ngày hôm nay theo VN time (00:00 VN) quy đổi về UTC epoch
+      const vnNow = new Date(nowUtcMs + vnOffsetMs);
+      const vnStartOfTodayLocal = new Date(vnNow);
+      vnStartOfTodayLocal.setHours(0, 0, 0, 0);
+      const vnStartOfTodayUtcMs = vnStartOfTodayLocal.getTime() - vnOffsetMs;
+
+      // Mốc cuối cùng được phép: hết ngày thứ 7 kể từ hôm nay (inclusive)
+      const vnEndOfMaxDayUtcMs = vnStartOfTodayUtcMs + (7 * 24 * 60 * 60 * 1000) + (24 * 60 * 60 * 1000 - 1);
+
+      // 1) Không cho đặt quá khứ
+      if (parsedBookingDate.getTime() < nowUtcMs) {
+        return res.status(400).json({
+          message: 'Không thể đặt lịch trong quá khứ. Lưu ý: Không được chọn quá 1 tuần (7 ngày).',
+          code: 'BOOKING_DATE_IN_PAST',
+          note: 'Không được chọn quá 1 tuần (7 ngày).'
+        });
+      }
+
+      // 2) Không vượt quá 7 ngày (inclusive theo VN time)
+      if (parsedBookingDate.getTime() > vnEndOfMaxDayUtcMs) {
+        return res.status(400).json({
+          message: 'Không thể đặt lịch quá 7 ngày kể từ hôm nay. Lưu ý: Không được chọn quá 1 tuần (7 ngày).',
+          code: 'BOOKING_DATE_EXCEEDS_MAX_DAYS',
+          note: 'Không được chọn quá 1 tuần (7 ngày).'
+        });
+      }
+    }
+
     // ============================================
     // VALIDATION: Prevent creating a new periodic plan while another is active for the vehicle
     // Allow scheduling for the SAME active plan
