@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress, getPeriodicVehicleForUser } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress, getPeriodicVehicleForUser, listMaintenanceReminders, sendMaintenanceReminderEmail } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -52,6 +52,10 @@ appointmentRouter.get('/:id/service', authMiddleware, getServiceByAppointmentId)
 
 // Get available technicians (admin/staff only) - MUST be before /:id route
 appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
+
+// Maintenance reminders (admin/staff) - MUST be before /:id route
+appointmentRouter.get('/reminders/maintenance', authMiddleware, listMaintenanceReminders);
+appointmentRouter.post('/reminders/maintenance/send-email', authMiddleware, sendMaintenanceReminderEmail);
 
 // Get appointment by id - MUST be after all specific routes
 appointmentRouter.get('/:id', authMiddleware, getAppointmentById);

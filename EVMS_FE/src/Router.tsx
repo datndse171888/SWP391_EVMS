@@ -34,6 +34,7 @@ import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
+
 import BookingPage from './pages/staff/BookingPage';
 import Booking from './pages/booking/Booking'
 import PartsPage from './pages/Parts'

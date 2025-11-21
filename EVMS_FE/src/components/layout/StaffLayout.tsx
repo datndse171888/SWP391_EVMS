@@ -60,6 +60,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         </svg>
       )
     },
+
   ];
 
   const isActive = (path: string) => {

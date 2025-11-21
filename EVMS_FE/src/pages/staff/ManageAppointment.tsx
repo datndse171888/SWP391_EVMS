@@ -4,6 +4,7 @@ import { UserApi } from '../../api/UserApi';
 import { ServiceApi } from '../../api/ServiceApi';
 import { ServicePackageApi } from '../../api/ServicePackageApi';
 import type { AppointmentResponse, AppointmentStatus } from '../../types/Appoitment';
+import { getMaintenanceReminders, sendMaintenanceReminderEmail, type ReminderItem } from '../../api/AppointmentApi';
 
 // Add custom CSS for line-clamp
 const customStyles = `
@@ -47,11 +48,39 @@ interface Appointment {
 }
 
 const ManageAppointment: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'confirmed' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled'>('pending');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'confirmed' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled' | 'reminder'>('pending');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
-  // Search and filter states
+  // Nhắc nhở định kỳ hôm nay (dành cho tab "reminder")
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
+  const [remindersLoading, setRemindersLoading] = useState(false);
+  const [remindersError, setRemindersError] = useState<string>('');
+  const [sendingIndex, setSendingIndex] = useState<number | null>(null);
+
+  async function handleSendReminderEmail(it: ReminderItem, idx: number) {
+    if (!it?.user?.email) return;
+    setSendingIndex(idx);
+    try {
+      await sendMaintenanceReminderEmail({
+        toEmail: it.user.email,
+        fullName: it.user.fullName || it.user.userName,
+        dueDate: it.dueDate,
+        plateNumber: it.vehicle?.plateNumber,
+        vehicleBrand: it.vehicle?.brand,
+        vehicleCategory: it.vehicle?.vehicleCategory as any,
+        serviceName: it.periodicSummary?.serviceName,
+        remainingVisits: it.periodicSummary?.remainingVisits,
+      });
+      alert('Đã gửi email nhắc hẹn');
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Gửi email thất bại');
+    } finally {
+      setSendingIndex(null);
+    }
+  }
+  
+  // Search và filter states
   const [searchTerm, setSearchTerm] = useState('');
   // Deprecated filters (kept for potential extension)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -91,6 +120,23 @@ const ManageAppointment: React.FC = () => {
   };
 
   useEffect(() => {
+    const fetchRemindersToday = async () => {
+      try {
+        setRemindersLoading(true);
+        setRemindersError('');
+        const resp = await getMaintenanceReminders({ windowDays: 3, type: 'all', include: 'user,vehicle', order: 'asc' });
+        const picked = (resp.data || [])
+          .filter((x) => (x.dueStatus === 'dueToday' || x.dueStatus === 'upcoming'))
+          .filter((x) => !x.nextAppointment); // nếu khách đã có lịch sắp tới thì ẩn khỏi nhắc nhở
+        setReminders(picked);
+      } catch (e: any) {
+        setRemindersError(e?.response?.data?.message || e?.message || 'Không thể tải nhắc nhở định kỳ');
+        setReminders([]);
+      } finally {
+        setRemindersLoading(false);
+      }
+    };
+
     const fetchData = async () => {
       setLoading(true);
       setError('');
@@ -301,6 +347,7 @@ const ManageAppointment: React.FC = () => {
         setLoading(false);
       }
     };
+    fetchRemindersToday();
     fetchData();
   }, []);
 
@@ -355,6 +402,8 @@ const ManageAppointment: React.FC = () => {
         return pendingAppointments;
       case 'confirmed':
         return confirmedAppointments;
+      case 'reminder':
+        return [] as Appointment[];
       case 'in_progress':
         return inProgressAppointments;
       case 'cancelled':
@@ -843,6 +892,16 @@ const ManageAppointment: React.FC = () => {
                 >
                   Đã xác nhận ({confirmedAppointments.length})
                 </button>
+                <button
+                  onClick={() => setSelectedTab('reminder')}
+                  className={`py-1 px-1 border-b-2 font-medium text-xs whitespace-nowrap max-w-[180px] truncate ${
+                    selectedTab === 'reminder'
+                      ? 'border-orange-500 text-orange-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Nhắc nhở định kỳ ({reminders.length})
+                </button>
               </nav>
             </div>
 
@@ -855,43 +914,100 @@ const ManageAppointment: React.FC = () => {
             )}
 
             {/* Content Grid */}
-            <div 
-              className={`grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 ${
-                paginatedData.length > 9 ? 'overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''
-              }`}
-              style={{
-                height: paginatedData.length > 9 ? '500px' : 'auto',
-                scrollbarWidth: paginatedData.length > 9 ? 'thin' : 'auto',
-                scrollbarColor: paginatedData.length > 9 ? '#d1d5db #f3f4f6' : 'auto'
-              }}
-            >
-              {paginatedData.map(renderAppointmentCard)}
-            </div>
+            {selectedTab !== 'reminder' ? (
+              <>
+                <div 
+                  className={`grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 ${
+                    paginatedData.length > 9 ? 'overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''
+                  }`}
+                  style={{
+                    height: paginatedData.length > 9 ? '500px' : 'auto',
+                    scrollbarWidth: paginatedData.length > 9 ? 'thin' : 'auto',
+                    scrollbarColor: paginatedData.length > 9 ? '#d1d5db #f3f4f6' : 'auto'
+                  }}
+                >
+                  {paginatedData.map(renderAppointmentCard)}
+                </div>
 
-            {/* Pagination */}
-            <div className="flex-shrink-0 mt-2">
-              {renderPagination()}
-            </div>
+                {/* Pagination */}
+                <div className="flex-shrink-0 mt-2">
+                  {renderPagination()}
+                </div>
 
-            {/* Empty State */}
-            {currentData.length === 0 && (
-              <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  {selectedTab === 'pending' && 'Không có lịch hẹn chờ xác nhận'}
-                  {selectedTab === 'all' && 'Không có lịch hẹn nào'}
-                  {selectedTab === 'confirmed' && 'Không có lịch hẹn đã xác nhận'}
-                  {selectedTab === 'completed' && 'Không có lịch hẹn hoàn thành'}
-                </h3>
-                <p className="mt-1 text-xs text-gray-500">
-                  {selectedTab === 'pending' && 'Tất cả lịch hẹn đã được xử lý.'}
-                  {selectedTab === 'all' && 'Chưa có lịch hẹn nào được tạo.'}
-                  {selectedTab === 'confirmed' && 'Chưa có lịch hẹn nào được xác nhận.'}
-                  {selectedTab === 'completed' && 'Chưa có lịch hẹn nào được hoàn thành.'}
-                </p>
-              </div>
+                {/* Empty State */}
+                {currentData.length === 0 && (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      {selectedTab === 'pending' && 'Không có lịch hẹn chờ xác nhận'}
+                      {selectedTab === 'all' && 'Không có lịch hẹn nào'}
+                      {selectedTab === 'confirmed' && 'Không có lịch hẹn đã xác nhận'}
+                      {selectedTab === 'completed' && 'Không có lịch hẹn hoàn thành'}
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {selectedTab === 'pending' && 'Tất cả lịch hẹn đã được xử lý.'}
+                      {selectedTab === 'all' && 'Chưa có lịch hẹn nào được tạo.'}
+                      {selectedTab === 'confirmed' && 'Chưa có lịch hẹn nào được xác nhận.'}
+                      {selectedTab === 'completed' && 'Chưa có lịch hẹn nào được hoàn thành.'}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {remindersLoading && (
+                  <div className="mb-2 text-sm text-gray-600">Đang tải nhắc nhở định kỳ...</div>
+                )}
+                {remindersError && (
+                  <div className="mb-2 text-sm text-red-600">{remindersError}</div>
+                )}
+                <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  {reminders.map((it, idx) => (
+                    <div key={idx} className="bg-white rounded-lg p-3 border hover:shadow-md transition">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold">{it.user?.fullName || it.user?.userName || 'Khách hàng'}</div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                          it.dueStatus === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' :
+                          it.dueStatus === 'dueToday' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'
+                        }`}>
+                          {it.dueStatus === 'overdue' ? 'Quá hạn' : it.dueStatus === 'dueToday' ? 'Hôm nay' : 'Sắp tới'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600">{it.user?.phoneNumber || it.user?.email || ''}</div>
+                      <div className="mt-2 text-sm">
+                        <div className="text-gray-800">Đến hạn: <span className="font-medium">{new Date(it.dueDate).toLocaleString()}</span></div>
+                        {it.vehicle && (
+                          <div className="text-gray-700 mt-1">Xe: {it.vehicle.plateNumber} • {it.vehicle.brand} • {it.vehicle.vehicleCategory}</div>
+                        )}
+                        {it.type === 'periodic' && it.periodicSummary && (
+                          <div className="text-gray-700 mt-1">
+                            {it.periodicSummary.serviceName || it.periodicSummary.serviceId} • {it.periodicSummary.completedVisits ?? 0}/{it.periodicSummary.totalVisits ?? '-'} lần • Còn {it.periodicSummary.remainingVisits ?? '-'}
+                          </div>
+                        )}
+                        <div className="text-gray-900 mt-1 font-semibold">
+                          SĐT: {it.user?.phoneNumber || '-'}
+                        </div>
+                        {it.user?.email && (
+                          <button
+                            type="button"
+                            onClick={() => handleSendReminderEmail(it, idx)}
+                            disabled={sendingIndex === idx}
+                            className={`mt-2 inline-flex items-center px-2 py-1 text-xs rounded border ${sendingIndex === idx ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600'}`}
+                            title={it.user.email}
+                          >
+                            {sendingIndex === idx ? 'Đang gửi...' : 'Gửi email nhắc'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {(!remindersLoading && reminders.length === 0) && (
+                  <div className="text-center py-8 text-sm text-gray-500">Không có nhắc nhở định kỳ hôm nay.</div>
+                )}
+              </>
             )}
           </div>
         </div>
