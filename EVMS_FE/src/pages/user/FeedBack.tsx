@@ -1,14 +1,28 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, Send } from 'lucide-react';
+import { CheckCircle, Send, XCircle } from 'lucide-react';
 import StarRating from '../../components/StarRating';
+import { feedbackApi } from '../../api/FeedbackApi';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { UserProfileLayout } from '../../components/layout/UserProfileLayout';
+import { UserProfileSidebar } from '../../components/layout/UserProfileSidebar';
+import { UserProfileHeader } from '../../components/layout/UserProfileHeader';
 
 const CHAR_LIMIT = 400;
 
 export default function FeedbackPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
+  const [error, setError] = useState('');
+
+  // Debug: Log user info
+  useEffect(() => {
+    console.log('FeedbackPage - User:', user);
+  }, [user]);
 
   useEffect(() => {
     if (!ok) return;
@@ -16,38 +30,58 @@ export default function FeedbackPage() {
     return () => clearTimeout(t);
   }, [ok]);
 
+  useEffect(() => {
+    if (!error) return;
+    const t = window.setTimeout(() => setError(''), 3000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   const canSubmit = rating > 0 && comment.trim().length > 0 && comment.length <= CHAR_LIMIT;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+
+    // Check if user is logged in
+    if (!user) {
+      setError('Vui lòng đăng nhập để gửi phản hồi');
+      setTimeout(() => navigate('/login'), 1500);
+      return;
+    }
+
     setLoading(true);
+    setError('');
     try {
-      // TODO: call API here, e.g. await feedbackApi.send({ rating, comment })
-      await new Promise((r) => setTimeout(r, 800));
+      await feedbackApi.createFeedback({ rating, comment: comment.trim() });
       setOk(true);
       setRating(0);
       setComment('');
-    } catch (err) {
-      console.error(err);
-      // show error toast if you have one
+    } catch (err: any) {
+      console.error('Error submitting feedback:', err);
+      const message = err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-gradient-to-b from-slate-50 to-white mt-10">
-      <div className="w-full max-w-xl">
-        <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
-          <div className="p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl font-semibold text-blue-800">Phản hồi & Đánh giá</h1>
-                <h2 className="text-blue-500">Chia sẻ trải nghiệm của bạn để chúng tôi phục vụ tốt hơn.</h2>
-              </div>
-              <div className="text-sm text-slate-400">{rating ? `${rating}/5` : 'Chưa đánh giá'}</div>
-            </div>
+    <UserProfileLayout>
+      <div className="flex flex-row w-full">
+        <UserProfileSidebar />
+        <div className="flex-1">
+          <div className="w-full px-8 py-8">
+            <UserProfileHeader
+              title="Phản hồi & Đánh giá"
+              description="Chia sẻ trải nghiệm của bạn để chúng tôi phục vụ tốt hơn"
+            />
+
+            <div className="max-w-2xl mx-auto">
+            <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
+              <div className="p-6 sm:p-8">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="text-sm text-slate-400">{rating ? `${rating}/5` : 'Chưa đánh giá'}</div>
+                </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-4">
@@ -128,26 +162,39 @@ export default function FeedbackPage() {
             </form>
           </div>
 
-          <div className="border-t border-gray-100 px-6 py-3 bg-gradient-to-t from-white to-transparent">
-            <div className="text-xs text-slate-500">
-              Phản hồi của bạn sẽ được ghi nhận; chúng tôi có thể liên hệ nếu cần làm rõ.
+              <div className="border-t border-gray-100 px-6 py-3 bg-gradient-to-t from-white to-transparent">
+                <div className="text-xs text-slate-500">
+                  Phản hồi của bạn sẽ được ghi nhận; chúng tôi có thể liên hệ nếu cần làm rõ.
+                </div>
+              </div>
             </div>
+
+            {/* Success toast */}
+            {ok && (
+              <div className="fixed top-8 right-6 z-50 flex items-center gap-3 rounded-lg bg-white shadow-lg border border-gray-100 px-4 py-3 mt-15">
+                <CheckCircle className="text-emerald-600" />
+                <div>
+                  <div className="text-sm font-semibold">Cảm ơn bạn!</div>
+                  <div className="text-xs text-slate-500">Phản hồi đã gửi thành công.</div>
+                </div>
+              </div>
+            )}
+
+            {/* Error toast */}
+            {error && (
+              <div className="fixed top-8 right-6 z-50 flex items-center gap-3 rounded-lg bg-white shadow-lg border border-red-200 px-4 py-3 mt-15">
+                <XCircle className="text-red-600" />
+                <div>
+                  <div className="text-sm font-semibold text-red-600">Lỗi!</div>
+                  <div className="text-xs text-slate-500">{error}</div>
+                </div>
+              </div>
+            )}
+          </div>
           </div>
         </div>
-
-        {/* toast */}
-       
-        {ok && (
-          <div className="fixed top-8 right-6 z-50 flex items-center gap-3 rounded-lg bg-white shadow-lg border border-gray-100 px-4 py-3 mt-15">
-            <CheckCircle className="text-emerald-600" />
-            <div>
-              <div className="text-sm font-semibold">Cảm ơn bạn!</div>
-              <div className="text-xs text-slate-500">Phản hồi đã gửi thành công.</div>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+    </UserProfileLayout>
   );
 }
 

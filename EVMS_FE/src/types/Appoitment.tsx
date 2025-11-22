@@ -7,6 +7,7 @@ export interface CreateAppointmentRequest {
     servicePackageID?: string;
     bookingDate: string;
     reason?: string;
+    isPeriodicRecheck?: boolean; // true nếu là lần đặt lịch tái kiểm tra định kỳ (giá = 0đ)
 }
 
 export interface AppointmentResponse {
@@ -20,6 +21,7 @@ export interface AppointmentResponse {
     technicianSupport2ID?: string;
     bookingDate: string;
     status: AppointmentStatus;
+    isPeriodicRecheck?: boolean; // true nếu là lần đặt lịch tái kiểm tra định kỳ (giá = 0đ)
     createdAt?: string;
     updatedAt?: string;
 }

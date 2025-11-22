@@ -75,6 +75,22 @@ export async function createChecklist(req: Request, res: Response) {
       });
     }
 
+    // Ràng buộc leader phải là leader được assign của appointment
+    if (!appointment.technicianLeaderID || String(appointment.technicianLeaderID) !== String(technicianID)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ leader được assign của appointment mới được tạo checklist'
+      });
+    }
+
+    // Chỉ cho phép tạo checklist khi appointment đang in_progress
+    if (appointment.status !== 'in_progress') {
+      return res.status(409).json({
+        success: false,
+        message: 'Chỉ appointment đang in_progress mới tạo checklist'
+      });
+    }
+
     // Kiểm tra đã có vehicle condition report "before-service" chưa
     // Leader chỉ được tạo checklist sau khi ghi vehicle condition report đầu tiên
     const vehicleConditionReport = await VehicleConditionReport.findOne({

@@ -43,6 +43,7 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
   const [availableServices, setAvailableServices] = useState<ServiceResponse[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load available services when vehicle category changes
   useEffect(() => {
@@ -142,9 +143,13 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 
   // Auto-calculate price when discount % changes
   const handleDiscountChange = (discount: number) => {
-    if (discount < 0 || discount > 100) {
-      alert('Giảm giá phải từ 0% đến 100%');
-      return;
+    // Validate discount range
+    if (discount < 0) {
+      setErrors(prev => ({ ...prev, discount: 'Giảm giá không thể âm' }));
+    } else if (discount > 80) {
+      setErrors(prev => ({ ...prev, discount: 'Giảm giá tối đa 80%' }));
+    } else {
+      setErrors(prev => ({ ...prev, discount: '' }));
     }
 
     const newPrice = totalOriginalPrice * (1 - discount / 100);
@@ -157,17 +162,24 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 
   // Auto-calculate discount % when final price changes
   const handleFinalPriceChange = (finalPrice: number) => {
+    // Validate price
     if (finalPrice < 0) {
-      alert('Giá không thể âm');
-      return;
-    }
-
-    if (finalPrice > totalOriginalPrice) {
-      alert('Giá sau giảm không thể lớn hơn giá gốc');
-      return;
+      setErrors(prev => ({ ...prev, price: 'Giá không thể âm' }));
+    } else if (finalPrice > totalOriginalPrice) {
+      setErrors(prev => ({ ...prev, price: 'Giá sau giảm không thể lớn hơn giá gốc' }));
+    } else {
+      setErrors(prev => ({ ...prev, price: '' }));
     }
 
     const newDiscount = totalOriginalPrice > 0 ? ((totalOriginalPrice - finalPrice) / totalOriginalPrice * 100) : 0;
+
+    // Check if calculated discount exceeds 80%
+    if (newDiscount > 80) {
+      setErrors(prev => ({ ...prev, discount: 'Giảm giá tối đa 80%' }));
+    } else {
+      setErrors(prev => ({ ...prev, discount: '' }));
+    }
+
     setFormData({
       ...formData,
       price: finalPrice,
@@ -177,6 +189,12 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if there are any errors
+    if (errors.discount || errors.price) {
+      alert('Vui lòng sửa các lỗi trước khi lưu');
+      return;
+    }
 
     // Validation
     if (!formData.name.trim()) {
@@ -196,6 +214,11 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 
     if (formData.price < 0) {
       alert('Giá không thể âm');
+      return;
+    }
+
+    if (formData.discount < 0 || formData.discount > 80) {
+      alert('Giảm giá phải từ 0% đến 80%');
       return;
     }
 
@@ -415,24 +438,30 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Giảm giá (%)
+                  Giảm giá (%) <span className="text-xs text-gray-500">(Tối đa 80%)</span>
                 </label>
                 <div className="relative">
                   <input
                     type="number"
                     min="0"
-                    max="100"
+                    max="80"
                     step="0.1"
                     value={formData.discount}
                     onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure-0 focus:border-transparent outline-none transition-all"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-azure-0 focus:border-transparent outline-none transition-all ${
+                      errors.discount ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Tự động tính: {calculatedDiscount.toFixed(1)}%
-                </p>
+                {errors.discount ? (
+                  <p className="text-xs text-red-500 mt-1">{errors.discount}</p>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Tự động tính: {calculatedDiscount.toFixed(1)}%
+                  </p>
+                )}
               </div>
 
               <div>
@@ -447,16 +476,20 @@ export const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                     step="1000"
                     value={formData.price}
                     onChange={(e) => handleFinalPriceChange(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure-0 focus:border-transparent outline-none transition-all"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-azure-0 focus:border-transparent outline-none transition-all ${
+                      errors.price ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₫</span>
                 </div>
-                {savings > 0 && (
+                {errors.price ? (
+                  <p className="text-xs text-red-500 mt-1">{errors.price}</p>
+                ) : savings > 0 ? (
                   <p className="text-xs text-green-600 mt-1">
                     Tiết kiệm: {savings.toLocaleString('vi-VN')}₫
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress } from '../controllers/appointmentController.js';
+import { createAppointment, listAppointments, getAppointmentById, listMyAppointments, cancelAppointment, assignTechnician, getAvailableTechnicians, getAppointmentsByUserId, updateAppointmentStatus, listTodayAwaitingPayment, listMyAssignedAppointments, getServiceByAppointmentId, countPendingAppointments, countConfirmedAndCancelledAppointments, countAllAppointments, countMyTodayAppointments, countMyTodayConfirmed, countMyTodayInProgress, getPeriodicVehicleForUser, listMaintenanceReminders, sendMaintenanceReminderEmail } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export const appointmentRouter = Router();
@@ -27,6 +27,9 @@ appointmentRouter.get('/count/confirmed-cancelled', authMiddleware, countConfirm
 // Test: http://localhost:4000/api/appointments/count/all
 appointmentRouter.get('/count/all', authMiddleware, countAllAppointments);
 
+// Get periodic vehicle for user by service/servicePackage
+appointmentRouter.get('/periodic/vehicle', authMiddleware, getPeriodicVehicleForUser);
+
 // Technician self counts (today)
 appointmentRouter.get('/technician/me/count/today', authMiddleware, countMyTodayAppointments);
 appointmentRouter.get('/technician/me/count/today/confirmed', authMiddleware, countMyTodayConfirmed);
@@ -49,6 +52,10 @@ appointmentRouter.get('/:id/service', authMiddleware, getServiceByAppointmentId)
 
 // Get available technicians (admin/staff only) - MUST be before /:id route
 appointmentRouter.get('/technicians/available', authMiddleware, getAvailableTechnicians);
+
+// Maintenance reminders (admin/staff) - MUST be before /:id route
+appointmentRouter.get('/reminders/maintenance', authMiddleware, listMaintenanceReminders);
+appointmentRouter.post('/reminders/maintenance/send-email', authMiddleware, sendMaintenanceReminderEmail);
 
 // Get appointment by id - MUST be after all specific routes
 appointmentRouter.get('/:id', authMiddleware, getAppointmentById);

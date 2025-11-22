@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type BillStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
+export type BillPaymentMethod = 'CASH' | 'PAYOS';
 
 export interface BillItem {
   partID: mongoose.Types.ObjectId;
@@ -22,6 +23,7 @@ export interface IBill extends Document {
   tax: number;
   totalAmount: number;
   status: BillStatus;
+  paymentMethod?: BillPaymentMethod; // 'CASH' | 'PAYOS'
   description?: string; // Ghi chú/mô tả cho bill (dùng cho PayOS description)
 }
 
@@ -49,6 +51,7 @@ const BillSchema = new Schema<IBill>(
     tax: { type: Number, required: true, min: 0, default: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     status: { type: String, required: true, enum: ['pending', 'paid', 'overdue', 'cancelled'], default: 'pending', index: true },
+    paymentMethod: { type: String, enum: ['CASH', 'PAYOS'], index: true },
     description: { type: String, trim: true }, // Ghi chú/mô tả cho bill (optional)
   },
   { timestamps: true }

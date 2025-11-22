@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment.js';
+import { Service } from '../models/Service.js';
+import { ServicePackage } from '../models/ServicePackage.js';
 import { Vehicle } from '../models/Vehicle.js';
 import { getDefaultMaintenanceCycleMonths, computeNextMaintenanceDate, isDue } from '../utils/maintenance.js';
 import { Technician } from '../models/Technician.js';
@@ -20,6 +22,7 @@ export async function createAppointment(req: Request, res: Response) {
       bookingDate,
       reason,
       status,
+      isPeriodicRecheck,
     } = req.body;
 
     if (!userID || !bookingDate) { 
@@ -62,6 +65,42 @@ export async function createAppointment(req: Request, res: Response) {
       }
     } catch (error) {
       return res.status(400).json({ message: 'bookingDate không hợp lệ' });
+    }
+
+    // Ràng buộc thời gian CHỈ CHO CUSTOMER theo Asia/Ho_Chi_Minh (UTC+07:00)
+    // - Không cho đặt quá khứ
+    // - Không cho đặt quá 7 ngày (bao gồm ngày thứ 7, inclusive)
+    // - Admin/Staff/Technician bypass ràng buộc này
+    if (req.user?.role === 'customer') {
+      const nowUtcMs = Date.now();
+      const vnOffsetMs = 7 * 60 * 60 * 1000; // UTC+07:00, không DST
+
+      // Tính mốc bắt đầu ngày hôm nay theo VN time (00:00 VN) quy đổi về UTC epoch
+      const vnNow = new Date(nowUtcMs + vnOffsetMs);
+      const vnStartOfTodayLocal = new Date(vnNow);
+      vnStartOfTodayLocal.setHours(0, 0, 0, 0);
+      const vnStartOfTodayUtcMs = vnStartOfTodayLocal.getTime() - vnOffsetMs;
+
+      // Mốc cuối cùng được phép: hết ngày thứ 7 kể từ hôm nay (inclusive)
+      const vnEndOfMaxDayUtcMs = vnStartOfTodayUtcMs + (7 * 24 * 60 * 60 * 1000) + (24 * 60 * 60 * 1000 - 1);
+
+      // 1) Không cho đặt quá khứ
+      if (parsedBookingDate.getTime() < nowUtcMs) {
+        return res.status(400).json({
+          message: 'Không thể đặt lịch trong quá khứ. Lưu ý: Không được chọn quá 1 tuần (7 ngày).',
+          code: 'BOOKING_DATE_IN_PAST',
+          note: 'Không được chọn quá 1 tuần (7 ngày).'
+        });
+      }
+
+      // 2) Không vượt quá 7 ngày (inclusive theo VN time)
+      if (parsedBookingDate.getTime() > vnEndOfMaxDayUtcMs) {
+        return res.status(400).json({
+          message: 'Không thể đặt lịch quá 7 ngày kể từ hôm nay. Lưu ý: Không được chọn quá 1 tuần (7 ngày).',
+          code: 'BOOKING_DATE_EXCEEDS_MAX_DAYS',
+          note: 'Không được chọn quá 1 tuần (7 ngày).'
+        });
+      }
     }
 
     // ============================================
@@ -325,6 +364,81 @@ export async function createAppointment(req: Request, res: Response) {
     }
 
     // ============================================
+    // VALIDATION: isPeriodicRecheck (miễn phí) chỉ hợp lệ khi còn lượt
+    // ============================================
+    if (isPeriodicRecheck === true || isPeriodicRecheck === 'true') {
+      // Validate: Phải có vehicleID
+      if (!vehicleID || !mongoose.Types.ObjectId.isValid(vehicleID)) {
+        return res.status(400).json({ 
+          message: 'Lịch tái định kỳ yêu cầu phải có thông tin xe' 
+        });
+      }
+
+      // Validate: Phải có serviceID hoặc servicePackageID
+      if (!serviceID && !servicePackageID) {
+        return res.status(400).json({ 
+          message: 'Lịch tái định kỳ yêu cầu phải chọn dịch vụ hoặc gói dịch vụ' 
+        });
+      }
+
+      // Load config của service/package
+      let config: any = null;
+      if (serviceID && mongoose.Types.ObjectId.isValid(serviceID)) {
+        const svc = await Service.findById(serviceID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+        if (svc && svc.periodicEnabled && svc.intervalMonths && svc.defaultTotalVisits) {
+          config = svc;
+        }
+      } else if (servicePackageID && mongoose.Types.ObjectId.isValid(servicePackageID)) {
+        const pkg = await ServicePackage.findById(servicePackageID).select('periodicEnabled intervalMonths defaultTotalVisits').lean();
+        if (pkg && pkg.periodicEnabled && pkg.intervalMonths && pkg.defaultTotalVisits) {
+          config = pkg;
+        }
+      }
+
+      // Validate: Service/Package phải là periodic
+      if (!config) {
+        return res.status(400).json({ 
+          message: 'Dịch vụ/gói này không hỗ trợ bảo dưỡng định kỳ hoặc chưa được cấu hình' 
+        });
+      }
+
+      // Đếm số lượt đã dùng
+      const filter: any = { 
+        vehicleID: new mongoose.Types.ObjectId(vehicleID), 
+        status: 'completed' 
+      };
+      if (serviceID) filter.serviceID = new mongoose.Types.ObjectId(serviceID);
+      if (servicePackageID) filter.servicePackageID = new mongoose.Types.ObjectId(servicePackageID);
+
+      const visitsUsed = await Appointment.countDocuments(filter);
+      const remainingVisits = Math.max(0, (config.defaultTotalVisits || 0) - (visitsUsed || 0));
+
+      // Validate: Phải còn lượt
+      if (remainingVisits <= 0) {
+        return res.status(400).json({ 
+          message: `Bạn đã sử dụng hết ${config.defaultTotalVisits} lần của gói định kỳ này. Vui lòng đặt lịch bình thường hoặc chọn gói mới.`,
+          code: 'NO_REMAINING_VISITS',
+          data: {
+            totalVisits: config.defaultTotalVisits,
+            visitsUsed,
+            remainingVisits: 0
+          }
+        });
+      }
+
+      // Validate: Phải đã từng đặt lịch này trước đó (có startDate)
+      const firstCompleted = await Appointment.findOne(filter).sort({ bookingDate: 1 }).select('bookingDate').lean();
+      if (!firstCompleted) {
+        return res.status(400).json({ 
+          message: 'Không tìm thấy lịch sử sử dụng dịch vụ định kỳ này. Vui lòng đặt lịch bình thường cho lần đầu.',
+          code: 'NO_PERIODIC_HISTORY'
+        });
+      }
+
+      console.log(`✅ Validated periodic recheck: remainingVisits=${remainingVisits}/${config.defaultTotalVisits}, vehicleID=${vehicleID}`);
+    }
+
+    // ============================================
     // TẠO APPOINTMENT
     // ============================================
 
@@ -339,6 +453,7 @@ export async function createAppointment(req: Request, res: Response) {
       bookingDate: parsedBookingDate,
       reason: reason || undefined,
       status: status || 'pending',
+      isPeriodicRecheck: isPeriodicRecheck === true || isPeriodicRecheck === 'true' ? true : false,
     });
 
     return res.status(201).json(appointment);
@@ -410,6 +525,7 @@ const ALLOWED_APPOINTMENT_FIELDS = new Set([
   'bookingDate',
   'reason',
   'status',
+  'isPeriodicRecheck',
   'createdAt',
   'updatedAt',
 ]);
@@ -606,7 +722,7 @@ export async function listMyAssignedAppointments(req: Request, res: Response) {
       { technicianSupport2ID: technicianId },
     ];
 
-    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
+    const select = buildSelect(params.fieldsParam) || '_id userID vehicleID serviceID servicePackageID bookingDate status isPeriodicRecheck technicianLeaderID technicianSupport1ID technicianSupport2ID createdAt updatedAt';
     const populates = buildPopulate(params.includeParam);
 
     const skip = (params.page - 1) * params.limit;
@@ -636,16 +752,134 @@ export async function getAppointmentById(req: Request, res: Response) {
     console.log('getAppointmentById - Requested ID:', id);
     console.log('getAppointmentById - User role:', req.user.role);
     console.log('getAppointmentById - User ID:', req.user.id);
-    
+
     const includeParam = (req.query.include as string | undefined)?.trim();
     const fieldsParam = (req.query.fields as string | undefined)?.trim();
     const select = buildSelect(fieldsParam);
     const populates = buildPopulate(includeParam);
 
+    const includeNextPeriodic = String((req.query as any).includeNextPeriodic || '')
+      .toLowerCase() === 'true';
+
+    type PeriodicInfo = {
+      isPeriodicSubscription: boolean;
+      serviceType?: 'service' | 'servicePackage';
+      serviceName?: string;
+      totalVisits?: number;
+      completedVisits?: number;
+      remainingVisits?: number;
+      intervalMonths?: number;
+      nextAppointment?: any | null;
+      estimatedNextDate?: Date | null;
+      subscriptionStatus?: 'active' | 'completed' | 'expired';
+      lastCompletedDate?: Date | null;
+    } | null;
+
+    async function buildPeriodicInfo(appointmentDoc: any): Promise<PeriodicInfo> {
+      try {
+        if (!appointmentDoc) return null;
+        if (!appointmentDoc.vehicleID) return null;
+
+        const hasPackage = Boolean(appointmentDoc.servicePackageID);
+        const hasService = Boolean(appointmentDoc.serviceID);
+        if (!hasPackage && !hasService) return null;
+
+        const now = new Date();
+        let periodicEnabled = false;
+        let intervalMonths: number | undefined = undefined;
+        let totalVisits: number | undefined = undefined;
+        let serviceName: string | undefined = undefined;
+        let serviceType: 'service' | 'servicePackage' = hasPackage ? 'servicePackage' : 'service';
+
+        if (hasPackage) {
+          const { ServicePackage } = await import('../models/ServicePackage.js');
+          const pkg = await ServicePackage.findById(appointmentDoc.servicePackageID)
+            .select('periodicEnabled intervalMonths defaultTotalVisits name')
+            .lean();
+          if (!pkg) return null;
+          periodicEnabled = Boolean((pkg as any).periodicEnabled);
+          intervalMonths = (pkg as any).intervalMonths ?? undefined;
+          totalVisits = (pkg as any).defaultTotalVisits ?? undefined;
+          serviceName = (pkg as any).name;
+        } else if (hasService) {
+          const { Service } = await import('../models/Service.js');
+          const svc = await Service.findById(appointmentDoc.serviceID)
+            .select('periodicEnabled intervalMonths defaultTotalVisits name')
+            .lean();
+          if (!svc) return null;
+          periodicEnabled = Boolean((svc as any).periodicEnabled);
+          intervalMonths = (svc as any).intervalMonths ?? undefined;
+          totalVisits = (svc as any).defaultTotalVisits ?? undefined;
+          serviceName = (svc as any).name;
+        }
+
+        if (!periodicEnabled) return null;
+
+        const completedFilter: any = {
+          vehicleID: appointmentDoc.vehicleID,
+          status: 'completed',
+        };
+        if (hasPackage) completedFilter.servicePackageID = appointmentDoc.servicePackageID;
+        if (hasService) completedFilter.serviceID = appointmentDoc.serviceID;
+
+        const [completedVisits, lastCompleted] = await Promise.all([
+          Appointment.countDocuments(completedFilter),
+          Appointment.findOne(completedFilter).sort({ bookingDate: -1 }).select('bookingDate').lean()
+        ]);
+
+        const nextFilter: any = {
+          vehicleID: appointmentDoc.vehicleID,
+          status: { $in: ['pending', 'confirmed'] },
+          bookingDate: { $gt: now },
+        };
+        if (hasPackage) nextFilter.servicePackageID = appointmentDoc.servicePackageID;
+        if (hasService) nextFilter.serviceID = appointmentDoc.serviceID;
+
+        const nextAppointment = await Appointment.findOne(nextFilter)
+          .sort({ bookingDate: 1 })
+          .select('_id userID vehicleID serviceID servicePackageID bookingDate status technicianLeaderID technicianSupport1ID technicianSupport2ID')
+          .lean();
+
+        const remainingVisits = typeof totalVisits === 'number'
+          ? Math.max(0, Number(totalVisits) - Number(completedVisits || 0))
+          : undefined;
+
+        const subscriptionStatus: 'active' | 'completed' | 'expired' | undefined =
+          typeof remainingVisits === 'number'
+            ? (remainingVisits > 0 ? 'active' : 'completed')
+            : undefined;
+
+        let estimatedNextDate: Date | null = null;
+        if (!nextAppointment && subscriptionStatus !== 'completed' && intervalMonths && intervalMonths > 0) {
+          const base = (lastCompleted?.bookingDate ? new Date(lastCompleted.bookingDate) : now);
+          const est = new Date(base);
+          est.setMonth(est.getMonth() + Number(intervalMonths));
+          estimatedNextDate = est;
+        }
+
+        return {
+          isPeriodicSubscription: true,
+          serviceType,
+          serviceName,
+          totalVisits: typeof totalVisits === 'number' ? totalVisits : undefined,
+          completedVisits: Number(completedVisits || 0),
+          remainingVisits,
+          intervalMonths: typeof intervalMonths === 'number' ? intervalMonths : undefined,
+          nextAppointment: nextAppointment || null,
+          estimatedNextDate,
+          subscriptionStatus,
+          lastCompletedDate: lastCompleted?.bookingDate ? new Date(lastCompleted.bookingDate) : null,
+        };
+      } catch (e) {
+        console.error('buildPeriodicInfo error:', e);
+        return null;
+      }
+    }
+
     let query = Appointment.findById(id);
     if (select) query = query.select(select);
     let doc = await query.populate(populates);
-    
+
     if (!doc) {
       console.log('getAppointmentById - Appointment not found in database');
       return res.status(404).json({ message: 'Không tìm thấy appointment' });
@@ -661,34 +895,46 @@ export async function getAppointmentById(req: Request, res: Response) {
 
     const role = req.user.role;
     if (role === 'admin' || role === 'staff') {
+      if (includeNextPeriodic) {
+        const periodicInfo = await buildPeriodicInfo(doc);
+        return res.json({ data: doc, periodicInfo });
+      }
       return res.json({ data: doc });
     }
 
     // Allow customer to view their own appointments
     if (role === 'customer' && String(doc.userID) === req.user.id) {
+      if (includeNextPeriodic) {
+        const periodicInfo = await buildPeriodicInfo(doc);
+        return res.json({ data: doc, periodicInfo });
+      }
       return res.json({ data: doc });
     }
 
     // Allow technician to view appointments they are assigned to
     if (role === 'technician') {
-    // Resolve technician profile by userID (accept both ObjectId and string)
-    const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean() 
-      || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
+      // Resolve technician profile by userID (accept both ObjectId and string)
+      const techDoc = (await Technician.findOne({ userID: req.user.id }).select('_id').lean()
+        || await Technician.findOne({ userID: new mongoose.Types.ObjectId(req.user.id) }).select('_id').lean()) as any;
       if (!techDoc) {
         console.log('getAppointmentById - Technician profile not found');
         return res.status(403).json({ message: 'Insufficient permissions' });
       }
       const technicianId = String(techDoc._id);
       console.log('getAppointmentById - Technician ID:', technicianId);
-      
-      const isAssigned = 
+
+      const isAssigned =
         String(doc.technicianLeaderID) === technicianId ||
         String(doc.technicianSupport1ID) === technicianId ||
         String(doc.technicianSupport2ID) === technicianId;
-      
+
       console.log('getAppointmentById - Is assigned:', isAssigned);
-      
+
       if (isAssigned) {
+        if (includeNextPeriodic) {
+          const periodicInfo = await buildPeriodicInfo(doc);
+          return res.json({ data: doc, periodicInfo });
+        }
         return res.json({ data: doc });
       } else {
         console.log('getAppointmentById - Technician not assigned to this appointment');
@@ -1465,6 +1711,85 @@ export async function countConfirmedAndCancelledAppointments(req: Request, res: 
 }
 
 // Dashboard: Count total appointments (all statuses)
+// Get vehicle by user + periodic service/servicePackage
+export async function getPeriodicVehicleForUser(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    let userId = String(req.query.userId || '').trim();
+    const serviceIdParam = (req.query.serviceId || req.query.serviceID || '').toString().trim();
+    const servicePackageIdParam = (req.query.servicePackageId || req.query.servicePackageID || req.query.packageId || '').toString().trim();
+    let serviceId = serviceIdParam;
+    let servicePackageId = servicePackageIdParam;
+
+    // Fallback: nếu không truyền userId, dùng id từ token
+    if (!userId && req.user?.id) userId = String(req.user.id);
+
+    if (!userId || (!serviceId && !servicePackageId)) {
+      return res.status(400).json({ message: 'Thiếu userId và serviceId/servicePackageId' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'userId không hợp lệ' });
+    }
+    if (serviceId && !mongoose.Types.ObjectId.isValid(serviceId)) {
+      return res.status(400).json({ message: 'serviceId không hợp lệ' });
+    }
+    if (servicePackageId && !mongoose.Types.ObjectId.isValid(servicePackageId)) {
+      return res.status(400).json({ message: 'servicePackageId không hợp lệ' });
+    }
+
+    // Permission: customer chỉ được hỏi xe của chính họ; admin/staff thì xem được tất cả
+    const role = req.user.role;
+    if (role === 'customer' && userId !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn chỉ có thể xem dữ liệu của chính mình' });
+    }
+
+    // Check periodicEnabled
+    let isPeriodic = false;
+    if (serviceId) {
+      const svc = await Service.findById(serviceId).select('periodicEnabled').lean();
+      if (!svc || !svc.periodicEnabled) return res.status(400).json({ message: 'Dịch vụ không phải định kỳ' });
+      isPeriodic = true;
+    } else if (servicePackageId) {
+      const pkg = await ServicePackage.findById(servicePackageId).select('periodicEnabled').lean();
+      if (!pkg || !pkg.periodicEnabled) return res.status(400).json({ message: 'Gói dịch vụ không phải định kỳ' });
+      isPeriodic = true;
+    }
+
+    if (!isPeriodic) {
+      return res.status(400).json({ message: 'Không phải dịch vụ/gói định kỳ' });
+    }
+
+    // Find any appointment that links this user with the periodic service/package
+    const filter: any = { userID: new mongoose.Types.ObjectId(userId) };
+    if (serviceId) filter.serviceID = new mongoose.Types.ObjectId(serviceId);
+    if (servicePackageId) filter.servicePackageID = new mongoose.Types.ObjectId(servicePackageId);
+
+    const apt = await Appointment.findOne(filter)
+      .sort({ bookingDate: -1 })
+      .select('vehicleID userID serviceID servicePackageID')
+      .populate({ path: 'vehicleID' })
+      .lean() as any;
+
+    if (!apt || !apt.vehicleID) {
+      return res.status(404).json({ message: 'Không tìm thấy lịch hẹn phù hợp hoặc không có thông tin xe' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        vehicle: apt.vehicleID,
+        appointmentId: apt._id,
+        userID: apt.userID,
+        serviceID: apt.serviceID,
+        servicePackageID: apt.servicePackageID
+      }
+    });
+  } catch (error) {
+    console.error('getPeriodicVehicleForUser error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy xe theo dịch vụ định kỳ' });
+  }
+}
+
 export async function countAllAppointments(req: Request, res: Response) {
   try {
     if (!req.user) {
@@ -1480,6 +1805,301 @@ export async function countAllAppointments(req: Request, res: Response) {
   } catch (error) {
     console.error('Count all appointments error:', error);
     return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Maintenance reminders list for staff/admin
+export async function listMaintenanceReminders(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const windowDaysRaw = parseInt(String(req.query.windowDays ?? '7'), 10);
+    const windowDays = Math.min(Math.max(isNaN(windowDaysRaw) ? 7 : windowDaysRaw, 1), 60);
+    const typeParam = String(req.query.type || 'all').toLowerCase(); // 'periodic' | 'vehicleschedule' | 'all'
+    const hasAppointmentParam = (req.query.hasAppointment as string | undefined)?.toLowerCase(); // 'true' | 'false'
+    const vehicleCategory = (req.query.vehicleCategory as string | undefined)?.toUpperCase() as ('CAR'|'MOTOBIKE'|'BICYCLE'|undefined);
+
+    const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
+    const limitRaw = Math.max(parseInt(String(req.query.limit || '10'), 10) || 10, 1);
+    const limit = Math.min(limitRaw, 100);
+    const sortField = String(req.query.sort || 'dueDate');
+    const order = String(req.query.order || 'asc');
+    const includeParam = (req.query.include as string | undefined)?.trim();
+    const include = new Set((includeParam || '').split(',').map(s => s.trim()).filter(Boolean));
+
+    const now = new Date();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const deadline = new Date(today); deadline.setDate(deadline.getDate() + windowDays);
+
+    // Helper: due status
+    const getDueStatus = (d: Date | null | undefined): 'overdue' | 'dueToday' | 'upcoming' | null => {
+      if (!d) return null;
+      const dd = new Date(d); dd.setHours(0,0,0,0);
+      if (dd.getTime() < today.getTime()) return 'overdue';
+      if (dd.getTime() === today.getTime()) return 'dueToday';
+      if (dd.getTime() > today.getTime() && dd.getTime() <= deadline.getTime()) return 'upcoming';
+      return null;
+    };
+
+    // 1) PERIODIC SUBSCRIPTIONS
+    const periodicPipeline: any[] = [
+      { $match: {
+          vehicleID: { $ne: null },
+          $or: [ { serviceID: { $ne: null } }, { servicePackageID: { $ne: null } } ],
+          status: { $in: ['completed','pending','confirmed'] }
+        }
+      },
+      { $addFields: {
+          isCompleted: { $eq: ['$status', 'completed'] },
+          isWindow: { $and: [ { $in: ['$status', ['pending','confirmed']] }, { $gte: ['$bookingDate', today] }, { $lte: ['$bookingDate', deadline] } ] }
+        }
+      },
+      { $group: {
+          _id: { vehicleID: '$vehicleID', serviceID: '$serviceID', servicePackageID: '$servicePackageID' },
+          completedVisits: { $sum: { $cond: ['$isCompleted', 1, 0] } },
+          lastCompletedDate: { $max: { $cond: ['$isCompleted', '$bookingDate', null] } },
+          nextScheduledDate: { $min: { $cond: ['$isWindow', '$bookingDate', null] } }
+        }
+      }
+    ];
+
+    const periodicGroups = await Appointment.aggregate(periodicPipeline);
+
+    // Collect IDs
+    const vehicleIds: string[] = [];
+    const serviceIds: string[] = [];
+    const packageIds: string[] = [];
+    for (const g of periodicGroups) {
+      const vid = String(g._id.vehicleID);
+      if (!vehicleIds.includes(vid)) vehicleIds.push(vid);
+      if (g._id.serviceID) {
+        const sid = String(g._id.serviceID);
+        if (!serviceIds.includes(sid)) serviceIds.push(sid);
+      }
+      if (g._id.servicePackageID) {
+        const pid = String(g._id.servicePackageID);
+        if (!packageIds.includes(pid)) packageIds.push(pid);
+      }
+    }
+
+    // Load vehicles map
+    const vehicles = await Vehicle.find({ _id: { $in: vehicleIds } })
+      .select('_id userID plateNumber vehicleCategory brand lastMaintenanceDate nextMaintenanceDate maintenanceCycleMonths')
+      .lean();
+    const vehicleMap = new Map<string, any>(vehicles.map(v => [String(v._id), v]));
+
+    // Load config maps for services/packages
+    const serviceMap = new Map<string, any>();
+    const packageMap = new Map<string, any>();
+    if (serviceIds.length > 0) {
+      const { Service } = await import('../models/Service.js');
+      const svcs = await Service.find({ _id: { $in: serviceIds } })
+        .select('_id name periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      svcs.forEach(s => serviceMap.set(String(s._id), s));
+    }
+    if (packageIds.length > 0) {
+      const { ServicePackage } = await import('../models/ServicePackage.js');
+      const pkgs = await ServicePackage.find({ _id: { $in: packageIds } })
+        .select('_id name periodicEnabled intervalMonths defaultTotalVisits')
+        .lean();
+      pkgs.forEach(p => packageMap.set(String(p._id), p));
+    }
+
+    type ReminderItem = {
+      type: 'periodic' | 'vehicleSchedule';
+      dueDate: Date;
+      dueStatus: 'overdue' | 'dueToday' | 'upcoming';
+      nextAppointment?: any | null;
+      vehicle?: any;
+      user?: any;
+      periodicSummary?: any;
+      scheduleSummary?: any;
+    };
+
+    const periodicItems: ReminderItem[] = [];
+
+    for (const g of periodicGroups) {
+      const vid = String(g._id.vehicleID);
+      const veh = vehicleMap.get(vid);
+      if (!veh) continue;
+      if (vehicleCategory && veh.vehicleCategory !== vehicleCategory) continue;
+
+      const isPkg = Boolean(g._id.servicePackageID);
+      const cfg = isPkg ? packageMap.get(String(g._id.servicePackageID)) : serviceMap.get(String(g._id.serviceID));
+      if (!cfg || !cfg.periodicEnabled) continue;
+
+      const totalVisits = typeof cfg.defaultTotalVisits === 'number' ? cfg.defaultTotalVisits : undefined;
+      const intervalMonths = typeof cfg.intervalMonths === 'number' ? cfg.intervalMonths : undefined;
+      const completedVisits = Number(g.completedVisits || 0);
+      const remainingVisits = typeof totalVisits === 'number' ? Math.max(0, totalVisits - completedVisits) : undefined;
+
+      // Skip if fully completed and no nextScheduledDate
+      if (typeof remainingVisits === 'number' && remainingVisits <= 0 && !g.nextScheduledDate) continue;
+
+      const nextScheduledDate: Date | null = g.nextScheduledDate ? new Date(g.nextScheduledDate) : null;
+      let dueDate: Date | null = nextScheduledDate;
+      if (!dueDate && g.lastCompletedDate && intervalMonths) {
+        dueDate = computeNextMaintenanceDate(new Date(g.lastCompletedDate), intervalMonths);
+      }
+      // Fallback: nếu chưa có lần hoàn thành và chưa đặt lịch, dùng vehicle.nextMaintenanceDate nếu có
+      if (!dueDate && veh?.nextMaintenanceDate) {
+        const vNext = new Date(veh.nextMaintenanceDate);
+        if (!isNaN(vNext.getTime())) {
+          dueDate = vNext;
+        }
+      }
+
+      const dueStatus = getDueStatus(dueDate);
+      if (!dueDate || !dueStatus) continue; // outside window
+
+      // hasAppointment filter
+      const hasNext = Boolean(nextScheduledDate);
+      if (hasAppointmentParam === 'true' && !hasNext) continue;
+      if (hasAppointmentParam === 'false' && hasNext) continue;
+
+      // Resolve nextAppointment document if exists
+      let nextAppointment: any | null = null;
+      if (nextScheduledDate) {
+        const filter: any = { vehicleID: g._id.vehicleID, status: { $in: ['pending','confirmed'] }, bookingDate: { $gte: nextScheduledDate } };
+        if (isPkg) filter.servicePackageID = g._id.servicePackageID; else filter.serviceID = g._id.serviceID;
+        nextAppointment = await Appointment.findOne(filter)
+          .sort({ bookingDate: 1 })
+          .select('_id userID vehicleID serviceID servicePackageID bookingDate status')
+          .lean();
+      }
+
+      const item: ReminderItem = {
+        type: 'periodic',
+        dueDate: dueDate!,
+        dueStatus,
+        nextAppointment: nextAppointment || null,
+      };
+
+      if (include.has('vehicle')) {
+        item.vehicle = { _id: veh._id, plateNumber: veh.plateNumber, vehicleCategory: veh.vehicleCategory, brand: veh.brand };
+      }
+
+      item.periodicSummary = {
+        serviceType: isPkg ? 'servicePackage' : 'service',
+        serviceId: isPkg ? String(g._id.servicePackageID) : String(g._id.serviceID),
+        serviceName: cfg.name,
+        totalVisits,
+        completedVisits,
+        remainingVisits,
+        intervalMonths,
+        vehicleID: vid,
+      };
+
+      periodicItems.push(item);
+    }
+
+    // 2) VEHICLE SCHEDULE REMINDERS
+    const vehicleQuery: any = {
+      $or: [
+        { isMaintenanceDue: true },
+        { nextMaintenanceDate: { $lte: deadline } }
+      ]
+    };
+    if (vehicleCategory) vehicleQuery.vehicleCategory = vehicleCategory;
+
+    const vehiclesDue = await Vehicle.find(vehicleQuery)
+      .select('_id userID plateNumber vehicleCategory brand lastMaintenanceDate nextMaintenanceDate maintenanceCycleMonths')
+      .lean();
+
+    const vehicleItems: ReminderItem[] = [];
+    for (const veh of vehiclesDue) {
+      const dueDate: Date | null = veh.nextMaintenanceDate ? new Date(veh.nextMaintenanceDate) : null;
+      const dueStatus = getDueStatus(dueDate);
+      if (!dueDate || !dueStatus) continue;
+
+      // Find next appointment for this vehicle (any service)
+      const nextAppointment = await Appointment.findOne({
+        vehicleID: veh._id,
+        status: { $in: ['pending','confirmed'] },
+        bookingDate: { $gt: now }
+      })
+        .sort({ bookingDate: 1 })
+        .select('_id userID vehicleID serviceID servicePackageID bookingDate status')
+        .lean();
+
+      const hasNext = Boolean(nextAppointment);
+      if (hasAppointmentParam === 'true' && !hasNext) continue;
+      if (hasAppointmentParam === 'false' && hasNext) continue;
+
+      const item: ReminderItem = {
+        type: 'vehicleSchedule',
+        dueDate: dueDate,
+        dueStatus,
+        nextAppointment: nextAppointment || null,
+      };
+
+      if (include.has('vehicle')) {
+        item.vehicle = { _id: veh._id, plateNumber: veh.plateNumber, vehicleCategory: veh.vehicleCategory, brand: veh.brand };
+      }
+
+      item.scheduleSummary = {
+        lastMaintenanceDate: veh.lastMaintenanceDate || null,
+        nextMaintenanceDate: veh.nextMaintenanceDate || null,
+        maintenanceCycleMonths: veh.maintenanceCycleMonths || null,
+        vehicleID: String(veh._id)
+      };
+
+      vehicleItems.push(item);
+    }
+
+    // Merge according to type filter
+    let items: ReminderItem[] = [];
+    if (typeParam === 'periodic') items = periodicItems;
+    else if (typeParam === 'vehicleschedule') items = vehicleItems;
+    else items = periodicItems.concat(vehicleItems);
+
+    // Include user if requested: fetch users for all involved vehicles
+    if (include.has('user')) {
+      const vIds = new Set<string>();
+      for (const it of items) {
+        const vehId = it.periodicSummary?.vehicleID || it.scheduleSummary?.vehicleID;
+        if (vehId) vIds.add(String(vehId));
+      }
+      const vDocs = await Vehicle.find({ _id: { $in: Array.from(vIds) } }).select('_id userID').lean();
+      const userIds = vDocs.map(v => String(v.userID));
+      const users = await User.find({ _id: { $in: userIds } }).select('_id userName fullName email phoneNumber').lean();
+      const uMap = new Map<string, any>(users.map(u => [String(u._id), u]));
+      const vMap = new Map<string, any>(vDocs.map(v => [String(v._id), v]));
+      for (const it of items) {
+        const vehId = String(it.periodicSummary?.vehicleID || it.scheduleSummary?.vehicleID || '');
+        const vdoc = vehId ? vMap.get(vehId) : null;
+        const uid = vdoc ? String(vdoc.userID) : null;
+        if (uid) it.user = uMap.get(uid) || undefined;
+      }
+    }
+
+    // Sort
+    items.sort((a, b) => {
+      const av = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+      const bv = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+      return (order === 'desc' ? -1 : 1) * (av - bv);
+    });
+
+    // Pagination
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const paged = items.slice(start, start + limit);
+
+    return res.status(200).json({
+      success: true,
+      data: paged,
+      pagination: { page, limit, total, totalPages },
+      filters: { windowDays: windowDays, type: typeParam, vehicleCategory, hasAppointment: hasAppointmentParam }
+    });
+  } catch (error) {
+    console.error('listMaintenanceReminders error:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách nhắc hẹn bảo dưỡng' });
   }
 }
 
@@ -1560,5 +2180,59 @@ export async function countMyTodayInProgress(req: Request, res: Response) {
     return res.json({ total });
   } catch {
     return res.status(500).json({ message: 'Lỗi máy chủ khi thống kê' });
+  }
+}
+
+// Send maintenance reminder email (admin/staff)
+export async function sendMaintenanceReminderEmail(req: Request, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'staff') {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    const { toEmail, fullName, dueDate, plateNumber, vehicleBrand, vehicleCategory, serviceName, remainingVisits } = req.body || {};
+    if (!toEmail) return res.status(400).json({ message: 'Thiếu toEmail' });
+
+    const { transporter } = await import('../services/emailService.js');
+
+    const prettyDate = (() => {
+      try { return new Date(dueDate).toLocaleString('vi-VN'); } catch { return String(dueDate || ''); }
+    })();
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+        <div style="background:#014091;color:#fff;padding:16px;border-radius:8px 8px 0 0;">
+          <h2 style="margin:0;font-size:20px;">EVMS - Nhắc hẹn bảo dưỡng</h2>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-top:none;padding:16px;border-radius:0 0 8px 8px;background:#fff;">
+          <p>Chào ${fullName || 'Quý khách'},</p>
+          <p>Đây là email nhắc nhở lịch bảo dưỡng định kỳ cho phương tiện của bạn.</p>
+          <ul>
+            ${plateNumber ? `<li><strong>Biển số:</strong> ${plateNumber}</li>` : ''}
+            ${vehicleBrand ? `<li><strong>Hãng xe:</strong> ${vehicleBrand}</li>` : ''}
+            ${vehicleCategory ? `<li><strong>Loại xe:</strong> ${vehicleCategory}</li>` : ''}
+            ${serviceName ? `<li><strong>Gói/Dịch vụ:</strong> ${serviceName}</li>` : ''}
+            ${typeof remainingVisits === 'number' ? `<li><strong>Số lần còn lại:</strong> ${remainingVisits}</li>` : ''}
+            ${dueDate ? `<li><strong>Đến hạn:</strong> ${prettyDate}</li>` : ''}
+          </ul>
+          <p>Vui lòng phản hồi email hoặc đặt lịch sớm để đảm bảo phương tiện luôn trong tình trạng tốt nhất.</p>
+          <p>Trân trọng,<br/>EVMS</p>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: 'EVMS <doantrinh489@gmail.com>',
+      to: toEmail,
+      subject: `Nhắc hẹn bảo dưỡng - ${plateNumber || ''} ${prettyDate}`.trim(),
+      html,
+    });
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('sendMaintenanceReminderEmail error:', e);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi gửi email nhắc hẹn' });
   }
 }

@@ -12,6 +12,7 @@ export interface IAppointment extends Document {
   servicePackageID?: mongoose.Types.ObjectId; // ref ServicePackage
   bookingDate: Date;
   status: AppointmentStatus;
+  isPeriodicRecheck?: boolean; // true nếu là lần đặt lịch tái kiểm tra định kỳ (giá = 0đ)
 }
 
 const AppointmentSchema = new Schema<IAppointment>(
@@ -32,6 +33,10 @@ const AppointmentSchema = new Schema<IAppointment>(
       default: 'pending',
       index: true,
     },
+    isPeriodicRecheck: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
@@ -39,6 +44,10 @@ const AppointmentSchema = new Schema<IAppointment>(
 // Useful compound indexes for queries (user appointments in a day, etc.)
 AppointmentSchema.index({ userID: 1, bookingDate: -1 });
 AppointmentSchema.index({ technicianLeaderID: 1, bookingDate: -1 });
+// Indexes to speed up reminder queries
+AppointmentSchema.index({ vehicleID: 1, status: 1, bookingDate: 1 });
+AppointmentSchema.index({ serviceID: 1 });
+AppointmentSchema.index({ servicePackageID: 1 });
 
 export const Appointment = mongoose.models.Appointment || mongoose.model<IAppointment>('Appointment', AppointmentSchema);
 

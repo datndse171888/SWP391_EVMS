@@ -26,9 +26,13 @@ declare global {
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
+    console.log('🔐 Auth Middleware - Path:', req.path);
+    console.log('🔐 Auth Header:', authHeader ? 'Present' : 'Missing');
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
+      console.log('❌ Missing or invalid auth header');
+      return res.status(401).json({
         message: 'Access token is required',
         code: 'MISSING_TOKEN'
       });
@@ -56,16 +60,18 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     
     // Get user from database
     const user = await User.findById(decoded.sub).select('-passwordHash');
-    
+
     if (!user) {
-      return res.status(401).json({ 
+      console.log('❌ User not found for ID:', decoded.sub);
+      return res.status(401).json({
         message: 'User not found',
         code: 'USER_NOT_FOUND'
       });
     }
 
     if (user.isDisabled) {
-      return res.status(403).json({ 
+      console.log('❌ Account disabled:', user.email);
+      return res.status(403).json({
         message: 'Account is disabled',
         code: 'ACCOUNT_DISABLED'
       });
@@ -85,6 +91,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       isVerified: user.isVerified ?? false
     };
 
+    console.log('✅ Auth successful - User:', user.email, 'Role:', user.role);
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {

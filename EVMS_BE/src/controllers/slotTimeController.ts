@@ -66,6 +66,38 @@ export async function getAvailableSlotTimes(req: Request, res: Response) {
       });
     }
 
+    // Ràng buộc phạm vi ngày CHỈ CHO CUSTOMER theo Asia/Ho_Chi_Minh (UTC+07:00)
+    // - Không cho lấy slot vượt quá hôm nay + 7 ngày (bao gồm ngày thứ 7, inclusive)
+    // - Admin/Staff/Technician bypass
+    if (req.user?.role === 'customer') {
+      const nowUtcMs = Date.now();
+      const vnOffsetMs = 7 * 60 * 60 * 1000; // UTC+07:00
+
+      // Tính mốc bắt đầu hôm nay theo VN (00:00 VN) quy đổi về UTC epoch
+      const vnNow = new Date(nowUtcMs + vnOffsetMs);
+      const vnStartOfTodayLocal = new Date(vnNow);
+      vnStartOfTodayLocal.setHours(0, 0, 0, 0);
+      const vnStartOfTodayUtcMs = vnStartOfTodayLocal.getTime() - vnOffsetMs;
+
+      // Mốc cuối cùng được phép: hết ngày thứ 7 kể từ hôm nay (inclusive)
+      const vnEndOfMaxDayUtcMs = vnStartOfTodayUtcMs + (7 * 24 * 60 * 60 * 1000) + (24 * 60 * 60 * 1000 - 1);
+
+      // Chuyển dateParam (YYYY-MM-DD) -> mốc 00:00 VN của ngày yêu cầu, quy đổi về UTC epoch
+      const [yStr, mStr, dStr] = dateParam.split('-');
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10) - 1; // 0-11
+      const d = parseInt(dStr, 10);
+      // 00:00 VN tương ứng UTC -7 giờ
+      const requestedStartVNUtcMs = Date.UTC(y, m, d, -7, 0, 0, 0);
+
+      if (requestedStartVNUtcMs > vnEndOfMaxDayUtcMs) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể lấy slot vượt quá 7 ngày kể từ hôm nay'
+        });
+      }
+    }
+
     // Set to start of day (00:00:00)
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);

@@ -16,6 +16,7 @@ interface VehicleProps {
   setVehicleCategory: React.Dispatch<React.SetStateAction<VehicleCategory>>;
   onNext: () => void;
   onPrevious?: () => void;
+  lockedVehicle?: boolean; // khi true: không cho đổi/chỉnh xe
 }
 
 const Vehicle: React.FC<VehicleProps> = ({
@@ -23,7 +24,8 @@ const Vehicle: React.FC<VehicleProps> = ({
   setFormData,
   setVehicleCategory,
   onNext,
-  onPrevious
+  onPrevious,
+  lockedVehicle = false,
 }) => {
 
 
@@ -250,7 +252,8 @@ const Vehicle: React.FC<VehicleProps> = ({
               name="vehicle"
               label="Xe của bạn"
               value={getDisplayValue()}
-              onChange={(e) => handleVehicleSelect(e.target.value)}
+              onChange={(e) => !lockedVehicle && handleVehicleSelect(e.target.value)}
+              disabled={lockedVehicle}
               defaultValue={{ value: 'new', label: '+ Thêm xe mới' }}
               option={[
                 ...vehicles.map((vehicle) => ({

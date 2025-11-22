@@ -20,13 +20,15 @@ interface ConfirmationProps {
   formData: CreateAppointmentRequest;
   onPrevious: () => void;
   onComplete: () => void;
+  isPeriodic?: boolean; // nếu là tái kiểm định kỳ, giá hiển thị = 0
 }
 
 // Main Confirmation Component
 const Confirmation: React.FC<ConfirmationProps> = ({
   formData,
   onPrevious,
-  onComplete
+  onComplete,
+  isPeriodic = false
 }) => {
 
   // ================================
@@ -40,7 +42,16 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [periodicInfo, setPeriodicInfo] = useState<any>(null);
+  type PeriodicInfo = {
+    periodicEnabled?: boolean;
+    remainingVisits?: number;
+    totalVisits?: number;
+    visitsUsed?: number;
+    intervalMonths?: number;
+    nextDueDate?: string;
+    startDate?: string;
+  } | null;
+  const [periodicInfo, setPeriodicInfo] = useState<PeriodicInfo>(null);
 
   const { showAlert, AlertComponent } = useAlert();
 
@@ -51,6 +62,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
 
   useEffect(() => {
     fetchBookingDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
   const fetchBookingDetails = async () => {
@@ -64,7 +76,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
           const vehiclePromise = await VehicleApi.getVehicleById(formData.vehicleID);
           const vehicleResponse: VehicleResponse = vehiclePromise.data;
           setVehicle(vehicleResponse);
-        } catch (error) {
+        } catch {
           showAlert('error', 'Không thể tải thông tin phương tiện');
         }
       }
@@ -74,7 +86,9 @@ const Confirmation: React.FC<ConfirmationProps> = ({
           try {
             const servicePromise = await ServiceApi.getServiceById(formData.serviceID);
             // Backend returns { service: ServiceResponse }
-            const serviceResponse: ServiceResponse = (servicePromise.data as any).service || servicePromise.data;
+            type ServiceApiResponse = { service?: ServiceResponse; data?: ServiceResponse };
+            const apiData = servicePromise.data as unknown as ServiceApiResponse;
+            const serviceResponse: ServiceResponse = apiData.service || apiData.data || apiData as ServiceResponse;
             setService(serviceResponse);
           } catch (error) {
             console.error('Error fetching service:', error);
@@ -94,7 +108,9 @@ const Confirmation: React.FC<ConfirmationProps> = ({
           try {
             const servicePackagePromise = await ServicePackageApi.getServicePackageById(formData.servicePackageID);
             // Backend returns { servicePackage: ServicePackageResponse }
-            const servicePackageResponse: ServicePackageResponse = (servicePackagePromise.data as any).servicePackage || servicePackagePromise.data;
+            type PackageApiResponse = { servicePackage?: ServicePackageResponse; data?: ServicePackageResponse };
+            const apiData = servicePackagePromise.data as unknown as PackageApiResponse;
+            const servicePackageResponse: ServicePackageResponse = apiData.servicePackage || apiData.data || apiData as ServicePackageResponse;
             setServicePackage(servicePackageResponse);
           } catch (error) {
             console.error('Error fetching service package:', error);
@@ -111,9 +127,10 @@ const Confirmation: React.FC<ConfirmationProps> = ({
 
       //   await Promise.all();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching booking details:', error);
-      setError(error.message || 'Có lỗi xảy ra khi tải thông tin đặt lịch');
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi tải thông tin đặt lịch';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +144,8 @@ const Confirmation: React.FC<ConfirmationProps> = ({
   const getTotalDuration = () => {
     return service?.duration || servicePackage?.duration || 0;
   };
+
+  const displayedPrice = isPeriodic ? 0 : (service?.price || servicePackage?.price || 0);
 
   const handleConfirmBooking = async () => {
     // Prevent double submit
@@ -155,6 +174,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({
       ...(formData.serviceID && formData.serviceID.trim() !== '' && { serviceID: formData.serviceID }),
       ...(formData.servicePackageID && formData.servicePackageID.trim() !== '' && { servicePackageID: formData.servicePackageID }),
       ...(formData.reason && formData.reason.trim() !== '' && { reason: formData.reason }),
+      ...(isPeriodic && { isPeriodicRecheck: true }), // Gửi flag nếu là luồng định kỳ
     };
 
     console.log('Submitting appointment with cleanFormData:', cleanFormData);
@@ -175,10 +195,12 @@ const Confirmation: React.FC<ConfirmationProps> = ({
         onComplete();
       }, 500);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating appointment:', error);
-      console.error('Error response:', error.response?.data);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
+      type ErrorResponse = { response?: { data?: { message?: string } } };
+      const errorData = error as ErrorResponse;
+      console.error('Error response:', errorData.response?.data);
+      const errorMessage = errorData.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
       showAlert('error', errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -289,13 +311,20 @@ const Confirmation: React.FC<ConfirmationProps> = ({
         {/* Service Information */}
         {(service || servicePackage) && (
           <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-              {service ? (
-                <Wrench className="w-5 h-5 mr-2 text-green-500" />
-              ) : (
-                <Package className="w-5 h-5 mr-2 text-orange-500" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center justify-between">
+              <span className="flex items-center">
+                {service ? (
+                  <Wrench className="w-5 h-5 mr-2 text-green-500" />
+                ) : (
+                  <Package className="w-5 h-5 mr-2 text-orange-500" />
+                )}
+                {service ? 'Dịch vụ đã chọn' : 'Gói dịch vụ đã chọn'}
+              </span>
+              {isPeriodic && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-800">
+                  TÁI ĐỊNH KỲ
+                </span>
               )}
-              {service ? 'Dịch vụ đã chọn' : 'Gói dịch vụ đã chọn'}
             </h3>
 
             <div className="space-y-4">
@@ -322,9 +351,22 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Giá dịch vụ</p>
-                  <p className="font-medium text-orange-600 text-lg">
-                    {formatPrice(service?.price || servicePackage?.price || 0)}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {isPeriodic && (service?.price || servicePackage?.price) ? (
+                      <>
+                        <p className="font-medium text-gray-400 line-through text-sm">
+                          {formatPrice(service?.price || servicePackage?.price || 0)}
+                        </p>
+                        <p className="font-bold text-green-600 text-lg">
+                          {formatPrice(0)} (Miễn phí)
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-medium text-orange-600 text-lg">
+                        {formatPrice(displayedPrice)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -333,12 +375,15 @@ const Confirmation: React.FC<ConfirmationProps> = ({
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Dịch vụ bao gồm</p>
                   <ul className="space-y-1">
-                    {servicePackage.services.map((svc, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-700">
-                        <CheckCircle className="w-3 h-3 text-green-500 mr-2 flex-shrink-0" />
-                        {svc.name}
-                      </li>
-                    ))}
+                    {servicePackage.services.map((svc, index) => {
+                      const serviceName = typeof svc === 'string' ? svc : (svc as { name?: string }).name || 'Dịch vụ';
+                      return (
+                        <li key={index} className="flex items-center text-sm text-gray-700">
+                          <CheckCircle className="w-3 h-3 text-green-500 mr-2 flex-shrink-0" />
+                          {serviceName}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -400,12 +445,22 @@ const Confirmation: React.FC<ConfirmationProps> = ({
             <div className="flex justify-between items-start text-xl">
               <div className="flex flex-col flex-1 mr-4">
                 <span className="text-gray-700 font-medium">Tổng chi phí dự kiến:</span>
+                {isPeriodic && (
+                  <div className="mt-2 mb-1">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                      🎉 MIỄN PHÍ - Lịch tái định kỳ
+                    </span>
+                  </div>
+                )}
                 <span className="text-xs text-gray-500 mt-1 italic">
-                  * Chi phí có thể thay đổi do sử dụng thêm linh kiện trong quá trình sửa chữa
+                  {isPeriodic 
+                    ? '* Lịch tái định kỳ được miễn phí 100% chi phí dịch vụ'
+                    : '* Chi phí có thể thay đổi do sử dụng thêm linh kiện trong quá trình sửa chữa'
+                  }
                 </span>
               </div>
-              <span className="font-bold text-orange-600 whitespace-nowrap">
-                {formatPrice(service?.price || servicePackage?.price || 0)} 
+              <span className={`font-bold whitespace-nowrap ${isPeriodic ? 'text-green-600' : 'text-orange-600'}`}>
+                {formatPrice(displayedPrice)} 
               </span>
             </div>
           </div>

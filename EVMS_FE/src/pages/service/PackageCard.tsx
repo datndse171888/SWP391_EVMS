@@ -67,7 +67,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({ package: pkg, onViewDe
             {pkg.services.map((service, index) => (
               <li key={index} className="flex items-start gap-2 text-sm">
                 <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">{service.name}</span>
+                <span className="text-gray-700">{typeof service === 'string' ? service : service.name}</span>
               </li>
             ))}
           </ul>

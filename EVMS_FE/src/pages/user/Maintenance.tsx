@@ -1,18 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { AppointmentApi } from '../../api/AppointmentApi';
+import { useAlert } from '../../hooks/useAlert';
 import { UserProfileLayout } from '../../components/layout/UserProfileLayout';
 import { UserProfileSidebar } from '../../components/layout/UserProfileSidebar';
 import { UserProfileHeader } from '../../components/layout/UserProfileHeader';
 import { VehicleApi } from '../../api/VehicleApi';
-import { ServiceApi } from '../../api/ServiceApi';
-import { ServicePackageApi } from '../../api/ServicePackageApi';
-import type { MaintenanceItem } from '../../types/Maintenance';
-import type { VehicleResponse } from '../../types/Vehicle';
-import type { ServiceResponse } from '../../types/Service';
-import type { ServicePackageResponse } from '../../types/ServicePackage';
+import type { MaintenanceItem, SlotStatus } from '../../types/Maintenance';
 import { MaintenanceTimeline } from '../../components/MaintenanceTimeline';
 
+type PeriodicSubscription = {
+  vehicleId: string;
+  plateNumber: string;
+  vehicleCategory: 'CAR' | 'MOTOBIKE' | 'BICYCLE';
+  sourceType?: 'service' | 'package' | 'servicePackage';
+  sourceId?: string;
+  serviceId?: string;
+  servicePackageId?: string;
+  startDate?: string;
+  visitsUsed?: number;
+  totalVisits?: number;
+  intervalMonths?: number;
+  nextDueDate?: string;
+};
+
 export default function Maintenance() {
-  const [subs, setSubs] = useState<any[]>([]);
+  const { showAlert } = useAlert();
+  const [subs, setSubs] = useState<PeriodicSubscription[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,53 +41,23 @@ export default function Maintenance() {
     })();
   }, []);
 
-  const buildTimelineFromStatus = (veh: VehicleResponse, info: any): MaintenanceItem => {
-    // Build slots using startDate, intervalMonths, totalVisits
-    const slots: { date: string; status: any }[] = [];
-    const total = info?.totalVisits || 0;
-    const used = info?.visitsUsed || 0;
-    if (info?.startDate && info?.intervalMonths) {
-      const start = new Date(info.startDate);
-      for (let i = 0; i < total; i++) {
-        const d = new Date(start);
-        d.setMonth(d.getMonth() + i * info.intervalMonths);
-        let status: any = 'future';
-        const today = new Date(); today.setHours(0,0,0,0);
-        const dd = new Date(d); dd.setHours(0,0,0,0);
-        if (i < used) status = 'completed';
-        else if (dd.getTime() === today.getTime()) status = 'dueToday';
-        else if (dd.getTime() < today.getTime()) status = 'overdue';
-        else status = 'upcoming';
-        slots.push({ date: d.toISOString(), status });
-      }
-    }
-    const nextDueDate = info?.nextDueDate || null;
-    const daysUntilDue = nextDueDate ? Math.ceil((new Date(nextDueDate).getTime() - Date.now()) / (1000*60*60*24)) : null;
-    return {
-      vehicleId: String(veh._id || veh.id),
-      plateNumber: veh.plateNumber,
-      vehicleCategory: veh.vehicleCategory as any,
-      lastMaintenanceDate: null,
-      nextMaintenanceDate: nextDueDate,
-      maintenanceCycleMonths: info?.intervalMonths || 0,
-      isMaintenanceDue: !!(daysUntilDue !== null && daysUntilDue <= 0),
-      daysUntilDue,
-      bookingUrl: `/appointments/new?vehicleId=${veh._id || veh.id}`,
-      timeline: slots
-    };
-  };
 
-  const toItem = (sub: any): MaintenanceItem => {
+  const toItem = (sub: PeriodicSubscription): MaintenanceItem => {
     const nextDueDate = sub?.nextDueDate || null;
     const daysUntilDue = nextDueDate ? Math.ceil((new Date(nextDueDate).getTime() - Date.now())/(1000*60*60*24)) : null;
     // build simple slots from startDate
-    const slots: any[] = [];
+    const slots: { date: string; status: SlotStatus }[] = [];
     if (sub.startDate && sub.intervalMonths && sub.totalVisits) {
       const start = new Date(sub.startDate);
       for (let i=0;i<sub.totalVisits;i++) {
         const d = new Date(start); d.setMonth(d.getMonth()+ i*sub.intervalMonths);
-        let status: any = 'future'; const today = new Date(); today.setHours(0,0,0,0); const dd = new Date(d); dd.setHours(0,0,0,0);
-        if (i < (sub.visitsUsed||0)) status='completed'; else if (dd.getTime()===today.getTime()) status='dueToday'; else if (dd.getTime()<today.getTime()) status='overdue'; else status='upcoming';
+        let status: SlotStatus = 'future'; 
+        const today = new Date(); today.setHours(0,0,0,0); 
+        const dd = new Date(d); dd.setHours(0,0,0,0);
+        if (i < (sub.visitsUsed||0)) status='completed'; 
+        else if (dd.getTime()===today.getTime()) status='dueToday'; 
+        else if (dd.getTime()<today.getTime()) status='overdue'; 
+        else status='upcoming';
         slots.push({ date: d.toISOString(), status });
       }
     }
@@ -82,7 +67,7 @@ export default function Maintenance() {
       vehicleCategory: sub.vehicleCategory,
       lastMaintenanceDate: null,
       nextMaintenanceDate: nextDueDate,
-      maintenanceCycleMonths: sub.intervalMonths,
+      maintenanceCycleMonths: sub.intervalMonths || 0,
       isMaintenanceDue: !!(daysUntilDue !== null && daysUntilDue <= 0),
       daysUntilDue,
       bookingUrl: `/appointments/new?vehicleId=${sub.vehicleId}`,
@@ -90,9 +75,47 @@ export default function Maintenance() {
     };
   };
 
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleBookDue = async (sub: PeriodicSubscription) => {
+    try {
+      if (!user?.id) return;
+      const params: { serviceId?: string; servicePackageId?: string } = {};
+      // Chuẩn hóa từ subscription item: sourceType ('service' | 'package') + sourceId
+      if (sub?.sourceType === 'service' && sub?.sourceId) {
+        params.serviceId = String(sub.sourceId);
+      } else if ((sub?.sourceType === 'package' || sub?.sourceType === 'servicePackage') && sub?.sourceId) {
+        params.servicePackageId = String(sub.sourceId);
+      } else if (sub?.serviceId || sub?.servicePackageId) {
+        if (sub.serviceId) params.serviceId = String(sub.serviceId);
+        if (sub.servicePackageId) params.servicePackageId = String(sub.servicePackageId);
+      }
+
+      const res = await AppointmentApi.getPeriodicVehicleForUser(user.id, params);
+      const data = res.data?.data;
+      if (!data?.vehicle?._id) {
+        showAlert('error', 'Không tìm thấy thông tin xe cho lần đặt định kỳ này');
+        return;
+      }
+      const q: string[] = [
+        `vehicleId=${encodeURIComponent(String(data.vehicle._id))}`,
+        'lockService=1',
+        'lockVehicle=1',
+        'periodic=1'
+      ];
+      if (params.serviceId) q.push(`serviceId=${encodeURIComponent(params.serviceId)}`);
+      if (params.servicePackageId) q.push(`servicePackageId=${encodeURIComponent(params.servicePackageId)}`);
+      navigate(`/booking?${q.join('&')}`);
+    } catch (e) {
+      console.error('handleBookDue error:', e);
+      alert('Không thể chuẩn bị đặt lịch tái kiểm tra');
+    }
+  };
+
   return (
     <UserProfileLayout>
-      <div className="flex flex-row w-full">
+      <div className="flex flex-row w-full"> 
         <UserProfileSidebar />
         <div className="flex-1">
           <div className="w-full px-8 py-8">
@@ -105,8 +128,8 @@ export default function Maintenance() {
                 <div className="text-gray-500">Chưa có dịch vụ/gói định kỳ nào đã được sử dụng.</div>
               ) : (
                 <div className="grid" style={{ gap: 16 }}>
-                  {subs.map((s:any) => (
-                    <MaintenanceTimeline key={`${s.vehicleId}-${s.sourceId}`} item={toItem(s)} onBook={(url)=> (window.location.href=url)} />
+                  {subs.map((s) => (
+                    <MaintenanceTimeline key={`${s.vehicleId}-${s.sourceId}`} item={toItem(s)} onBook={() => handleBookDue(s)} />
                   ))}
                 </div>
               )}

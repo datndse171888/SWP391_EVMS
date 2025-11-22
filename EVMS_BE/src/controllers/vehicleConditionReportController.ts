@@ -173,6 +173,43 @@ export async function createVehicleConditionReport(req: Request, res: Response) 
       });
     }
 
+    // Ràng buộc: leader tạo report phải là leader được assign của appointment
+    if (!appointment.technicianLeaderID || String(appointment.technicianLeaderID) !== String(technician._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ leader được assign của appointment mới được tạo báo cáo'
+      });
+    }
+
+    // Ràng buộc theo stage & trạng thái/khung giờ
+    if (stage === 'before-service') {
+      // Chỉ khi appointment đang confirmed
+      if (appointment.status !== 'confirmed') {
+        return res.status(409).json({
+          success: false,
+          message: 'Chỉ appointment ở trạng thái confirmed mới tạo before-service'
+        });
+      }
+      // So sánh thời gian theo Asia/Ho_Chi_Minh (+07)
+      const offsetMs = 7 * 60 * 60 * 1000;
+      const nowVN = Date.now() + offsetMs;
+      const bookingVN = new Date(appointment.bookingDate).getTime() + offsetMs;
+      if (nowVN < bookingVN) {
+        return res.status(400).json({
+          success: false,
+          message: 'Chưa đến thời điểm bắt đầu slot (bookingDate). Chỉ được tạo báo cáo từ thời điểm bookingDate trở đi'
+        });
+      }
+    } else if (stage === 'after-service') {
+      // Chỉ khi appointment đang in_progress
+      if (appointment.status !== 'in_progress') {
+        return res.status(409).json({
+          success: false,
+          message: 'Chỉ appointment đang in_progress mới tạo after-service'
+        });
+      }
+    }
+
     // Kiểm tra xem đã có report với cùng appointmentID và stage chưa
     // Mỗi appointment chỉ có thể có:
     // - 1 report với stage = "before-service" (trước khi sửa)
@@ -206,9 +243,15 @@ export async function createVehicleConditionReport(req: Request, res: Response) 
 
     const vehicleConditionReport = await VehicleConditionReport.create(reportData);
 
-    // Nếu tạo báo cáo sau sửa, chuyển trạng thái appointment sang chờ thanh toán
+    // Cập nhật trạng thái appointment theo stage
     try {
-      if (stage === 'after-service') {
+      if (stage === 'before-service') {
+        await Appointment.findByIdAndUpdate(
+          appointmentID,
+          { $set: { status: 'in_progress' } },
+          { new: true }
+        );
+      } else if (stage === 'after-service') {
         await Appointment.findByIdAndUpdate(
           appointmentID,
           { $set: { status: 'awaiting_payment' } },
@@ -216,7 +259,7 @@ export async function createVehicleConditionReport(req: Request, res: Response) 
         );
       }
     } catch (statusErr) {
-      console.error('Failed to update appointment status to awaiting_payment:', statusErr);
+      console.error('Failed to update appointment status:', statusErr);
       // Không throw để không làm fail việc tạo report; FE có thể tự đồng bộ lại trạng thái
     }
 

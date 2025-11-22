@@ -34,6 +34,7 @@ import ChatWithCustomer from './pages/staff/ChatWithCustomer';
 import ManageAppointment from './pages/staff/ManageAppointment';
 import ManagePart from './pages/staff/ManagePart';
 import StaffProfile from './pages/staff/StaffProfile';
+
 import BookingPage from './pages/staff/BookingPage';
 import Booking from './pages/booking/Booking'
 import PartsPage from './pages/Parts'
@@ -49,6 +50,7 @@ import ServicePackages from './pages/admin/ServicePackages';
 import Appointments from './pages/admin/Appointments';
 import Staffs from './pages/admin/Staffs';
 import FeedbackPage from './pages/user/FeedBack';
+import MyFeedbacks from './pages/user/MyFeedbacks';
 import AppointmentHistory from './pages/user/AppointmentHistory';
 import Maintenance from './pages/user/Maintenance';
 import MyVehicles from './pages/user/MyVehicles';
@@ -88,7 +90,6 @@ export const Router: React.FC = () => {
           <Route path="/part/:id" element={<><PartDetail /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path="/technicians" element={<><TechniciansPage /> <ChatboxButton /> <ButtonRegister /></>} />
           <Route path='/booking' element={<><Booking /> <ChatboxButton /> </>} />
-          <Route path="/feedback" element={<><FeedbackPage /> <ChatboxButton /> </>} />
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -121,6 +122,16 @@ export const Router: React.FC = () => {
         <Route path="/add-vehicle" element={
           <PrivateRoute>
             <AddVehicle />
+          </PrivateRoute>
+        } />
+        <Route path="/feedback" element={
+          <PrivateRoute>
+            <FeedbackPage />
+          </PrivateRoute>
+        } />
+        <Route path="/my-feedbacks" element={
+          <PrivateRoute>
+            <MyFeedbacks />
           </PrivateRoute>
         } />
 

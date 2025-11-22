@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import type { ServiceResponse } from '../types/Service';
 import type { VehicleCategory } from '../types/Vehicle';
+import { compressImage, uploadImageApi } from '../api/UploadApi';
 
 interface ServiceModalProps {
     isOpen: boolean;
@@ -13,6 +14,9 @@ interface ServiceModalProps {
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onSave, service, mode }: ServiceModalProps) => {
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [uploading, setUploading] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>('');
 
     const [formData, setFormData] = useState<ServiceResponse>({
         _id: '',
@@ -41,6 +45,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                 intervalMonths: service.intervalMonths,
                 defaultTotalVisits: service.defaultTotalVisits,
             });
+            setImagePreview(service.image || '');
         } else {
             setFormData({
                 _id: '',
@@ -54,23 +59,87 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                 intervalMonths: undefined,
                 defaultTotalVisits: undefined,
             });
+            setImagePreview('');
         }
+        setImageFile(null);
+        setErrors({});
     }, [service, mode, isOpen]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            setErrors(prev => ({ ...prev, image: 'Chỉ được upload file ảnh' }));
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setErrors(prev => ({ ...prev, image: 'Kích thước file không được vượt quá 5MB' }));
+            return;
+        }
+
+        setErrors(prev => ({ ...prev, image: '' }));
+        setImageFile(file);
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({
-            _id: formData._id,
-            name: formData.name,
-            description: formData.description,
-            price: formData.price,
-            duration: formData.duration,
-            image: formData.image,
-            vehicleCategory: formData.vehicleCategory,
-            periodicEnabled: formData.periodicEnabled,
-            intervalMonths: formData.periodicEnabled ? formData.intervalMonths : undefined,
-            defaultTotalVisits: formData.periodicEnabled ? formData.defaultTotalVisits : undefined,
-        });
+        setUploading(true);
+
+        try {
+            let imageUrl = formData.image;
+
+            // Upload image if file is selected
+            if (imageFile) {
+                try {
+                    // Compress image before upload
+                    const compressedFile = await compressImage(
+                        imageFile,
+                        1920, // maxWidth
+                        1920, // maxHeight
+                        0.7, // quality
+                        500 // maxFileSizeKB
+                    );
+
+                    // Upload to Cloudinary
+                    imageUrl = await uploadImageApi(compressedFile);
+                    console.log('✅ Image uploaded successfully:', imageUrl);
+                } catch (uploadError: any) {
+                    console.error('Lỗi khi upload ảnh:', uploadError);
+                    setErrors({ image: uploadError?.message || 'Lỗi khi upload ảnh. Vui lòng thử lại.' });
+                    setUploading(false);
+                    return;
+                }
+            }
+
+            onSave({
+                _id: formData._id,
+                name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                duration: formData.duration,
+                image: imageUrl,
+                vehicleCategory: formData.vehicleCategory,
+                periodicEnabled: formData.periodicEnabled,
+                intervalMonths: formData.periodicEnabled ? formData.intervalMonths : undefined,
+                defaultTotalVisits: formData.periodicEnabled ? formData.defaultTotalVisits : undefined,
+            });
+        } catch (error: any) {
+            console.error('Error saving service:', error);
+            setErrors({ submit: error?.message || 'Có lỗi xảy ra. Vui lòng thử lại.' });
+        } finally {
+            setUploading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -256,15 +325,72 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                URL Hình ảnh
+                                Hình ảnh dịch vụ
                             </label>
-                            <input
-                                type="text"
-                                value={formData.image}
-                                onChange={(e) => handleChange('image', e.target.value)}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-                                placeholder="https://example.com/image.jpg"
-                            />
+
+                            {/* Upload from local */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <label className="flex-1 cursor-pointer">
+                                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all">
+                                            <Upload size={20} className="text-gray-400" />
+                                            <span className="text-sm text-gray-600">
+                                                {imageFile ? imageFile.name : 'Chọn ảnh từ máy'}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+
+                                {/* OR divider */}
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-gray-300"></div>
+                                    <span className="text-xs text-gray-500 font-medium">HOẶC</span>
+                                    <div className="flex-1 h-px bg-gray-300"></div>
+                                </div>
+
+                                {/* URL input */}
+                                <input
+                                    type="text"
+                                    value={formData.image}
+                                    onChange={(e) => {
+                                        handleChange('image', e.target.value);
+                                        setImagePreview(e.target.value);
+                                        setImageFile(null);
+                                    }}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                                    placeholder="Hoặc dán URL ảnh: https://example.com/image.jpg"
+                                />
+
+                                {errors.image && (
+                                    <p className="text-sm text-red-500">{errors.image}</p>
+                                )}
+
+                                {/* Image preview */}
+                                {imagePreview && (
+                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                        <div className="flex items-start gap-3">
+                                            <ImageIcon size={20} className="text-gray-400 mt-1" />
+                                            <div className="flex-1">
+                                                <p className="text-sm text-gray-600 mb-2">Xem trước:</p>
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Preview"
+                                                    className="w-full max-w-xs h-auto rounded-lg border border-gray-300"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Invalid+Image';
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -339,20 +465,29 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, onS
                         )}
                     </div>
 
+                    {/* Error message */}
+                    {errors.submit && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-600">{errors.submit}</p>
+                        </div>
+                    )}
+
                     {/* Action Buttons */}
                     <div className="flex gap-3 pt-6 border-t border-gray-200">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold"
+                            disabled={uploading}
+                            className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             ✕ Hủy
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-semibold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40"
+                            disabled={uploading}
+                            className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-semibold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {mode === 'create' ? '✓ Tạo mới' : '✓ Cập nhật'}
+                            {uploading ? '⏳ Đang upload ảnh...' : mode === 'create' ? '✓ Tạo mới' : '✓ Cập nhật'}
                         </button>
                     </div>
                 </form>
